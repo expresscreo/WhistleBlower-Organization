@@ -1,0 +1,226 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Helmet } from 'react-helmet';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useToast } from '@/components/ui/use-toast';
+import { Loader2, Save } from 'lucide-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'News Editor', 'Bounty Details'];
+const allRoles = [{
+  key: 'super_admin',
+  label: 'Super Admin'
+}, {
+  key: 'executive_admin',
+  label: 'Executive Admin'
+}, {
+  key: 'organization_admin',
+  label: 'Organization Admin'
+}, {
+  key: 'staff',
+  label: 'Staff'
+}, {
+  key: 'customer_care',
+  label: 'Customer Care'
+}];
+const PlanManagement = () => {
+  const [plans, setPlans] = useState([]);
+  const [permissions, setPermissions] = useState({});
+  const [reportLimits, setReportLimits] = useState({});
+  const [activeTab, setActiveTab] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const {
+    toast
+  } = useToast();
+  const {
+    profile,
+    loading: profileLoading
+  } = useAuth();
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const {
+        data: plansData,
+        error: plansError
+      } = await supabase.from('plans').select('*').order('price');
+      if (plansError) throw plansError;
+      setPlans(plansData);
+      if (plansData.length > 0) {
+        setActiveTab(plansData[0].id);
+        const limits = plansData.reduce((acc, plan) => {
+          acc[plan.id] = plan.monthly_report_limit || 0;
+          return acc;
+        }, {});
+        setReportLimits(limits);
+      }
+      const {
+        data: permsData,
+        error: permsError
+      } = await supabase.from('plan_role_permissions').select('*');
+      if (permsError) throw permsError;
+      const formattedPermissions = permsData.reduce((acc, p) => {
+        if (!acc[p.plan_id]) acc[p.plan_id] = {};
+        if (!acc[p.plan_id][p.role]) acc[p.plan_id][p.role] = {};
+        acc[p.plan_id][p.role][p.page_name] = p.can_view;
+        return acc;
+      }, {});
+      setPermissions(formattedPermissions);
+    } catch (error) {
+      toast({
+        title: 'Error fetching data',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+  useEffect(() => {
+    if (profile?.user_type === 'super_admin') {
+      fetchData();
+    } else if (!profileLoading) {
+      setLoading(false);
+    }
+  }, [profile, profileLoading, fetchData]);
+  const getRolesForPlan = planName => {
+    const standardRoles = allRoles.filter(r => r.key !== 'super_admin');
+    if (planName === 'Executive') {
+      return standardRoles;
+    }
+    return standardRoles;
+  };
+  const handlePermissionChange = (planId, roleKey, pageName, value) => {
+    setPermissions(prev => ({
+      ...prev,
+      [planId]: {
+        ...prev[planId],
+        [roleKey]: {
+          ...(prev[planId]?.[roleKey] || {}),
+          [pageName]: value
+        }
+      }
+    }));
+  };
+  const handleReportLimitChange = (planId, value) => {
+    setReportLimits(prev => ({
+      ...prev,
+      [planId]: value
+    }));
+  };
+  const handleSaveChanges = async (planId, rolesForPlan) => {
+    setSaving(true);
+    try {
+      // Update report limit
+      const {
+        error: limitError
+      } = await supabase.from('plans').update({
+        monthly_report_limit: reportLimits[planId]
+      }).eq('id', planId);
+      if (limitError) throw limitError;
+
+      // Prepare permissions for upsert, including seeding missing ones
+      const permissionsToUpsert = [];
+      for (const role of rolesForPlan) {
+        for (const page of availablePages) {
+          const hasPermission = permissions[planId]?.[role.key]?.[page] || false;
+          permissionsToUpsert.push({
+            plan_id: planId,
+            role: role.key,
+            page_name: page,
+            can_view: hasPermission
+          });
+        }
+      }
+      if (permissionsToUpsert.length > 0) {
+        const {
+          error: permsError
+        } = await supabase.from('plan_role_permissions').upsert(permissionsToUpsert, {
+          onConflict: 'plan_id, role, page_name'
+        });
+        if (permsError) throw permsError;
+      }
+      toast({
+        title: 'Plan settings saved successfully!'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error Saving Settings',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+  if (loading || profileLoading) {
+    return <div className="flex justify-center items-center h-full"><Loader2 className="h-16 w-16 animate-spin" /></div>;
+  }
+  if (profile?.user_type !== 'super_admin') {
+    return <div className="p-4 text-center text-muted-foreground">
+                You do not have permission to view this page.
+            </div>;
+  }
+  return <>
+            <Helmet><title>Plan Permissions Management - WhistleBlower.ng</title></Helmet>
+            <div className="space-y-8">
+                <div>
+                    <h1 className="text-3xl font-bold">Plan Management</h1>
+                    <p className="text-muted-foreground">Control which features each plan can access and set report limits.</p>
+                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList>
+                        {plans.map(plan => <TabsTrigger key={plan.id} value={plan.id}>{plan.name}</TabsTrigger>)}
+                    </TabsList>
+                    {plans.map(plan => {
+          const rolesForPlan = getRolesForPlan(plan.name);
+          return <TabsContent key={plan.id} value={plan.id}>
+                                <Card>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-center">
+                                            <CardTitle>{plan.name} Plan Settings</CardTitle>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Label htmlFor={`limit-${plan.id}`}>Monthly Report Limit</Label>
+                                                    <Input id={`limit-${plan.id}`} type="number" className="w-24" value={reportLimits[plan.id] || 0} onChange={e => handleReportLimitChange(plan.id, parseInt(e.target.value, 10))} />
+                                                </div>
+                                                <Button onClick={() => handleSaveChanges(plan.id, rolesForPlan)} disabled={saving}>
+                                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                                    Save Plan Settings
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="border rounded-lg overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead className="w-[250px] font-bold">PAGE / FEATURE</TableHead>
+                                                        {rolesForPlan.map(role => <TableHead key={role.key} className="text-center font-bold">{role.label.toUpperCase()}</TableHead>)}
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {availablePages.map(page => <TableRow key={page}>
+                                                            <TableCell className="font-medium">{page}</TableCell>
+                                                            {rolesForPlan.map(role => <TableCell key={role.key} className="text-center">
+                                                                    <Switch checked={permissions[plan.id]?.[role.key]?.[page] || false} onCheckedChange={checked => handlePermissionChange(plan.id, role.key, page, checked)} />
+                                                                </TableCell>)}
+                                                        </TableRow>)}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>;
+        })}
+                </Tabs>
+            </div>
+        </>;
+};
+export default PlanManagement;

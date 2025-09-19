@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 26 100% 50%; /* #ff5100 */
+  --primary-foreground: 355 100% 97%;
+  --secondary: 210 40% 98%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 98%;
+  --muted-foreground: 220 8.9% 43.1%; /* #707070 */
+  --accent: 210 40% 98%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 26 100% 50%;
+  --radius: 0rem;
+}
+
+.dark {
+  --background: 0 0% 4%; /* #0f0f0f */
+  --foreground: 210 40% 98%;
+  --card: 0 0% 7.1%; /* #121212 */
+  --card-foreground: 210 40% 98%;
+  --popover: 0 0% 7.1%; /* #121212 */
+  --popover-foreground: 210 40% 98%;
+  --primary: 26 100% 50%; /* #ff5100 */
+  --primary-foreground: 355 100% 97%;
+  --secondary: 0 0% 17.9%; /* #2e2e2e */
+  --secondary-foreground: 210 40% 98%;
+  --muted: 0 0% 7.1%; /* #121212 */
+  --muted-foreground: 0 0% 70.6%; /* #b4b4b4 */
+  --accent: 0 0% 17.9%; /* #2e2e2e */
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 0 0% 17.9%; /* #2e2e2e */
+  --input: 0 0% 17.9%; /* #2e2e2e */
+  --ring: 26 100% 50%;
+}
+
+* {
+  border-color: hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ff7e4d, #ff5100);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-pattern {
+  background-image: 
+    radial-gradient(circle at 25px 25px, rgba(255, 81, 0, 0.1) 2px, transparent 0),
+    radial-gradient(circle at 75px 75px, rgba(255, 81, 0, 0.05) 2px, transparent 0);
+  background-size: 100px 100px;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(18, 18, 18, 0.5); /* #121212 with opacity */
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark body {
+  background-color: #0f0f0f;
+}
+
+.dark .bg-muted\/40 {
+    background-color: #121212;
+}
