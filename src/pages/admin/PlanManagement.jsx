@@ -11,6 +11,9 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useAdminData } from '@/contexts/AdminDataContext';
+import PageContentWrapper from '@/components/admin/PageContentWrapper';
+import PageHeader from '@/components/admin/PageHeader';
 const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'News Editor', 'Bounty Details'];
 const allRoles = [{
   key: 'super_admin',
@@ -33,23 +36,16 @@ const PlanManagement = () => {
   const [permissions, setPermissions] = useState({});
   const [reportLimits, setReportLimits] = useState({});
   const [activeTab, setActiveTab] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const {
-    toast
-  } = useToast();
-  const {
-    profile,
-    loading: profileLoading
-  } = useAuth();
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const { toast } = useToast();
+  const { profile, loading: profileLoading } = useAuth();
+  const { fetchPlans, loading } = useAdminData();
+  
+  const loadPlansData = useCallback(async () => {
+    if (profile?.user_type !== 'super_admin') return;
+    
     try {
-      const {
-        data: plansData,
-        error: plansError
-      } = await supabase.from('plans').select('*').order('price');
-      if (plansError) throw plansError;
+      const plansData = await fetchPlans();
       setPlans(plansData);
       if (plansData.length > 0) {
         setActiveTab(plansData[0].id);
@@ -59,11 +55,12 @@ const PlanManagement = () => {
         }, {});
         setReportLimits(limits);
       }
-      const {
-        data: permsData,
-        error: permsError
-      } = await supabase.from('plan_role_permissions').select('*');
+      
+      const { data: permsData, error: permsError } = await supabase
+        .from('plan_role_permissions')
+        .select('*');
       if (permsError) throw permsError;
+      
       const formattedPermissions = permsData.reduce((acc, p) => {
         if (!acc[p.plan_id]) acc[p.plan_id] = {};
         if (!acc[p.plan_id][p.role]) acc[p.plan_id][p.role] = {};
@@ -71,23 +68,22 @@ const PlanManagement = () => {
         return acc;
       }, {});
       setPermissions(formattedPermissions);
+      
     } catch (error) {
+      console.error('Failed to load plans data:', error);
       toast({
         title: 'Error fetching data',
         description: error.message,
         variant: 'destructive'
       });
-    } finally {
-      setLoading(false);
     }
-  }, [toast]);
+  }, [profile?.user_type, fetchPlans, toast]);
+
   useEffect(() => {
-    if (profile?.user_type === 'super_admin') {
-      fetchData();
-    } else if (!profileLoading) {
-      setLoading(false);
+    if (!profileLoading) {
+      loadPlansData();
     }
-  }, [profile, profileLoading, fetchData]);
+  }, [profileLoading, loadPlansData]);
   const getRolesForPlan = planName => {
     const standardRoles = allRoles.filter(r => r.key !== 'super_admin');
     if (planName === 'Executive') {
@@ -158,9 +154,6 @@ const PlanManagement = () => {
       setSaving(false);
     }
   };
-  if (loading || profileLoading) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="h-16 w-16 animate-spin" /></div>;
-  }
   if (profile?.user_type !== 'super_admin') {
     return <div className="p-4 text-center text-muted-foreground">
                 You do not have permission to view this page.
@@ -168,22 +161,21 @@ const PlanManagement = () => {
   }
   return <>
             <Helmet><title>Plan Permissions Management - WhistleBlower.ng</title></Helmet>
-            <div className="space-y-8">
-                <div>
-                    <h1 className="text-3xl font-bold">Plan Management</h1>
-                    <p className="text-muted-foreground">Control which features each plan can access and set report limits.</p>
-                </div>
+            <PageContentWrapper loading={loading.plans || profileLoading} loadingText="Loading plan management data...">
+              <div className="space-y-8">
+                <PageHeader 
+                  title="Plan Management" 
+                  description="Control which features each plan can access and set report limits."
+                />
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList>
                         {plans.map(plan => <TabsTrigger key={plan.id} value={plan.id}>{plan.name}</TabsTrigger>)}
                     </TabsList>
                     {plans.map(plan => {
           const rolesForPlan = getRolesForPlan(plan.name);
-          return <TabsContent key={plan.id} value={plan.id}>
-                                <Card>
-                                    <CardHeader>
+          return <TabsContent key={plan.id} value={plan.id} className="space-y-6">
                                         <div className="flex justify-between items-center">
-                                            <CardTitle>{plan.name} Plan Settings</CardTitle>
+                                            <h3 className="text-xl font-semibold">{plan.name} Plan Settings</h3>
                                             <div className="flex items-center gap-4">
                                                 <div className="flex items-center gap-2">
                                                     <Label htmlFor={`limit-${plan.id}`}>Monthly Report Limit</Label>
@@ -195,8 +187,6 @@ const PlanManagement = () => {
                                                 </Button>
                                             </div>
                                         </div>
-                                    </CardHeader>
-                                    <CardContent>
                                         <div className="border rounded-lg overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
@@ -215,12 +205,11 @@ const PlanManagement = () => {
                                                 </TableBody>
                                             </Table>
                                         </div>
-                                    </CardContent>
-                                </Card>
                             </TabsContent>;
         })}
                 </Tabs>
-            </div>
+              </div>
+            </PageContentWrapper>
         </>;
 };
 export default PlanManagement;

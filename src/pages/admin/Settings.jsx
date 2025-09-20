@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Loader2 } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 
 const ProfileSettings = () => {
     const { toast } = useToast();
@@ -73,21 +74,21 @@ const ProfileSettings = () => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 [&_*]:!transition-none [&_*]:!animate-none">
             <Card>
                 <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2"><Label htmlFor="name">Full Name</Label><Input id="name" value={name} onChange={e => setName(e.target.value)} /></div>
-                    <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} disabled/></div>
-                    <Button onClick={handleProfileUpdate} disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} Update Profile</Button>
+                    <div className="space-y-2"><Label htmlFor="name">Full Name</Label><Input id="name" value={name} onChange={e => setName(e.target.value)} className="!transition-none" /></div>
+                    <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} disabled className="!transition-none"/></div>
+                    <Button onClick={handleProfileUpdate} disabled={loading} className="!transition-none">{loading ? <Loader2 className="mr-2 h-4 w-4"/> : null} Update Profile</Button>
                 </CardContent>
             </Card>
              <Card>
                 <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2"><Label htmlFor="new-password">New Password</Label><Input id="new-password" type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
-                    <div className="space-y-2"><Label htmlFor="confirm-password">Confirm New Password</Label><Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></div>
-                    <Button onClick={handlePasswordUpdate} disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} Update Password</Button>
+                    <div className="space-y-2"><Label htmlFor="new-password">New Password</Label><Input id="new-password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="!transition-none" /></div>
+                    <div className="space-y-2"><Label htmlFor="confirm-password">Confirm New Password</Label><Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="!transition-none" /></div>
+                    <Button onClick={handlePasswordUpdate} disabled={loading} className="!transition-none">{loading ? <Loader2 className="mr-2 h-4 w-4"/> : null} Update Password</Button>
                 </CardContent>
             </Card>
         </div>
@@ -99,6 +100,7 @@ const Settings = () => {
   const { toast } = useToast();
   const { profile, loading: profileLoading } = useUserProfile();
   const [loading, setLoading] = useState(true);
+  const settingsLoadedRef = useRef(false);
   const [appSettings, setAppSettings] = useState({
     maintenance_mode: false,
     smtp_host: '',
@@ -114,6 +116,9 @@ const Settings = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
+      // Prevent refetching if already loaded
+      if (settingsLoadedRef.current) return;
+      
       setLoading(true);
       const { data, error } = await supabase.from('app_settings').select('*').limit(1).single();
       if (data) {
@@ -124,13 +129,15 @@ const Settings = () => {
         toast({ variant: 'destructive', title: 'Error fetching settings', description: error.message });
       }
       setLoading(false);
+      settingsLoadedRef.current = true;
     };
+    
     if(profile?.user_type === 'super_admin'){
         fetchSettings();
     } else {
         setLoading(false);
     }
-  }, [toast, profile]);
+  }, [toast, profile?.user_type]); // Only depend on user_type, not the entire profile object
   
   const handleSettingChange = (key, value) => {
     setAppSettings(prev => ({...prev, [key]: value}));
@@ -150,26 +157,46 @@ const Settings = () => {
 
   const isSuperAdmin = profile?.user_type === 'super_admin';
 
-  if(loading || profileLoading) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  if(loading || profileLoading) {
+    return (
+      <>
+        <Helmet><title>Loading Settings - WhistleBlower.ng</title></Helmet>
+        <NavbarLoader />
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold">Settings</h1>
+            {/* Placeholder for save button to prevent layout shift */}
+            <div className="w-32 h-10"></div>
+          </div>
+          
+          {/* Placeholder tabs structure to prevent layout shift */}
+          <div className="space-y-4">
+            <div className="h-10 bg-muted/20 rounded"></div>
+            <div className="h-96 bg-muted/20 rounded"></div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       <Helmet>
         <title>Settings - WhistleBlower.ng</title>
       </Helmet>
-      <div className="space-y-8">
+      <div className="space-y-8 [&_*]:!transition-none [&_*]:!animate-none">
         <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">Settings</h1>
-            {isSuperAdmin && <Button onClick={handleSaveSettings} disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Save All Settings</Button>}
+            {isSuperAdmin && <Button onClick={handleSaveSettings} disabled={loading} className="!transition-none">{loading ? <Loader2 className="mr-2 h-4 w-4" /> : null}Save All Settings</Button>}
         </div>
         
-        <Tabs defaultValue="profile">
-          <TabsList>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            {isSuperAdmin && <TabsTrigger value="general">General</TabsTrigger>}
-            {isSuperAdmin && <TabsTrigger value="email">Email (SMTP)</TabsTrigger>}
-            {isSuperAdmin && <TabsTrigger value="payments">Payments (Interswitch)</TabsTrigger>}
-            {isSuperAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
+        <Tabs defaultValue="profile" className="[&_*]:!transition-none">
+          <TabsList className="!transition-none">
+            <TabsTrigger value="profile" className="!transition-none">Profile</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="general" className="!transition-none">General</TabsTrigger>}
+            {isSuperAdmin && <TabsTrigger value="email" className="!transition-none">Email (SMTP)</TabsTrigger>}
+            {isSuperAdmin && <TabsTrigger value="payments" className="!transition-none">Payments (Interswitch)</TabsTrigger>}
+            {isSuperAdmin && <TabsTrigger value="notifications" className="!transition-none">Notifications</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="profile" className="mt-4">

@@ -91,3 +91,39 @@ body {
 .dark .bg-muted\/40 {
     background-color: #121212;
 }
+
+/* NavbarLoader - Animated progress bar for admin dashboard loading states */
+.navbar-loader {
+  position: fixed;
+  top: 64px; /* Exactly below dashboard header (h-16 = 64px) */
+  left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 60; /* Higher than other UI elements to ensure visibility */
+  background-color: transparent;
+}
+
+/* Animated progress bar with orange gradient */
+.navbar-progress-orange {
+  height: 100%;
+  width: 0%;
+  background-image: linear-gradient(90deg, #ff7e4d, #ff5100, #ff4500, #ff6b35, #ff5100, #ff7e4d);
+  background-size: 400% 100%;
+  animation: navbar-progress-fill 2s ease-in-out infinite;
+}
+
+/* Smooth fill and gradient animation */
+@keyframes navbar-progress-fill {
+  0% { 
+    width: 0%; 
+    background-position: 0% 50%; 
+  }
+  50% { 
+    width: 100%; 
+    background-position: 100% 50%; 
+  }
+  100% { 
+    width: 0%; 
+    background-position: 0% 50%; 
+  }
+}

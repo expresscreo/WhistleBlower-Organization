@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { format } from 'date-fns';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PageHeader from '@/components/admin/PageHeader';
 
 const LOGS_PER_PAGE = 19;
 
@@ -21,10 +23,31 @@ const AuditLogs = () => {
   const [availableActions, setAvailableActions] = useState([]);
   const { toast } = useToast();
   const { profile, loading: profileLoading } = useUserProfile();
+  
+  // Refs to prevent unnecessary re-fetching
+  const hasInitialData = useRef(false);
+  const lastFetchTime = useRef(0);
+  const fetchLogsRef = useRef(null);
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (forceRefresh = false) => {
     if (!profile) return;
+    
+    // Prevent unnecessary re-fetching
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    
+    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
+    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
+      return;
+    }
+    
+    // Skip fetch if page is not visible and not forced
+    if (!forceRefresh && document.visibilityState !== 'visible') {
+      return;
+    }
+    
     setLoading(true);
+    lastFetchTime.current = now;
 
     const from = (currentPage - 1) * LOGS_PER_PAGE;
     const to = from + LOGS_PER_PAGE - 1;
@@ -50,12 +73,21 @@ const AuditLogs = () => {
     } else {
       setLogs(data);
       setTotalPages(Math.ceil(count / LOGS_PER_PAGE));
+      hasInitialData.current = true;
     }
     setLoading(false);
   }, [toast, profile, currentPage, actionFilter]);
 
-  const fetchAvailableActions = useCallback(async () => {
+  // Store the latest fetchLogs in ref
+  fetchLogsRef.current = fetchLogs;
+
+  const fetchAvailableActions = useCallback(async (forceRefresh = false) => {
       if (!profile) return;
+      
+      // Only fetch actions once or when forced
+      if (availableActions.length > 0 && !forceRefresh) {
+        return;
+      }
 
       let query = supabase.from('audit_logs').select('action', { count: 'exact' });
       
@@ -71,15 +103,18 @@ const AuditLogs = () => {
           const uniqueActions = [...new Set(data.map(item => item.action))];
           setAvailableActions(uniqueActions);
       }
-  }, [profile, toast]);
+  }, [profile, toast, availableActions.length]);
 
 
+  // Initial data fetch - only runs when profile is loaded or when page/filter changes
   useEffect(() => {
-    if (!profileLoading) {
-      fetchLogs();
-      fetchAvailableActions();
+    if (!profileLoading && profile) {
+      // Always fetch logs when page or filter changes (this is expected behavior)
+      fetchLogs(true);
+      // Only fetch available actions once
+      fetchAvailableActions(true);
     }
-  }, [profile, profileLoading, currentPage, actionFilter, fetchLogs, fetchAvailableActions]);
+  }, [profileLoading, profile?.id, currentPage, actionFilter]); // Only depend on stable references and expected changes
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -91,27 +126,23 @@ const AuditLogs = () => {
     <>
       <Helmet><title>Audit Logs - WhistleBlower.ng</title></Helmet>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Audit Logs</h1>
+        <PageHeader 
+          title="Audit Logs"
+          description="Track important actions performed within the system."
+        >
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filter by action..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Actions</SelectItem>
+              {availableActions.map(action => (
+                <SelectItem key={action} value={action}>{action}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </PageHeader>
+        
+        {/* Audit Logs Table */}
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-                <div>
-                    <CardTitle>Activity History</CardTitle>
-                    <CardDescription>Track important actions performed within the system.</CardDescription>
-                </div>
-                <div className="w-1/4">
-                    <Select value={actionFilter} onValueChange={setActionFilter}>
-                        <SelectTrigger><SelectValue placeholder="Filter by action..." /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Actions</SelectItem>
-                            {availableActions.map(action => (
-                                <SelectItem key={action} value={action}>{action}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -123,7 +154,12 @@ const AuditLogs = () => {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan="3" className="text-center h-48"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></TableCell></TableRow>
+                  <>
+                    <NavbarLoader />
+                    <TableRow><TableCell colSpan="3" className="text-center h-48">
+                      {/* Loading indication is handled by NavbarLoader */}
+                    </TableCell></TableRow>
+                  </>
                 ) : logs.length > 0 ? (
                   logs.map(log => (
                     <TableRow key={log.id}>

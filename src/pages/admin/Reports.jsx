@@ -6,18 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, MessageSquare, Building, Calendar, Paperclip, ChevronLeft, ChevronRight, FileUp, Mic } from 'lucide-react';
+import { Loader2, MessageSquare, Building, Calendar, Paperclip, ChevronLeft, ChevronRight, FileUp, Mic, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useAdminData } from '@/contexts/AdminDataContext';
+import PageContentWrapper from '@/components/admin/PageContentWrapper';
+import PageHeader from '@/components/admin/PageHeader';
 
 const REPORTS_PER_PAGE = 18;
 
 const Reports = () => {
   const [allReports, setAllReports] = useState([]);
   const [displayedReports, setDisplayedReports] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState({
@@ -27,34 +28,26 @@ const Reports = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useAuth();
+  const { fetchReports, loading } = useAdminData();
 
-  const fetchReports = useCallback(async () => {
-    if (!profile) return;
-    setLoading(true);
-
-    const { data, error } = await supabase.rpc('get_reports_for_user', {
-        user_id_param: profile.id,
-        user_role_param: profile.user_type,
-        organization_id_param: profile.organization_id
-    });
-
-    if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching reports', description: error.message });
+  const loadReports = useCallback(async () => {
+    if (!profile || profileLoading) return;
+    
+    try {
+      const data = await fetchReports();
+      setAllReports(data);
+    } catch (error) {
+      // Error handling is done in the context
+      console.error('Failed to load reports:', error);
       setAllReports([]);
-    } else {
-        setAllReports(data);
     }
-    setLoading(false);
-  }, [toast, profile]);
+  }, [profile, profileLoading, fetchReports]);
   
   useEffect(() => {
-    if (!profileLoading && profile) {
-      fetchReports();
-    }
-  }, [fetchReports, profileLoading, profile]);
+    loadReports();
+  }, [loadReports]);
 
   useEffect(() => {
     let filtered = allReports;
@@ -107,47 +100,58 @@ const Reports = () => {
   return (
     <>
       <Helmet><title>Reports - WhistleBlower.ng</title></Helmet>
-      <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Reports</h1>
-        <Card>
-          <CardHeader>
-            <CardTitle>All Reports</CardTitle>
-            <CardDescription>Review, manage, and track all submitted reports.</CardDescription>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-              <Input className="lg:col-span-2" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {Object.keys(statusConfig).map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
-                  <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Fraud">Fraud</SelectItem>
-                      <SelectItem value="Corruption">Corruption</SelectItem>
-                      <SelectItem value="Misconduct">Misconduct</SelectItem>
-                      <SelectItem value="Harassment">Harassment</SelectItem>
-                      <SelectItem value="Safety Violation">Safety Violation</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-              </Select>
-              <Select value={filters.sortBy} onValueChange={(v) => handleFilterChange('sortBy', v)}>
-                <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="updated">Recently Updated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading || profileLoading ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <PageContentWrapper loading={loading.reports} loadingText="Loading reports...">
+        <div className="space-y-8">
+          <PageHeader 
+            title="Reports" 
+            description="Review, manage, and track all submitted reports."
+          />
+          
+          {/* Search, Sort and Filters - ALL on the same line */}
+          <div className="flex gap-4 items-center">
+            <Input 
+              placeholder="Search by ID or title..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+            <Select value={filters.sortBy} onValueChange={(v) => handleFilterChange('sortBy', v)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="updated">Recently Updated</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {Object.keys(statusConfig).map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Fraud">Fraud</SelectItem>
+                <SelectItem value="Corruption">Corruption</SelectItem>
+                <SelectItem value="Misconduct">Misconduct</SelectItem>
+                <SelectItem value="Harassment">Harassment</SelectItem>
+                <SelectItem value="Safety Violation">Safety Violation</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Reports Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {displayedReports.map(report => {
                       const currentStatus = statusConfig[report.status] || { progress: 0, color: 'bg-gray-400', tag: 'bg-gray-100 text-gray-800' };
                       
@@ -185,20 +189,27 @@ const Reports = () => {
                           </Card>
                       )
                   })}
-                </div>
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center space-x-4 mt-8">
-                    <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
-                    <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
-                    <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="h-4 w-4" /></Button>
-                  </div>
-                )}
-              </>
+            </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-4 mt-8">
+                <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
+                <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+                <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="h-4 w-4" /></Button>
+              </div>
             )}
-            {!loading && !profileLoading && displayedReports.length === 0 && <div className="text-center py-8 text-muted-foreground">No reports match the current filters.</div>}
-          </CardContent>
-        </Card>
-      </div>
+
+            {/* Empty State */}
+            {displayedReports.length === 0 && (
+              <div className="text-center py-16 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">No reports match the current filters.</p>
+                <p className="text-sm">Try adjusting your search criteria.</p>
+              </div>
+            )}
+        </div>
+      </PageContentWrapper>
     </>
   );
 };

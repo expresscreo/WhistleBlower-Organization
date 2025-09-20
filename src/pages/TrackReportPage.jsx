@@ -33,19 +33,37 @@ const TrackReportPage = ({ reportId, password }) => {
     if (error) console.error("Error marking messages as read:", error);
   }, []);
 
-  const fetchUpdates = useCallback(async (currentReportData) => {
+  const fetchUpdates = useCallback(async (currentReportData, forceRefresh = false) => {
     if (!currentReportData) return;
+    
+    // Skip fetch if page is not visible and not forced
+    if (!forceRefresh && document.visibilityState !== 'visible') {
+      return;
+    }
+    
     const { data, error } = await supabase.from('report_updates').select('*').eq('report_id', currentReportData.id).order('created_at', { ascending: true });
     if (!error) {
       setUpdates(data);
     }
   }, []);
 
+  // Debounced version to prevent rapid successive calls
+  const debouncedFetchUpdates = useCallback(() => {
+    if (!reportData) return;
+    const timeoutId = setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        fetchUpdates(reportData, true);
+      }
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [reportData, fetchUpdates]);
+
   const setAuthenticatedState = useCallback(async (report) => {
     setReportData(report);
     setAuthenticated(true);
     await markMessagesAsRead(report.id);
-    await fetchUpdates(report);
+    await fetchUpdates(report, true);
   }, [markMessagesAsRead, fetchUpdates]);
 
   const handleLogout = useCallback(() => {
@@ -95,7 +113,7 @@ const TrackReportPage = ({ reportId, password }) => {
         const channel = supabase
             .channel(`report_updates_${reportData.id}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'report_updates', filter: `report_id=eq.${reportData.id}` }, async (payload) => {
-                fetchUpdates(reportData);
+                fetchUpdates(reportData, true);
                 if (document.visibilityState === 'visible') {
                     await markMessagesAsRead(reportData.id);
                 }
@@ -108,7 +126,8 @@ const TrackReportPage = ({ reportId, password }) => {
         const handleVisibilityChange = async () => {
             if (document.visibilityState === 'visible') {
                 await markMessagesAsRead(reportData.id);
-                fetchUpdates(reportData);
+                // Use debounced fetch to prevent rapid successive calls
+                debouncedFetchUpdates();
             }
         };
 
@@ -137,7 +156,7 @@ const TrackReportPage = ({ reportId, password }) => {
         setUpdates(prev => prev.filter(u => u.id !== tempId));
     } else {
         await supabase.from('reports').update({ admin_has_viewed: false }).eq('id', reportData.id);
-        fetchUpdates(reportData);
+        fetchUpdates(reportData, true);
     }
     setIsSending(false);
   };

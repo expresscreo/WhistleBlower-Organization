@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, MessageSquare, Calendar, Paperclip, Award, FileText, Info } from 'lucide-react';
+import { Loader2, MessageSquare, Calendar, Paperclip, Award, FileText, Info, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useAdminData } from '@/contexts/AdminDataContext';
+import PageContentWrapper from '@/components/admin/PageContentWrapper';
+import PageHeader from '@/components/admin/PageHeader';
 
 const ITEMS_PER_PAGE = 18;
 const NairaSign = () => <span className="font-sans">₦</span>;
@@ -22,33 +23,27 @@ const toTitleCase = (str) => {
 const BountiesManagement = () => {
     const [allItems, setAllItems] = useState([]);
     const [displayedItems, setDisplayedItems] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({ status: 'all', sortBy: 'newest', type: 'all' });
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const { toast } = useToast();
     const navigate = useNavigate();
+    const { fetchBounties, loading } = useAdminData();
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        const { data: bounties, error: bountiesError } = await supabase.from('bounties').select('*').eq('is_trashed', false);
-        const { data: reports, error: reportsError } = await supabase.from('reports').select('*, bounty_reports!inner(bounty_id)').eq('category', 'Bounty').eq('is_trashed', false);
-
-        if (bountiesError || reportsError) {
-            toast({ variant: 'destructive', title: 'Error fetching data', description: bountiesError?.message || reportsError?.message });
+    const loadBountiesData = useCallback(async () => {
+        try {
+            const data = await fetchBounties();
+            setAllItems(data);
+        } catch (error) {
+            // Error handling is done in the context
+            console.error('Failed to load bounties data:', error);
             setAllItems([]);
-        } else {
-            const formattedBounties = bounties.map(b => ({ ...b, item_type: 'bounty' }));
-            const formattedReports = reports.map(r => ({ ...r, item_type: 'report', bounty_id: r.bounty_reports[0]?.bounty_id }));
-            setAllItems([...formattedBounties, ...formattedReports]);
         }
-        setLoading(false);
-    }, [toast]);
+    }, [fetchBounties]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        loadBountiesData();
+    }, [loadBountiesData]);
 
     useEffect(() => {
         let filtered = allItems;
@@ -95,34 +90,35 @@ const BountiesManagement = () => {
     return (
         <>
             <Helmet><title>Bounties Management - WhistleBlower.ng</title></Helmet>
-            <div className="space-y-8">
-                <h1 className="text-3xl font-bold">Bounties Management</h1>
-                <Card className="rounded-none">
-                    <CardHeader>
-                        <CardTitle>All Bounties & Reports</CardTitle>
-                        <CardDescription>Review placed bounties and incoming reports on them.</CardDescription>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-                            <Input className="lg:col-span-2 rounded-none" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                            <Select value={filters.type} onValueChange={(v) => setFilters(f => ({ ...f, type: v }))}>
-                                <SelectTrigger className="rounded-none"><SelectValue placeholder="Filter by Type" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Types</SelectItem>
-                                    <SelectItem value="bounty">Placed Bounty</SelectItem>
-                                    <SelectItem value="report">Bounty Report</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
-                                <SelectTrigger className="rounded-none"><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Statuses</SelectItem>
-                                    {Object.keys(statusConfig).map(key => <SelectItem key={key} value={key}>{toTitleCase(key)}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <PageContentWrapper loading={loading.bounties} loadingText="Loading bounties and reports...">
+                <div className="space-y-8">
+                    <PageHeader 
+                        title="Bounties Management" 
+                        description="Review placed bounties and incoming reports on them."
+                    />
+                    
+                    {/* Filters */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Input className="lg:col-span-2" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <Select value={filters.type} onValueChange={(v) => setFilters(f => ({ ...f, type: v }))}>
+                            <SelectTrigger><SelectValue placeholder="Filter by Type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value="bounty">Placed Bounty</SelectItem>
+                                <SelectItem value="report">Bounty Report</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
+                            <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                {Object.keys(statusConfig).map(key => <SelectItem key={key} value={key}>{toTitleCase(key)}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Bounties Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {displayedItems.map(item => {
                                     const isBounty = item.item_type === 'bounty';
                                     const currentStatus = statusConfig[item.status] || { progress: 0, color: 'bg-gray-400', tag: 'bg-gray-100 text-gray-800' };
@@ -153,24 +149,37 @@ const BountiesManagement = () => {
                                             </CardContent>
                                             <div className="p-4 pt-2 border-t mt-2">
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                                                    <div className={cn('flex items-center gap-2 font-semibold px-2 py-1 text-xs justify-start', currentStatus.tag)}>
-                                                        <Info className="w-4 h-4" />
-                                                        <span>{isBounty ? 'Placed Bounty' : 'Bounty Report'}</span>
+                                                    <div className="flex items-center gap-2 -ml-4">
+                                                        <div className={cn('flex items-center gap-2 font-semibold pl-0 py-1 text-xs relative overflow-hidden', 
+                                                            isBounty ? 'bg-red-500 text-white' : 'bg-green-500 text-white')} 
+                                                            style={{
+                                                                paddingRight: '16px',
+                                                                clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)'
+                                                            }}>
+                                                            <Info className="w-4 h-4 ml-4" />
+                                                            <span>{isBounty ? 'Placed Bounty' : 'Bounty Report'}</span>
+                                                        </div>
                                                     </div>
                                                     <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /><span className="font-semibold text-muted-foreground">{date ? format(new Date(date), 'MM/dd/yyyy') : 'N/A'}</span></div>
                                                     <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-primary" /><span className="font-semibold text-muted-foreground">{attachmentCount} attachment(s)</span></div>
-                                                    {isBounty && <div className="flex items-center gap-2 font-semibold text-primary"><NairaSign /><span>{item.bounty_amount ? Number(item.bounty_amount).toLocaleString() : 'No Reward'}</span></div>}
+                                                    {isBounty && <div className="flex items-center gap-2 font-semibold text-primary"><Banknote className="w-4 h-4" /><span className="font-black">{item.bounty_amount ? Number(item.bounty_amount).toLocaleString() : 'No Reward'}</span></div>}
                                                 </div>
                                             </div>
                                         </Card>
                                     );
                                 })}
+                        </div>
+
+                        {/* Empty State */}
+                        {displayedItems.length === 0 && (
+                            <div className="text-center py-16 text-muted-foreground">
+                                <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p className="text-lg">No items match the current filters.</p>
+                                <p className="text-sm">Try adjusting your search criteria.</p>
                             </div>
                         )}
-                        {!loading && displayedItems.length === 0 && <div className="text-center py-8 text-muted-foreground">No items match the current filters.</div>}
-                    </CardContent>
-                </Card>
-            </div>
+                </div>
+            </PageContentWrapper>
         </>
     );
 };

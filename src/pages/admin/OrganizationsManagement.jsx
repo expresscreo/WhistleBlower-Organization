@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Ban, CheckCircle, ChevronDown, Loader2, QrCode, Link2Off, MessageSquare } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import QRCode from 'qrcode';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import PageHeader from '@/components/admin/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -27,6 +29,8 @@ const OrganizationsManagement = () => {
     const [organizations, setOrganizations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedPlan, setSelectedPlan] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -46,7 +50,6 @@ const OrganizationsManagement = () => {
         if (searchTerm) {
             query = query.ilike('name', `%${searchTerm}%`);
         }
-        query = query.order('created_at', { ascending: false });
 
         const { data, error } = await query;
         if (error) {
@@ -66,10 +69,24 @@ const OrganizationsManagement = () => {
                 
                 return { ...org, reports_used_this_month: countError ? 0 : count };
             }));
-            setOrganizations(orgsWithReportCount);
+            // Filter organizations based on selected filters
+            let filteredOrgs = orgsWithReportCount;
+            
+            if (selectedPlan !== 'all') {
+                filteredOrgs = filteredOrgs.filter(org => org.plans?.name === selectedPlan);
+            }
+            
+            if (selectedStatus !== 'all') {
+                filteredOrgs = filteredOrgs.filter(org => org.status === selectedStatus);
+            }
+            
+            // Sort by name by default
+            filteredOrgs.sort((a, b) => a.name.localeCompare(b.name));
+            
+            setOrganizations(filteredOrgs);
         }
         setLoading(false);
-    }, [searchTerm, toast]);
+    }, [searchTerm, selectedPlan, selectedStatus, toast]);
 
     useEffect(() => {
         fetchOrganizations();
@@ -190,23 +207,59 @@ const OrganizationsManagement = () => {
         <>
             <Helmet><title>Organizations Management - WhistleBlower.ng</title></Helmet>
             <div className="space-y-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h1 className="text-3xl font-bold">Organizations Management</h1>
-                    <div className="flex gap-2">
-                        <Link to="/admin/unmatched-organizations">
-                            <Button variant="outline"><Link2Off className="mr-2 h-4 w-4" />Review Unmatched</Button>
-                        </Link>
-                        <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Add Organization</Button>
-                    </div>
+                <PageHeader 
+                    title="Organizations Management"
+                    description="Manage partner organizations and their details."
+                >
+                    <Link to="/admin/unmatched-organizations">
+                        <Button variant="outline"><Link2Off className="mr-2 h-4 w-4" />Review Unmatched</Button>
+                    </Link>
+                    <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Add Organization</Button>
+                </PageHeader>
+                
+                {/* Search and Filters */}
+                <div className="flex gap-4 items-center">
+                    <Input 
+                        placeholder="Search organizations..." 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1"
+                    />
+                    <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filter by Plan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Plans</SelectItem>
+                            {plans.map(plan => (
+                                <SelectItem key={plan.id} value={plan.name}>{plan.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filter by Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="suspended">Suspended</SelectItem>
+                            <SelectItem value="pending_payment">Pending Payment</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
+                
+                {/* Organizations Table */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle>All Organizations</CardTitle>
-                        <CardDescription>Manage partner organizations and their details.</CardDescription>
-                        <div className="mt-4"><Input placeholder="Search organizations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-                    </CardHeader>
                     <CardContent>
-                        {loading ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
+                        {loading ? (
+                            <>
+                                <NavbarLoader />
+                                <div className="flex justify-center p-8">
+                                    {/* Loading indication is handled by NavbarLoader */}
+                                </div>
+                            </>
+                        ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>

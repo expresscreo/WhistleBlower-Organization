@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import ReportActions from '@/components/admin/report-details/ReportActions';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import ReportChat from '@/components/admin/report-details/ReportChat';
 import ReportAssignment from '@/components/admin/report-details/ReportAssignment';
 import ReportInfoCard from '@/components/admin/report-details/ReportInfoCard';
@@ -29,6 +30,12 @@ const ReportDetails = () => {
   const [orgUsers, setOrgUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   
+  // Refs to prevent unnecessary re-fetching
+  const hasInitialData = useRef(false);
+  const lastFetchTime = useRef(0);
+  const fetchReportDetailsRef = useRef(null);
+  const fetchUpdatesRef = useRef(null);
+  
   const canAssign = !profileLoading && (profile?.user_type === 'super_admin' || profile?.user_type === 'executive_admin' || profile?.user_type === 'organization_admin');
 
   const markMessagesAsRead = useCallback(async (reportId, readerId) => {
@@ -40,8 +47,30 @@ const ReportDetails = () => {
     if (error) console.error("Error marking messages as read:", error);
   }, []);
 
-  const fetchUpdates = useCallback(async () => {
+  const fetchUpdates = useCallback(async (forceRefresh = false) => {
+      console.log('fetchUpdates (ReportDetails) called:', { forceRefresh, hasData: hasInitialData.current, reportId: id });
+      
       if(!id) return;
+      
+      // Prevent unnecessary re-fetching
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastFetchTime.current;
+      
+      // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
+      if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
+        console.log('Skipping fetch - too soon since last fetch');
+        return;
+      }
+      
+      // Skip fetch if page is not visible and not forced
+      if (!forceRefresh && document.visibilityState !== 'visible') {
+        console.log('Skipping fetch - page not visible');
+        return;
+      }
+      
+      console.log('Actually fetching report updates...');
+      lastFetchTime.current = now;
+      
       try {
         const { data: updatesData, error: updatesError } = await supabase.from('report_updates').select('*, users(name)').eq('report_id', id).order('created_at', { ascending: true });
         if (updatesError) throw updatesError;
@@ -51,9 +80,43 @@ const ReportDetails = () => {
       }
   }, [id, toast]);
 
-  const fetchReportDetails = useCallback(async () => {
+  // Debounced version to prevent rapid successive calls
+  const debouncedFetchUpdates = useCallback(() => {
+    if (!id) return;
+    const timeoutId = setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        fetchUpdates(true);
+      }
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [id, fetchUpdates]);
+
+  const fetchReportDetails = useCallback(async (forceRefresh = false) => {
+    console.log('fetchReportDetails called:', { forceRefresh, hasData: hasInitialData.current, reportId: id });
+    
     if(!id || !profile) return;
+    
+    // Prevent unnecessary re-fetching
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    
+    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
+    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
+      console.log('Skipping fetch - too soon since last fetch');
+      return;
+    }
+    
+    // Skip fetch if page is not visible and not forced
+    if (!forceRefresh && document.visibilityState !== 'visible') {
+      console.log('Skipping fetch - page not visible');
+      return;
+    }
+    
+    console.log('Actually fetching report details...');
     setLoading(true);
+    lastFetchTime.current = now;
+    
     try {
       const { data: reportData, error: reportError } = await supabase.from('reports').select('*, organizations(name)').eq('id', id).single();
       
@@ -66,7 +129,7 @@ const ReportDetails = () => {
 
       setReport(reportData);
       await markMessagesAsRead(reportData.id, user.id);
-      fetchUpdates();
+      fetchUpdates(true);
 
       if (reportData.organization_id && canAssign) {
           const { data: usersData, error: usersError } = await supabase.from('users').select('id, name, user_type').eq('organization_id', reportData.organization_id);
@@ -82,6 +145,7 @@ const ReportDetails = () => {
       }
 
       await supabase.from('reports').update({ admin_has_viewed: true }).eq('id', id);
+      hasInitialData.current = true;
     } catch (error) {
        toast({ title: 'Error fetching report details', description: error.message, variant: 'destructive' });
        setReport(null);
@@ -90,11 +154,16 @@ const ReportDetails = () => {
     }
   }, [id, toast, canAssign, profile, navigate, user, markMessagesAsRead, fetchUpdates]);
 
+  // Store the latest fetch functions in refs
+  fetchReportDetailsRef.current = fetchReportDetails;
+  fetchUpdatesRef.current = fetchUpdates;
+
+  // Initial data fetch - only runs once when profile is loaded
   useEffect(() => {
-    if (!profileLoading) {
-      fetchReportDetails();
+    if (!profileLoading && profile && !hasInitialData.current) {
+        fetchReportDetails(true); // Force initial fetch
     }
-  }, [fetchReportDetails, profileLoading]);
+  }, [profileLoading, profile?.id, id]); // Only depend on stable references
 
   useEffect(() => {
     if (id && user?.id) {
@@ -102,7 +171,7 @@ const ReportDetails = () => {
             .channel(`report_updates_${id}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'report_updates', filter: `report_id=eq.${id}` }, async (payload) => {
                 if (payload.new?.updated_by !== user.id) {
-                    await fetchUpdates();
+                    await fetchUpdates(true);
                 }
                 if (document.visibilityState === 'visible') {
                     await markMessagesAsRead(id, user.id);
@@ -110,21 +179,23 @@ const ReportDetails = () => {
             })
             .subscribe();
 
-        const handleVisibilityChange = async () => {
-            if (document.visibilityState === 'visible') {
-                await markMessagesAsRead(id, user.id);
-                await fetchUpdates();
-            }
-        };
+        // Disable visibility change handler completely to prevent reloading
+        // const handleVisibilityChange = async () => {
+        //     if (document.visibilityState === 'visible') {
+        //         await markMessagesAsRead(id, user.id);
+        //         // Use debounced fetch to prevent rapid successive calls
+        //         debouncedFetchUpdates();
+        //     }
+        // };
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        // document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
             supabase.removeChannel(channel);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            // document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }
-  }, [id, user?.id, fetchUpdates, markMessagesAsRead]);
+  }, [id, user?.id, markMessagesAsRead]); // Removed fetchUpdates from dependencies
 
   const handleStatusUpdate = useCallback(async (newStatus) => {
     const { error } = await supabase.from('reports').update({ status: newStatus }).eq('id', id);
@@ -233,7 +304,20 @@ const ReportDetails = () => {
     }
   };
 
-  if (loading || profileLoading) return <div className="flex justify-center items-center h-full"><Loader2 className="h-16 w-16 animate-spin" /></div>;
+  if (loading || profileLoading) {
+    return (
+      <>
+        <Helmet><title>Loading Report Details - WhistleBlower.ng</title></Helmet>
+        <NavbarLoader />
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold">Report Details</h1>
+            {/* Loading indication is handled by NavbarLoader */}
+          </div>
+        </div>
+      </>
+    );
+  }
   if (!report) return <div className="p-4 text-center">Report not found or access denied.</div>;
 
   return (

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 import { 
@@ -17,10 +16,9 @@ import {
 const DashboardLayout = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const { logout, profile, permissions } = useAuth();
+    const { logout, profile, permissions, loading } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
-    const location = useLocation();
 
     const handleLogout = async () => {
         await logout();
@@ -49,10 +47,17 @@ const DashboardLayout = ({ children }) => {
     const isSuperAdmin = profile?.user_type === 'super_admin';
     const canSeeTrashed = isSuperAdmin || profile?.user_type === 'executive_admin';
     
-    const visibleNavLinks = navLinks.filter(link => {
+    // Show filtered links immediately - if we don't have profile data yet, show basic links
+    const visibleNavLinks = profile ? navLinks.filter(link => {
         if (link.pageName === 'Trashed Report') return canSeeTrashed;
         return isSuperAdmin || permissions[link.pageName];
-    });
+    }) : [
+        // Show basic navigation links while profile loads
+        { href: '/admin/overview', label: 'Overview', icon: LayoutDashboard, pageName: 'Overview' },
+        { href: '/admin/reports', label: 'Reports', icon: FileText, pageName: 'Reports' },
+        { href: '/admin/bounties', label: 'Bounties', icon: Award, pageName: 'Bounties' },
+        { href: '/admin/settings', label: 'Settings', icon: Settings, pageName: 'Settings' },
+    ];
 
     const sideNav = (isMinimized) => (
         <div className="flex flex-col h-full">
@@ -126,7 +131,7 @@ const DashboardLayout = ({ children }) => {
 
                     <div className="flex items-center gap-4">
                         <div className="hidden md:block text-sm md:text-base font-medium text-muted-foreground text-right">
-                           Welcome, {profile?.name} 
+                           Welcome, {profile?.name || 'Admin'}
                            {profile?.organizationName && ` of ${profile.organizationName}`}
                         </div>
                         <Button variant="outline" size="icon" onClick={toggleTheme}>
@@ -137,17 +142,7 @@ const DashboardLayout = ({ children }) => {
                     </div>
                 </header>
                 <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={location.pathname}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                           {children}
-                        </motion.div>
-                    </AnimatePresence>
+                    {children}
                 </main>
             </div>
         </div>

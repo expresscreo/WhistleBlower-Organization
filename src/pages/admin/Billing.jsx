@@ -10,7 +10,9 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { Loader2, AlertCircle } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { cn } from '@/lib/utils';
+import PageHeader from '@/components/admin/PageHeader';
 
 const Billing = () => {
     const { profile, loading: profileLoading, organizationStatus } = useUserProfile();
@@ -58,7 +60,10 @@ const Billing = () => {
         <>
             <Helmet><title>Billing - WhistleBlower.ng</title></Helmet>
             <div className="space-y-8">
-                <h1 className="text-3xl font-bold">Billing</h1>
+                <PageHeader 
+                    title="Billing"
+                    description="View your billing history and manage payments."
+                />
                 {(organizationStatus === 'suspended' || organizationStatus === 'pending_payment') && (
                      <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
                         <CardHeader className="flex flex-row items-center gap-4">
@@ -74,17 +79,19 @@ const Billing = () => {
                         </CardHeader>
                      </Card>
                 )}
+                {/* Search */}
+                <Input placeholder="Search by plan, status, or reference..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                
+                {/* Billing History Table */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Billing History</CardTitle>
-                        <CardDescription>View your transaction history and payment statuses.</CardDescription>
-                        <div className="mt-4">
-                            <Input placeholder="Search by plan, status, or reference..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                    </CardHeader>
                     <CardContent>
                         {loading || profileLoading ? (
-                            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                            <>
+                                <NavbarLoader />
+                                <div className="flex justify-center py-8">
+                                    {/* Loading indication is handled by NavbarLoader */}
+                                </div>
+                            </>
                         ) : (
                             <Table>
                                 <TableHeader>

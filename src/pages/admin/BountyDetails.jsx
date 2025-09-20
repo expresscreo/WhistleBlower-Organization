@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Upload, Trash2 } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import ReportInfoCard from '@/components/admin/report-details/ReportInfoCard';
 import ReportAttachmentsCard from '@/components/admin/report-details/ReportAttachmentsCard';
 import ReportChat from '@/components/admin/report-details/ReportChat';
@@ -112,7 +113,20 @@ const BountyDetails = () => {
         });
     };
 
-    if (loading) return <div className="flex justify-center items-center h-full"><Loader2 className="h-16 w-16 animate-spin" /></div>;
+    if (loading) {
+        return (
+            <>
+                <Helmet><title>Loading Bounty Details - WhistleBlower.ng</title></Helmet>
+                <NavbarLoader />
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-2xl font-bold">Bounty Details</h1>
+                        {/* Loading indication is handled by NavbarLoader */}
+                    </div>
+                </div>
+            </>
+        );
+    }
     if (!bounty) return null;
 
     const bountyAsReport = {

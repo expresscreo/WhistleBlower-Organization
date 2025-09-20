@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Save } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
+import PageHeader from '@/components/admin/PageHeader';
+import PageContentWrapper from '@/components/admin/PageContentWrapper';
 
 const PlanFeatures = () => {
   const [plans, setPlans] = useState([]);
@@ -57,22 +60,26 @@ const PlanFeatures = () => {
     }
   };
 
-  if (loading) {
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
-
   return (
     <>
       <Helmet><title>Plan Features - WhistleBlower.ng</title></Helmet>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Plan Features Management</h1>
-        <Card>
-          <CardHeader>
-            <CardTitle>Manage Plan Details</CardTitle>
-            <CardDescription>Update plan information that appears on the public pricing page.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            {plans.map(plan => (
+        <PageHeader 
+          title="Plan Features Management"
+          description="Update plan information that appears on the public pricing page."
+        />
+        
+        {/* Plan Details */}
+        <div className="space-y-8">
+          {loading ? (
+            <>
+              <NavbarLoader />
+              <div className="flex justify-center py-16">
+                {/* Loading indication is handled by NavbarLoader */}
+              </div>
+            </>
+          ) : (
+            plans.map(plan => (
               <Card key={plan.id}>
                 <CardHeader>
                   <CardTitle>{plan.name}</CardTitle>
@@ -99,9 +106,9 @@ const PlanFeatures = () => {
                   <Button onClick={() => handleSavePlan(plan.id)}><Save className="mr-2 h-4 w-4" />Save {plan.name} Plan</Button>
                 </CardContent>
               </Card>
-            ))}
-          </CardContent>
-        </Card>
+            ))
+          )}
+        </div>
       </div>
     </>
   );

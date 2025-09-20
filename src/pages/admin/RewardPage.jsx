@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
     import { Helmet } from 'react-helmet';
     import { useAuth } from '@/contexts/SupabaseAuthContext';
     import { supabase } from '@/lib/customSupabaseClient';
@@ -9,7 +9,10 @@ import React, { useState, useEffect, useCallback } from 'react';
     import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
     import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
     import { Loader2, Wallet } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
     import { format } from 'date-fns';
+    import PageContentWrapper from '@/components/admin/PageContentWrapper';
+    import PageHeader from '@/components/admin/PageHeader';
     
     const RewardPage = () => {
       const { profile } = useAuth();
@@ -27,9 +30,15 @@ import React, { useState, useEffect, useCallback } from 'react';
         auditLog: [],
       });
       const [rewardAmounts, setRewardAmounts] = useState({});
+      
+      // Prevent duplicate data loading
+      const hasLoadedData = useRef(false);
     
       const fetchData = useCallback(async () => {
+        if (!profile?.id || hasLoadedData.current) return; // Don't fetch if no profile or already loaded
+        
         setLoading(true);
+        hasLoadedData.current = true; // Set immediately to prevent duplicate calls
         try {
           if (profile.user_type === 'super_admin') {
             const { data: orgSummary, error: orgSummaryError } = await supabase.from('organizations').select('id, name, organization_wallets(balance)');
@@ -78,14 +87,17 @@ import React, { useState, useEffect, useCallback } from 'react';
           }
         } catch (error) {
           toast({ variant: 'destructive', title: 'Error fetching data', description: error.message });
+          hasLoadedData.current = false; // Reset on error to allow retry
         } finally {
           setLoading(false);
         }
-      }, [profile, toast]);
+      }, [profile?.id, profile?.user_type, profile?.organization_id, toast]);
     
       useEffect(() => {
-        fetchData();
-      }, [fetchData]);
+        if (profile?.id && !hasLoadedData.current) {
+          fetchData();
+        }
+      }, [profile?.id, fetchData]);
     
       const handleRewardAmountChange = (reportId, amount) => {
         setRewardAmounts(prev => ({ ...prev, [reportId]: amount }));
@@ -165,7 +177,18 @@ import React, { useState, useEffect, useCallback } from 'react';
       }
     
       if (loading && !data.wallet && !data.orgSummary.length) {
-        return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        return (
+          <>
+            <Helmet><title>Loading Reward Management - WhistleBlower.ng</title></Helmet>
+            <NavbarLoader />
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold">Reward Management</h1>
+                {/* Loading indication is handled by NavbarLoader */}
+              </div>
+            </div>
+          </>
+        );
       }
     
       const renderOrgView = () => (
@@ -353,15 +376,22 @@ import React, { useState, useEffect, useCallback } from 'react';
           <Helmet>
             <title>Reward Management - WhistleBlower.ng</title>
           </Helmet>
-          <div className="space-y-2 mb-6">
-            <h1 className="text-3xl font-bold">Reward Management</h1>
-            <p className="text-muted-foreground">
-              {profile.user_type === 'super_admin'
+          <div className="space-y-8">
+            <PageHeader 
+              title="Reward Management"
+              description={profile.user_type === 'super_admin'
                 ? 'Oversee and manage reward requests from all organizations.'
                 : 'Manage your reward funds and process payments for resolved reports.'}
-            </p>
+            />
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Loading reward data...</span>
+              </div>
+            ) : (
+              profile.user_type === 'super_admin' ? renderAdminView() : renderOrgView()
+            )}
           </div>
-          {profile.user_type === 'super_admin' ? renderAdminView() : renderOrgView()}
         </>
       );
     };

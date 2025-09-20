@@ -2,6 +2,8 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import PageContentWrapper from '@/components/admin/PageContentWrapper';
+import PageHeader from '@/components/admin/PageHeader';
 
 const Reward = () => {
   return (
@@ -10,16 +12,15 @@ const Reward = () => {
         <title>Reward Management - WhistleBlower.ng</title>
       </Helmet>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Reward Management</h1>
+        <PageHeader 
+          title="Reward Management"
+          description="This page is deprecated. Please use the main Reward page."
+        />
         <Card>
-          <CardHeader>
-            <CardTitle>Rewards</CardTitle>
-            <div className="mt-4">
-              <Input placeholder="Search rewards..." />
-            </div>
-          </CardHeader>
           <CardContent>
-            <p>This page is deprecated. Please use RewardPage.jsx</p>
+            <p className="text-center py-8 text-muted-foreground">
+              This page is deprecated. Please use RewardPage.jsx
+            </p>
           </CardContent>
         </Card>
       </div>

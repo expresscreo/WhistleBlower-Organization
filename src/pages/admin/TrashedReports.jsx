@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, RotateCcw, Calendar, Trash2, Award, FileText } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
+import PageHeader from '@/components/admin/PageHeader';
 import { format, addDays } from 'date-fns';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
@@ -28,6 +30,11 @@ const TrashedReports = () => {
   const { profile, loading: profileLoading } = useAuth();
   const [isProcessing, setIsProcessing] = useState(null);
   
+  // Refs to prevent unnecessary re-fetching
+  const hasInitialData = useRef(false);
+  const lastFetchTime = useRef(0);
+  const fetchTrashedItemsRef = useRef(null);
+  
   const [dialogState, setDialogState] = useState({
       isOpen: false,
       item: null,
@@ -35,9 +42,24 @@ const TrashedReports = () => {
       type: null,
   });
 
-  const fetchTrashedItems = useCallback(async () => {
+  const fetchTrashedItems = useCallback(async (forceRefresh = false) => {
     if (!profile) return;
+    
+    // Prevent unnecessary re-fetching
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    
+    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
+    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
+      return;
+    }
+    
+    // Skip fetch if page is not visible and not forced
+    if (!forceRefresh && document.visibilityState !== 'visible') {
+      return;
+    }
     setLoading(true);
+    lastFetchTime.current = now;
     
     let reportQuery = supabase.from('reports').select('*').eq('is_trashed', true);
     let bountyQuery = supabase.from('bounties').select('*').eq('is_trashed', true);
@@ -57,10 +79,15 @@ const TrashedReports = () => {
       const bounties = bountiesRes.data.map(b => ({ ...b, type: 'bounty' }));
       const allItems = [...reports, ...bounties].sort((a, b) => new Date(b.trashed_at) - new Date(a.trashed_at));
       setTrashedItems(allItems);
+      hasInitialData.current = true;
     }
     setLoading(false);
   }, [toast, profile]);
+
+  // Store the latest fetchTrashedItems in ref
+  fetchTrashedItemsRef.current = fetchTrashedItems;
   
+  // Initial data fetch - only runs once when profile is loaded
   useEffect(() => {
     if (!profileLoading && profile) {
       const allowedRoles = ['super_admin', 'executive_admin'];
@@ -69,9 +96,11 @@ const TrashedReports = () => {
           navigate('/admin/overview');
           return;
       }
-      fetchTrashedItems();
+      if (!hasInitialData.current) {
+        fetchTrashedItems(true); // Force initial fetch
+      }
     }
-  }, [fetchTrashedItems, profileLoading, profile, toast, navigate]);
+  }, [profileLoading, profile?.id, profile?.user_type, toast, navigate]); // Only depend on stable references
   
   const handleActionClick = (e, item, action, type) => {
     e.stopPropagation();
@@ -124,10 +153,17 @@ const TrashedReports = () => {
   return (
     <>
       <Helmet><title>Trash - WhistleBlower.ng</title></Helmet>
+      {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Trash</h1>
-        <p className="text-muted-foreground">Items in the trash will be automatically and permanently deleted after 30 days.</p>
-        {loading || profileLoading ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
+        <PageHeader 
+          title="Trash" 
+          description="Items in the trash will be automatically and permanently deleted after 30 days."
+        />
+        {loading || profileLoading ? (
+          <div className="flex justify-center py-8">
+            {/* Loading indication is handled by NavbarLoader */}
+          </div>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {trashedItems.map(item => {
               const trashedDate = new Date(item.trashed_at);

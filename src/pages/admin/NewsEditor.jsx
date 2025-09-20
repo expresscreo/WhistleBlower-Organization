@@ -11,8 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, Edit, Trash2, PlusCircle, ImagePlus, UploadCloud } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { format } from 'date-fns';
 import { sanitizeFilename } from '@/lib/utils';
+import PageHeader from '@/components/admin/PageHeader';
 
 const NewsEditor = () => {
     const [newsItems, setNewsItems] = useState([]);
@@ -149,18 +151,21 @@ const NewsEditor = () => {
     return (
         <>
             <Helmet><title>News Editor - WhistleBlower.ng</title></Helmet>
+            {loading && <NavbarLoader />}
             <div className="space-y-8">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold">News Editor</h1>
+                <PageHeader 
+                    title="News Editor"
+                    description="Create, edit, and publish articles."
+                >
                     <Button onClick={() => handleOpenDialog()}><PlusCircle className="mr-2 h-4 w-4" /> Create News</Button>
-                </div>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Manage News & Bounties</CardTitle>
-                        <CardDescription>Create, edit, and publish articles.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
+                </PageHeader>
+                
+                {/* News Articles */}
+                        {loading ? (
+                            <div className="flex justify-center py-8">
+                                {/* Loading indication is handled by NavbarLoader */}
+                            </div>
+                        ) : (
                             <div className="space-y-4">
                                 {newsItems.map(item => (
                                     <Card key={item.id} className="flex items-center justify-between p-4">
@@ -178,9 +183,13 @@ const NewsEditor = () => {
                                 ))}
                             </div>
                         )}
-                        {!loading && newsItems.length === 0 && <p className="text-center text-muted-foreground py-8">No news items yet.</p>}
-                    </CardContent>
-                </Card>
+                        {!loading && newsItems.length === 0 && (
+                            <div className="text-center py-16 text-muted-foreground">
+                                <PlusCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p className="text-lg">No news items yet.</p>
+                                <p className="text-sm">Create your first article to get started.</p>
+                            </div>
+                        )}
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

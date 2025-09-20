@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, MessageSquare, Building, Calendar, Paperclip, ChevronLeft, ChevronRight, FileUp, Mic } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import PageHeader from '@/components/admin/PageHeader';
 
 const FEEDBACK_PER_PAGE = 18;
 
@@ -30,10 +32,36 @@ const CustomerFeedback = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useUserProfile();
+  
+  // Refs to prevent unnecessary re-fetching
+  const hasInitialData = useRef(false);
+  const lastFetchTime = useRef(0);
+  const fetchFeedbackRef = useRef(null);
 
-  const fetchFeedback = useCallback(async () => {
+  const fetchFeedback = useCallback(async (forceRefresh = false) => {
+    console.log('fetchFeedback called:', { forceRefresh, hasData: hasInitialData.current, profileId: profile?.id });
+    
     if (!profile) return;
+    
+    // Prevent unnecessary re-fetching
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    
+    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
+    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
+      console.log('Skipping fetch - too soon since last fetch');
+      return;
+    }
+    
+    // Skip fetch if page is not visible and not forced
+    if (!forceRefresh && document.visibilityState !== 'visible') {
+      console.log('Skipping fetch - page not visible');
+      return;
+    }
+    
+    console.log('Actually fetching feedback...');
     setLoading(true);
+    lastFetchTime.current = now;
 
     let query = supabase
       .from('reports')
@@ -66,15 +94,20 @@ const CustomerFeedback = () => {
             }
         });
         setAllFeedback(processedFeedback);
+        hasInitialData.current = true;
     }
     setLoading(false);
   }, [toast, profile]);
+
+  // Store the latest fetchFeedback in ref
+  fetchFeedbackRef.current = fetchFeedback;
   
+  // Initial data fetch - only runs once when profile is loaded
   useEffect(() => {
-    if (!profileLoading && profile) {
-      fetchFeedback();
+    if (!profileLoading && profile && !hasInitialData.current) {
+        fetchFeedback(true); // Force initial fetch
     }
-  }, [fetchFeedback, profileLoading, profile]);
+  }, [profileLoading, profile?.id]); // Only depend on profile.id, not the entire profile object
 
   useEffect(() => {
     let filtered = allFeedback;
@@ -126,32 +159,38 @@ const CustomerFeedback = () => {
   return (
     <>
       <Helmet><title>Customer Feedback - WhistleBlower.ng</title></Helmet>
+      {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Customer Feedback</h1>
-        <Card>
-          <CardHeader>
-            <CardTitle>All Feedback</CardTitle>
-            <CardDescription>Review, manage, and track all submitted customer feedback.</CardDescription>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-              <Input className="lg:col-span-2" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Statuses</SelectItem>
-                  {Object.keys(statusConfig).map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.sortBy} onValueChange={(v) => handleFilterChange('sortBy', v)}>
-                <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="updated">Recently Updated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading || profileLoading ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
+        <PageHeader 
+          title="Customer Feedback" 
+          description="Review, manage, and track all submitted customer feedback."
+        />
+        
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Input className="lg:col-span-2" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
+            <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All Statuses</SelectItem>
+              {Object.keys(statusConfig).map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filters.sortBy} onValueChange={(v) => handleFilterChange('sortBy', v)}>
+            <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
+              <SelectItem value="updated">Recently Updated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Feedback Grid */}
+            {loading || profileLoading ? (
+                <div className="flex justify-center py-8">
+                    {/* Loading indication is handled by NavbarLoader */}
+                </div>
+            ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {displayedFeedback.map(feedback => {
@@ -201,9 +240,15 @@ const CustomerFeedback = () => {
                 )}
               </>
             )}
-            {!loading && !profileLoading && displayedFeedback.length === 0 && <div className="text-center py-8 text-muted-foreground">No feedback entries match the current filters.</div>}
-          </CardContent>
-        </Card>
+            
+            {/* Empty State */}
+            {!loading && !profileLoading && displayedFeedback.length === 0 && (
+              <div className="text-center py-16 text-muted-foreground">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">No feedback entries match the current filters.</p>
+                <p className="text-sm">Try adjusting your search criteria.</p>
+              </div>
+            )}
       </div>
     </>
   );

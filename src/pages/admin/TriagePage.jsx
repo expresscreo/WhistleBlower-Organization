@@ -8,29 +8,31 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Check, X, ArrowRight, Building, ChevronsUpDown } from 'lucide-react';
 import { format } from 'date-fns';
+import PageContentWrapper from '@/components/admin/PageContentWrapper';
+import { useAdminData } from '@/contexts/AdminDataContext';
+import PageHeader from '@/components/admin/PageHeader';
 import { cn } from '@/lib/utils';
 
 const TriagePage = () => {
   const [unassignedReports, setUnassignedReports] = useState([]);
   const [organizations, setOrganizations] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [currentReportIndex, setCurrentReportIndex] = useState(0);
   const [selectedOrg, setSelectedOrg] = useState('');
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { fetchTriageData, loading } = useAdminData();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+
+  const loadTriageData = useCallback(async () => {
     try {
-      const { data: reportsData, error: reportsError } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('status', 'Under Review')
-        .is('organization_id', null)
-        .order('created_at', { ascending: true });
-      if (reportsError) throw reportsError;
-      setUnassignedReports(reportsData);
+      // Get unassigned reports
+      const triageData = await fetchTriageData();
+      const unassigned = triageData.filter(report => 
+        report.status === 'Under Review' && !report.organization_id
+      );
+      setUnassignedReports(unassigned);
 
+      // Get organizations
       const { data: orgsData, error: orgsError } = await supabase
         .from('organizations')
         .select('id, name')
@@ -39,15 +41,14 @@ const TriagePage = () => {
       setOrganizations(orgsData);
 
     } catch (error) {
+      console.error('Failed to load triage data:', error);
       toast({ variant: 'destructive', title: 'Failed to load data', description: error.message });
-    } finally {
-      setLoading(false);
     }
-  }, [toast]);
+  }, [fetchTriageData, toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    loadTriageData();
+  }, [loadTriageData]);
 
   const handleAssign = async () => {
     if (!selectedOrg) {
@@ -99,15 +100,15 @@ const TriagePage = () => {
   return (
     <>
       <Helmet><title>Triage Reports - WhistleBlower.ng</title></Helmet>
-      <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Report Triage</h1>
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle>Unassigned Reports</CardTitle>
-            <CardDescription>Review and assign new reports to the correct organizations.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> :
+      <PageContentWrapper loading={loading.triage} loadingText="Loading reports for triage...">
+        <div className="space-y-8">
+          <PageHeader 
+            title="Report Triage" 
+            description="Assign unmatched reports to the appropriate organizations."
+          />
+          
+          <div className="max-w-4xl mx-auto">
+            {loading.triage ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> :
              !currentReport ? <p className="text-center py-8">No unassigned reports to triage. Great job!</p> :
              (
                <div className="space-y-6">
@@ -181,9 +182,9 @@ const TriagePage = () => {
                </div>
              )
             }
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </PageContentWrapper>
     </>
   );
 };

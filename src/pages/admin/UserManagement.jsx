@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,16 +7,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, PlusCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff, CheckCircle, Ban } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import PageHeader from '@/components/admin/PageHeader';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrganization, setSelectedOrganization] = useState('all');
+  const [selectedPlan, setSelectedPlan] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -24,8 +29,14 @@ const UserManagement = () => {
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', organization_id: '', user_type: 'staff' });
   const [showPassword, setShowPassword] = useState(false);
   const [organizations, setOrganizations] = useState([]);
+  const [plans, setPlans] = useState([]);
   const { toast } = useToast();
   const { profile, loading: profileLoading, permissions } = useAuth();
+  
+  // Refs to prevent unnecessary re-fetching
+  const hasInitialData = useRef(false);
+  const lastFetchTime = useRef(0);
+  const fetchUsersRef = useRef(null);
   
   const isSuperAdmin = !profileLoading && profile?.user_type === 'super_admin';
   const isExecutiveAdmin = !profileLoading && profile?.user_type === 'executive_admin';
@@ -33,9 +44,30 @@ const UserManagement = () => {
 
   const userTypes = ['super_admin', 'executive_admin', 'organization_admin', 'staff', 'customer_care'];
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (forceRefresh = false) => {
+    console.log('fetchUsers called:', { forceRefresh, hasData: hasInitialData.current, profileId: profile?.id });
+    
     if (profileLoading) return;
+    
+    // Prevent unnecessary re-fetching
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    
+    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
+    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
+      console.log('Skipping fetch - too soon since last fetch');
+      return;
+    }
+    
+    // Skip fetch if page is not visible and not forced
+    if (!forceRefresh && document.visibilityState !== 'visible') {
+      console.log('Skipping fetch - page not visible');
+      return;
+    }
+    
+    console.log('Actually fetching users...');
     setLoading(true);
+    lastFetchTime.current = now;
     let query = supabase
       .from('users')
       .select('*, organizations(name, plans(id, name)), assigned_reports:report_assignments!assigned_to(count)');
@@ -57,16 +89,65 @@ const UserManagement = () => {
       const usersWithCounts = data.map(user => ({
         ...user,
         assigned_reports_count: user.assigned_reports[0]?.count || 0,
-        plan_name: user.organizations?.plans?.name
+        plan_name: user.organizations?.plans?.name,
+        organization_name: user.organizations?.name
       }));
-      setUsers(usersWithCounts);
+      
+      // Debug: Log first user to see data structure
+      if (usersWithCounts.length > 0) {
+        console.log('Sample user data:', {
+          name: usersWithCounts[0].name,
+          organization_name: usersWithCounts[0].organization_name,
+          plan_name: usersWithCounts[0].plan_name,
+          is_active: usersWithCounts[0].is_active,
+          organizations: usersWithCounts[0].organizations
+        });
+      }
+      
+      // Filter users based on selected filters
+      let filteredUsers = [...usersWithCounts]; // Create a copy
+      
+      console.log('Filtering with:', { selectedOrganization, selectedPlan, selectedStatus });
+      console.log('Total users before filtering:', filteredUsers.length);
+      
+      if (selectedOrganization !== 'all') {
+        const beforeCount = filteredUsers.length;
+        filteredUsers = filteredUsers.filter(user => user.organization_name === selectedOrganization);
+        console.log(`Organization filter: ${beforeCount} → ${filteredUsers.length} (filtering by: ${selectedOrganization})`);
+      }
+      
+      if (selectedPlan !== 'all') {
+        const beforeCount = filteredUsers.length;
+        filteredUsers = filteredUsers.filter(user => user.plan_name === selectedPlan);
+        console.log(`Plan filter: ${beforeCount} → ${filteredUsers.length} (filtering by: ${selectedPlan})`);
+      }
+      
+      if (selectedStatus !== 'all') {
+        const beforeCount = filteredUsers.length;
+        if (selectedStatus === 'active') {
+          filteredUsers = filteredUsers.filter(user => user.is_active === true);
+        } else if (selectedStatus === 'suspended') {
+          filteredUsers = filteredUsers.filter(user => user.is_active === false);
+        }
+        console.log(`Status filter: ${beforeCount} → ${filteredUsers.length} (filtering by: ${selectedStatus})`);
+      }
+      
+      // Sort by name by default
+      filteredUsers.sort((a, b) => a.name.localeCompare(b.name));
+      
+      setUsers(filteredUsers);
+      hasInitialData.current = true;
     }
     setLoading(false);
-  }, [searchTerm, toast, profile, profileLoading]);
+  }, [searchTerm, selectedOrganization, selectedPlan, selectedStatus, toast, profile, profileLoading]);
 
+  // Store the latest fetchUsers in ref
+  fetchUsersRef.current = fetchUsers;
+
+  // Initial data fetch - only runs once when profile is loaded
   useEffect(() => {
-    if (!profileLoading) {
-        fetchUsers();
+    if (!profileLoading && !hasInitialData.current) {
+        fetchUsers(true); // Force initial fetch
     }
     const fetchDropdownData = async () => {
       let orgQuery = supabase.from('organizations').select('id, name, plans(id, name)');
@@ -74,13 +155,19 @@ const UserManagement = () => {
           orgQuery = orgQuery.eq('id', profile.organization_id);
       }
       const { data: orgsData } = await orgQuery;
+      console.log('Loaded organizations:', orgsData);
       setOrganizations(orgsData || []);
+      
+      // Fetch plans
+      const { data: plansData } = await supabase.from('plans').select('id, name');
+      console.log('Loaded plans:', plansData);
+      setPlans(plansData || []);
     };
 
     if (!profileLoading) {
       fetchDropdownData();
     }
-  }, [fetchUsers, profileLoading, profile]);
+  }, [profileLoading, profile?.id]); // Only depend on profile.id, not the entire profile object
 
   const handleOpenAddModal = () => {
     setNewUser({ name: '', email: '', password: '', organization_id: profile?.organization_id || '', user_type: 'staff' });
@@ -192,16 +279,66 @@ const UserManagement = () => {
     <>
       <Helmet><title>User Management - WhistleBlower.ng</title></Helmet>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">User Management</h1>
+        <PageHeader 
+          title="User Management"
+          description="Manage all platform users and their permissions."
+        >
           {canManageUsers && <Button onClick={handleOpenAddModal}><PlusCircle className="mr-2 h-4 w-4" />Add User</Button>}
+        </PageHeader>
+        
+        {/* Search and Filters */}
+        <div className="flex gap-4 items-center">
+          <Input 
+            placeholder="Search by name or email..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1"
+          />
+          <Select value={selectedOrganization} onValueChange={(value) => {
+            console.log('Organization filter changed to:', value);
+            setSelectedOrganization(value);
+          }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Organization" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Organizations</SelectItem>
+              {organizations.map(org => (
+                <SelectItem key={org.id} value={org.name}>{org.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedPlan} onValueChange={(value) => {
+            console.log('Plan filter changed to:', value);
+            setSelectedPlan(value);
+          }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Plan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Plans</SelectItem>
+              {plans.map(plan => (
+                <SelectItem key={plan.id} value={plan.name}>{plan.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedStatus} onValueChange={(value) => {
+            console.log('Status filter changed to:', value);
+            setSelectedStatus(value);
+          }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+        
+        {/* Users Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>All Users</CardTitle>
-            <CardDescription>Manage all platform users and their permissions.</CardDescription>
-            <div className="mt-4"><Input placeholder="Search by name or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-          </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
@@ -218,7 +355,14 @@ const UserManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading || profileLoading ? <TableRow><TableCell colSpan="8" className="text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></TableCell></TableRow> :
+                  {loading || profileLoading ? (
+                    <>
+                      <NavbarLoader />
+                      <TableRow><TableCell colSpan="8" className="text-center">
+                        {/* Loading indication is handled by NavbarLoader */}
+                      </TableCell></TableRow>
+                    </>
+                  ) :
                   users.map(user => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>

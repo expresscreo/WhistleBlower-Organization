@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
+import NavbarLoader from '@/components/admin/NavbarLoader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PageHeader from '@/components/admin/PageHeader';
 
 const UnmatchedOrganizations = () => {
   const [unmatchedReports, setUnmatchedReports] = useState([]);
@@ -76,12 +78,13 @@ const UnmatchedOrganizations = () => {
     <>
       <Helmet><title>Unmatched Organizations - WhistleBlower.ng</title></Helmet>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Unmatched Organizations</h1>
+        <PageHeader 
+          title="Unmatched Organizations"
+          description="Match free-text organization names from reports to official organizations in the system."
+        />
+        
+        {/* Organizations Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Review Submitted Organization Names</CardTitle>
-            <CardDescription>Match free-text organization names from reports to official organizations in the system.</CardDescription>
-          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -93,7 +96,12 @@ const UnmatchedOrganizations = () => {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan="3" className="text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></TableCell></TableRow>
+                  <>
+                    <NavbarLoader />
+                    <TableRow><TableCell colSpan="3" className="text-center">
+                      {/* Loading indication is handled by NavbarLoader */}
+                    </TableCell></TableRow>
+                  </>
                 ) : unmatchedReports.length > 0 ? (
                   unmatchedReports.map(report => (
                     <TableRow key={report.id}>

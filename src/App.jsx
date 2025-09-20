@@ -28,7 +28,7 @@ import ContactPage from '@/pages/ContactPage';
 import PaymentSuccessPage from '@/pages/PaymentSuccessPage';
 import SitemapPage from '@/pages/SitemapPage';
 
-import DashboardLayout from '@/components/admin/DashboardLayout';
+import AdminLayoutWrapper from '@/components/admin/AdminLayoutWrapper';
 import Overview from '@/pages/admin/Overview';
 import Reports from '@/pages/admin/Reports';
 import CustomerFeedback from '@/pages/admin/CustomerFeedback';
@@ -48,29 +48,7 @@ import BountiesManagement from '@/pages/admin/BountiesManagement';
 import BountyDetails from '@/pages/admin/BountyDetails';
 import NewsEditor from '@/pages/admin/NewsEditor';
 
-const ProtectedRoute = ({ children, pageName }) => {
-  const { user, loading, profile, permissions } = useAuth();
-  const isSuperAdmin = profile?.user_type === 'super_admin';
 
-  if (loading) {
-    return <div className="flex h-screen w-screen items-center justify-center">Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (pageName === 'Trashed Report') {
-      const allowedRoles = ['super_admin', 'executive_admin'];
-      if (!profile || !allowedRoles.includes(profile.user_type)) {
-          return <Navigate to="/admin/overview" replace />;
-      }
-  } else if (!isSuperAdmin && pageName && !permissions[pageName]) {
-    return <Navigate to="/admin/overview" replace />;
-  }
-
-  return children;
-};
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -118,30 +96,28 @@ function App() {
             <Route path="/payment-success" element={<PaymentSuccessPage />} />
 
             <Route path="/admin/*" element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Routes>
-                    <Route path="overview" element={<ProtectedRoute pageName="Overview"><Overview /></ProtectedRoute>} />
-                    <Route path="reports" element={<ProtectedRoute pageName="Reports"><Reports /></ProtectedRoute>} />
-                    <Route path="customer-feedback" element={<ProtectedRoute pageName="Customer Feedback"><CustomerFeedback /></ProtectedRoute>} />
-                    <Route path="reports/:id" element={<ProtectedRoute pageName="Report Details"><ReportDetails /></ProtectedRoute>} />
-                    <Route path="user-management" element={<ProtectedRoute pageName="User Management"><UserManagement /></ProtectedRoute>} />
-                    <Route path="organizations-management" element={<ProtectedRoute pageName="Organizations"><OrganizationsManagement /></ProtectedRoute>} />
-                    <Route path="unmatched-organizations" element={<ProtectedRoute pageName="Unmatched Organization"><UnmatchedOrganizations /></ProtectedRoute>} />
-                    <Route path="reward" element={<ProtectedRoute pageName="Reward"><RewardPage /></ProtectedRoute>} />
-                    <Route path="bounties" element={<ProtectedRoute pageName="Bounties"><BountiesManagement /></ProtectedRoute>} />
-                    <Route path="bounties/:id" element={<ProtectedRoute pageName="Bounty Details"><BountyDetails /></ProtectedRoute>} />
-                    <Route path="news-editor" element={<ProtectedRoute pageName="News Editor"><NewsEditor /></ProtectedRoute>} />
-                    <Route path="billing" element={<ProtectedRoute pageName="Billing"><Billing /></ProtectedRoute>} />
-                    <Route path="plan-features" element={<ProtectedRoute pageName="Plan Features"><PlanFeatures /></ProtectedRoute>} />
-                    <Route path="plan-management" element={<ProtectedRoute pageName="Plan Management"><PlanManagement /></ProtectedRoute>} />
-                    <Route path="audit-logs" element={<ProtectedRoute pageName="Audit Logs"><AuditLogs /></ProtectedRoute>} />
-                    <Route path="settings" element={<ProtectedRoute pageName="Settings"><Settings /></ProtectedRoute>} />
-                    <Route path="triage" element={<ProtectedRoute pageName="Triage"><TriagePage /></ProtectedRoute>} />
-                    <Route path="trashed-reports" element={<ProtectedRoute pageName="Trashed Report"><TrashedReports /></ProtectedRoute>} />
-                  </Routes>
-                </DashboardLayout>
-              </ProtectedRoute>
+              <AdminLayoutWrapper>
+                <Routes>
+                  <Route path="overview" element={<Overview />} />
+                  <Route path="reports" element={<Reports />} />
+                  <Route path="customer-feedback" element={<CustomerFeedback />} />
+                  <Route path="reports/:id" element={<ReportDetails />} />
+                  <Route path="user-management" element={<UserManagement />} />
+                  <Route path="organizations-management" element={<OrganizationsManagement />} />
+                  <Route path="unmatched-organizations" element={<UnmatchedOrganizations />} />
+                  <Route path="reward" element={<RewardPage />} />
+                  <Route path="bounties" element={<BountiesManagement />} />
+                  <Route path="bounties/:id" element={<BountyDetails />} />
+                  <Route path="news-editor" element={<NewsEditor />} />
+                  <Route path="billing" element={<Billing />} />
+                  <Route path="plan-features" element={<PlanFeatures />} />
+                  <Route path="plan-management" element={<PlanManagement />} />
+                  <Route path="audit-logs" element={<AuditLogs />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="triage" element={<TriagePage />} />
+                  <Route path="trashed-reports" element={<TrashedReports />} />
+                </Routes>
+              </AdminLayoutWrapper>
             } />
           </Routes>
           <Toaster />
