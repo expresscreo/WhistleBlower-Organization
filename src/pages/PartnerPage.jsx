@@ -1,8 +1,9 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Building, ShieldCheck, BarChart2, ArrowRight } from 'lucide-react';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -27,10 +28,13 @@ const PartnerPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Partner Program - WhistleBlower.ng</title>
-        <meta name="description" content="Join the WhistleBlower.ng network. Partner with us to receive direct reports, enhance transparency, and manage cases efficiently." />
-      </Helmet>
+      <SEOHead 
+        {...generateSEOMeta({
+          ...DEFAULT_SEO_PAGES.partner,
+          url: '/partner-program',
+          type: 'website'
+        })}
+      />
       <div className="bg-background text-foreground">
         <section className="relative py-20 md:py-32 hero-pattern">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5" />

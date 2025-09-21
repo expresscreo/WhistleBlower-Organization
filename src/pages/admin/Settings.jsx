@@ -171,7 +171,7 @@ const Settings = () => {
           
           {/* Placeholder tabs structure to prevent layout shift */}
           <div className="space-y-4">
-            <div className="h-10 bg-muted/20 rounded"></div>
+            <div className="h-10 bg-muted/20 rounded w-full sm:w-auto"></div>
             <div className="h-96 bg-muted/20 rounded"></div>
           </div>
         </div>
@@ -185,19 +185,21 @@ const Settings = () => {
         <title>Settings - WhistleBlower.ng</title>
       </Helmet>
       <div className="space-y-8 [&_*]:!transition-none [&_*]:!animate-none">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-3xl font-bold">Settings</h1>
-            {isSuperAdmin && <Button onClick={handleSaveSettings} disabled={loading} className="!transition-none">{loading ? <Loader2 className="mr-2 h-4 w-4" /> : null}Save All Settings</Button>}
+            {isSuperAdmin && <Button onClick={handleSaveSettings} disabled={loading} className="!transition-none w-full sm:w-auto">{loading ? <Loader2 className="mr-2 h-4 w-4" /> : null}Save All Settings</Button>}
         </div>
         
         <Tabs defaultValue="profile" className="[&_*]:!transition-none">
-          <TabsList className="!transition-none">
-            <TabsTrigger value="profile" className="!transition-none">Profile</TabsTrigger>
-            {isSuperAdmin && <TabsTrigger value="general" className="!transition-none">General</TabsTrigger>}
-            {isSuperAdmin && <TabsTrigger value="email" className="!transition-none">Email (SMTP)</TabsTrigger>}
-            {isSuperAdmin && <TabsTrigger value="payments" className="!transition-none">Payments (Interswitch)</TabsTrigger>}
-            {isSuperAdmin && <TabsTrigger value="notifications" className="!transition-none">Notifications</TabsTrigger>}
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="!transition-none w-full sm:w-auto flex-nowrap">
+              <TabsTrigger value="profile" className="!transition-none whitespace-nowrap">Profile</TabsTrigger>
+              {isSuperAdmin && <TabsTrigger value="general" className="!transition-none whitespace-nowrap">General</TabsTrigger>}
+              {isSuperAdmin && <TabsTrigger value="email" className="!transition-none whitespace-nowrap">Email (SMTP)</TabsTrigger>}
+              {isSuperAdmin && <TabsTrigger value="payments" className="!transition-none whitespace-nowrap">Payments</TabsTrigger>}
+              {isSuperAdmin && <TabsTrigger value="notifications" className="!transition-none whitespace-nowrap">Notifications</TabsTrigger>}
+            </TabsList>
+          </div>
           
           <TabsContent value="profile" className="mt-4">
              <ProfileSettings />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { getLocalFileUrl } from '@/lib/fileUtils';
 
 const AttachmentItem = ({ file, onDownload }) => {
   const [url, setUrl] = useState(null);
@@ -15,17 +16,12 @@ const AttachmentItem = ({ file, onDownload }) => {
         setError('File path is missing.');
         return;
       }
-      const { data, error: urlError } = await supabase.storage
-        .from('wb-evidence')
-        .createSignedUrl(file.path, 3600); // 1 hour expiry
-
+      
+      // Use local file URL instead of Supabase signed URL
+      const localUrl = getLocalFileUrl(file.path);
+      
       if (!isMounted) return;
-      if (urlError) {
-        console.error(`Error generating signed URL for ${file.path}:`, urlError);
-        setError('Could not load preview.');
-      } else {
-        setUrl(data.signedUrl);
-      }
+      setUrl(localUrl);
     };
 
     if (isImage) {

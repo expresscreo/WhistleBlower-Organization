@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { Lock, ShieldCheck, Database, Server, Fingerprint, KeyRound, Globe, Route, ChevronDown, ChevronUp } from 'lucide-react';
 
 const SecurityFeature = ({ icon, title, description, delay }) => (
@@ -80,10 +81,13 @@ const HowWeSecureDataPage = () => {
 
     return (
         <>
-            <Helmet>
-                <title>How We Secure Your Data - WhistleBlower.ng</title>
-                <meta name="description" content="Learn about the advanced security measures we use to protect your anonymity and ensure the confidentiality of your reports." />
-            </Helmet>
+            <SEOHead 
+                {...generateSEOMeta({
+                    ...DEFAULT_SEO_PAGES.secureData,
+                    url: '/how-we-secure-your-data',
+                    type: 'website'
+                })}
+            />
             <div className="bg-background text-foreground">
                 <section className="pt-20 pb-16 bg-muted/40">
                     <div className="container mx-auto px-4 text-center">

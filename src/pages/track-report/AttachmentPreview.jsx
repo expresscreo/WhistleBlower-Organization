@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, Eye, File as FileIcon, Download } from 'lucide-react';
 import { sanitizeFilename } from '@/lib/utils';
+import { getLocalFileUrl } from '@/lib/fileUtils';
 
 const AttachmentPreview = ({ path }) => {
   const { toast } = useToast();
@@ -20,17 +21,12 @@ const AttachmentPreview = ({ path }) => {
   const generateUrl = async () => {
     setLoading(true);
     try {
-      const { data, error: funcError } = await supabase.functions.invoke('create-signed-url', {
-        body: { path },
-      });
-
-      if (funcError) throw funcError;
-      if (data.error) throw new Error(data.error);
-      
-      setUrl(data.signedUrl);
-      return data.signedUrl;
+      // Use local file URL instead of Supabase signed URL
+      const localUrl = getLocalFileUrl(path);
+      setUrl(localUrl);
+      return localUrl;
     } catch (e) {
-      console.error("Error generating signed URL:", e);
+      console.error("Error generating file URL:", e);
       toast({ title: 'Error', description: 'Could not load preview.', variant: 'destructive' });
       return null;
     } finally {

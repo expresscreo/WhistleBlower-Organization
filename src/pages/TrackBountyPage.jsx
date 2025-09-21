@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut } from 'lucide-react';
+import { Loader2, LogOut, Banknote } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import ChatWindow from '@/pages/track-report/ChatWindow';
@@ -13,8 +13,9 @@ import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import AttachmentPreview from './track-report/AttachmentPreview';
 import { sanitizeFilename } from '@/lib/utils';
+import { uploadFileToLocal } from '@/lib/fileUtils';
 
-const NairaSign = () => <span className="font-sans">₦</span>;
+const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
 const statusConfig = {
     'pending_review': { progress: 10, color: 'bg-yellow-400', label: 'Pending Review' },
@@ -25,7 +26,7 @@ const statusConfig = {
     'refunded': { progress: 100, color: 'bg-gray-500', label: 'Refunded' },
 };
 
-const BountySummary = ({ bounty, onUpdateBounty }) => {
+const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
     const currentStatus = statusConfig[bounty.status] || { progress: 0, color: 'bg-gray-400', label: 'Unknown' };
     const evidencePaths = Array.isArray(bounty.evidence) ? bounty.evidence : [];
 
@@ -33,10 +34,20 @@ const BountySummary = ({ bounty, onUpdateBounty }) => {
         <Card>
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <CardTitle>Bounty Summary</CardTitle>
-                    <Button variant="outline" onClick={onUpdateBounty}>
-                        Update Bounty
-                    </Button>
+                    <CardTitle className="text-xl sm:text-2xl">Bounty Summary</CardTitle>
+                    <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+                        <Button variant="outline" onClick={onUpdateBounty} className="flex-1 sm:flex-initial">
+                            <span className="hidden xs:inline">Update Bounty</span>
+                            <span className="xs:hidden">Update</span>
+                        </Button>
+                        <Button 
+                            onClick={onLogout}
+                            className="bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 flex-1 sm:flex-initial"
+                        >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Logout
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -51,7 +62,7 @@ const BountySummary = ({ bounty, onUpdateBounty }) => {
                     <div><p className="text-sm text-muted-foreground">Bounty ID</p><p className="font-semibold">{bounty.bounty_id}</p></div>
                     <div><p className="text-sm text-muted-foreground">Type of Crime</p><p className="font-semibold">{bounty.type_of_crime}</p></div>
                     <div><p className="text-sm text-muted-foreground">Submitted</p><p className="font-semibold">{format(new Date(bounty.created_at), 'PPP')}</p></div>
-                    <div><p className="text-sm text-muted-foreground">Bounty Amount</p><p className="font-semibold text-primary flex items-center"><NairaSign />{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p></div>
+                    <div><p className="text-sm text-muted-foreground">Bounty Amount</p><p className="font-semibold text-primary flex items-center"><MoneyIcon />{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p></div>
                 </div>
                 <div className="border-t pt-6">
                     <h3 className="font-semibold text-xl mb-2">Description</h3>
@@ -139,24 +150,23 @@ const TrackBountyPage = ({ bountyId, password }) => {
         if (newEvidenceFiles.length > 0) {
             for (let i = 0; i < newEvidenceFiles.length; i++) {
                 const file = newEvidenceFiles[i];
-                const sanitizedName = sanitizeFilename(file.name);
-                const filePath = `bounties/${bountyData.bounty_id}/${Date.now()}-${sanitizedName}`;
                 
-                const { error: uploadError } = await supabase.storage.from('wb_evio').upload(filePath, file, {
-                    cacheControl: '3600',
-                    upsert: false,
-                }, (event) => {
-                    if (event.type === 'progress') {
-                        setUploadProgress(prev => ({ ...prev, [i]: (event.loaded / event.total) * 100 }));
-                    }
-                });
-
-                if (uploadError) {
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: `Could not upload ${file.name}.` });
+                try {
+                    // Update progress
+                    setUploadProgress(prev => ({ ...prev, [i]: 50 }));
+                    
+                    // Upload to local storage (use generic folder name to hide bounty ID)
+                    const filePath = await uploadFileToLocal(file, 'bounties', 'delito');
+                    
+                    // Complete progress
+                    setUploadProgress(prev => ({ ...prev, [i]: 100 }));
+                    
+                    newPaths.push(filePath);
+                } catch (error) {
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: `Could not upload ${file.name}: ${error.message}` });
                     setIsUpdating(false);
                     return;
                 }
-                newPaths.push(filePath);
             }
         }
         
@@ -198,17 +208,16 @@ const TrackBountyPage = ({ bountyId, password }) => {
                 <title>Track Your Bounty - WhistleBlower.ng</title>
                 <meta name="description" content="Securely track the status of your submitted bounty." />
             </Helmet>
-            <div className="container mx-auto px-4 py-16 md:py-24 min-h-screen">
+            <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
                 <div className="max-w-4xl mx-auto">
                     <AnimatePresence>
                         {authenticated && bountyData && (
                             <motion.div key="details" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
                                 <div className="flex justify-between items-center">
-                                    <h1 className="text-3xl font-bold">{bountyData.title}</h1>
-                                    <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" /> Logout</Button>
+                                    <h1 className="text-2xl sm:text-3xl font-bold break-words">{bountyData.title}</h1>
                                 </div>
                                 <div className="space-y-8">
-                                    <BountySummary bounty={bountyData} onUpdateBounty={() => setIsUpdateDialogOpen(true)} />
+                                    <BountySummary bounty={bountyData} onUpdateBounty={() => setIsUpdateDialogOpen(true)} onLogout={handleLogout} />
                                     <ChatWindow updates={updates} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} />
                                 </div>
                             </motion.div>

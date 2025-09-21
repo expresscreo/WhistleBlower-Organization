@@ -85,7 +85,7 @@ const PlanFeatures = () => {
                   <CardTitle>{plan.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Price (Numeric)</Label>
                       <Input type="number" value={plan.price || ''} onChange={e => handlePlanChange(plan.id, 'price', e.target.value)} />

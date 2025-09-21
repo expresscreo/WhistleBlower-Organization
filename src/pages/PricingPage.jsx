@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, ArrowRight, Star } from 'lucide-react';
@@ -7,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const PricingCard = ({ plan, isAnnual, onGetStarted }) => {
   const annualDiscount = 0.20;
@@ -117,12 +118,16 @@ const PricingPage = () => {
     }
   };
 
+  // Generate SEO metadata
+  const seoMeta = generateSEOMeta({
+    ...DEFAULT_SEO_PAGES.pricing,
+    url: '/pricing',
+    type: 'website'
+  });
+
   return (
     <>
-      <Helmet>
-        <title>Pricing Plans - WhistleBlower.ng</title>
-        <meta name="description" content="Choose the perfect plan for your organization's whistleblowing needs." />
-      </Helmet>
+      <SEOHead {...seoMeta} />
       <div className="min-h-screen py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-16">

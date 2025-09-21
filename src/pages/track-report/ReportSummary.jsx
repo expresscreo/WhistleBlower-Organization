@@ -1,12 +1,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Paperclip, Clock, Edit } from 'lucide-react';
+import { Paperclip, Clock, Edit, LogOut } from 'lucide-react';
 import AttachmentPreview from './AttachmentPreview';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
-const ReportSummary = ({ report, onUpdateReport }) => {
+const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
     const statusConfig = {
         'Pending': { progress: 5, color: 'bg-orange-400' },
         'Under Review': { progress: 20, color: 'bg-yellow-400' },
@@ -23,11 +23,21 @@ const ReportSummary = ({ report, onUpdateReport }) => {
     return (
         <div className="bg-card p-6 md:p-8 border">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-                <h2 className="text-2xl font-bold">Report Summary</h2>
-                <Button variant="outline" onClick={onUpdateReport}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Update Report
-                </Button>
+                <h2 className="text-xl sm:text-2xl font-bold">Report Summary</h2>
+                <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={onUpdateReport} className="flex-1 sm:flex-initial">
+                        <Edit className="mr-2 h-4 w-4" />
+                        <span className="hidden xs:inline">Update Report</span>
+                        <span className="xs:hidden">Update</span>
+                    </Button>
+                    <Button 
+                        onClick={onLogout}
+                        className="bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 flex-1 sm:flex-initial"
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                    </Button>
+                </div>
             </div>
             
             <div className="mb-6">

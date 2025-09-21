@@ -1,11 +1,12 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, ShieldCheck, Target, Eye, Lock, TrendingUp, HeartHandshake as Handshake, CheckSquare, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const StatCard = ({ icon, value, label, index }) => (
     <motion.div
@@ -58,12 +59,36 @@ const AboutUsPageV2 = () => {
         },
     ];
 
+    // Generate SEO metadata
+    const seoMeta = generateSEOMeta({
+        ...DEFAULT_SEO_PAGES.about,
+        url: '/about-us',
+        type: 'website'
+    });
+
+    // Generate structured data
+    const structuredData = [
+        STRUCTURED_DATA_TEMPLATES.organization(),
+        {
+            '@context': 'https://schema.org',
+            '@type': 'AboutPage',
+            name: 'About WhistleBlower.ng',
+            description: 'Learn about WhistleBlower.ng\'s mission to empower Nigerian citizens with secure crime reporting and transparency.',
+            mainEntity: {
+                '@type': 'Organization',
+                name: 'WhistleBlower.ng',
+                foundingDate: '2023',
+                description: 'Nigeria\'s premier platform for secure crime reporting and public bounties'
+            }
+        }
+    ];
+
     return (
         <>
-            <Helmet>
-                <title>Our Story - WhistleBlower.ng</title>
-                <meta name="description" content="Discover the story behind WhistleBlower.ng. Our mission is to build a safer, more transparent Nigeria by empowering citizens to speak up." />
-            </Helmet>
+            <SEOHead
+                {...seoMeta}
+                structuredData={structuredData}
+            />
 
             <div className="bg-background text-foreground">
                 {/* Hero Section */}

@@ -144,7 +144,8 @@ const AuditLogs = () => {
         {/* Audit Logs Table */}
         <Card>
           <CardContent>
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
@@ -173,6 +174,7 @@ const AuditLogs = () => {
                 )}
               </TableBody>
             </Table>
+            </div>
             {totalPages > 1 && (
                 <div className="flex justify-center items-center space-x-4 mt-8">
                     <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>

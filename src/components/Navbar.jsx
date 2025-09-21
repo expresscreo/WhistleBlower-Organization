@@ -103,7 +103,12 @@ const Navbar = () => {
         { name: 'About Us', path: '/about-us'},
         { name: 'How We Secure Your Data', path: '/how-we-secure-your-data' }
     ]},
-    { name: 'NEWS', path: '/news' },
+    { name: 'NEWS', dropdown: true, items: [
+        { name: 'All News', path: '/news' },
+        { name: 'Latest News', path: '/news/news' },
+        { name: 'Active Bounties', path: '/news/bounty' },
+        { name: 'Most Wanted', path: '/news/most_wanted' }
+    ]},
     { name: 'TRACK', path: '/track' },
     { name: 'PLACE A BOUNTY', path: '/place-bounty' },
     { name: 'FAQ', path: '/faq' }

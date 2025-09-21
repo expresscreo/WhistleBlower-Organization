@@ -107,37 +107,38 @@ const Reports = () => {
             description="Review, manage, and track all submitted reports."
           />
           
-          {/* Search, Sort and Filters - ALL on the same line */}
-          <div className="flex gap-4 items-center">
+          {/* Search, Sort and Filters - Mobile responsive */}
+          <div className="flex flex-col sm:flex-row gap-4">
             <Input 
               placeholder="Search by ID or title..." 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
-            <Select value={filters.sortBy} onValueChange={(v) => handleFilterChange('sortBy', v)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
+              <Select value={filters.sortBy} onValueChange={(v) => handleFilterChange('sortBy', v)}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">Newest First</SelectItem>
                 <SelectItem value="oldest">Oldest First</SelectItem>
                 <SelectItem value="updated">Recently Updated</SelectItem>
               </SelectContent>
-            </Select>
-            <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by Status" />
-              </SelectTrigger>
+              </Select>
+              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 {Object.keys(statusConfig).map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
               </SelectContent>
-            </Select>
-            <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by Category" />
-              </SelectTrigger>
+              </Select>
+              <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Filter by Category" />
+                </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value="Fraud">Fraud</SelectItem>
@@ -147,11 +148,12 @@ const Reports = () => {
                 <SelectItem value="Safety Violation">Safety Violation</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
-            </Select>
+              </Select>
+            </div>
           </div>
 
           {/* Reports Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {displayedReports.map(report => {
                       const currentStatus = statusConfig[report.status] || { progress: 0, color: 'bg-gray-400', tag: 'bg-gray-100 text-gray-800' };
                       

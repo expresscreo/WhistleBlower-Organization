@@ -168,20 +168,22 @@ const PlanManagement = () => {
                   description="Control which features each plan can access and set report limits."
                 />
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList>
-                        {plans.map(plan => <TabsTrigger key={plan.id} value={plan.id}>{plan.name}</TabsTrigger>)}
-                    </TabsList>
+                    <div className="overflow-x-auto">
+                        <TabsList className="w-full sm:w-auto flex-nowrap">
+                            {plans.map(plan => <TabsTrigger key={plan.id} value={plan.id} className="whitespace-nowrap">{plan.name}</TabsTrigger>)}
+                        </TabsList>
+                    </div>
                     {plans.map(plan => {
           const rolesForPlan = getRolesForPlan(plan.name);
           return <TabsContent key={plan.id} value={plan.id} className="space-y-6">
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                             <h3 className="text-xl font-semibold">{plan.name} Plan Settings</h3>
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Label htmlFor={`limit-${plan.id}`}>Monthly Report Limit</Label>
-                                                    <Input id={`limit-${plan.id}`} type="number" className="w-24" value={reportLimits[plan.id] || 0} onChange={e => handleReportLimitChange(plan.id, parseInt(e.target.value, 10))} />
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+                                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                    <Label htmlFor={`limit-${plan.id}`} className="whitespace-nowrap">Monthly Report Limit</Label>
+                                                    <Input id={`limit-${plan.id}`} type="number" className="w-24 flex-shrink-0" value={reportLimits[plan.id] || 0} onChange={e => handleReportLimitChange(plan.id, parseInt(e.target.value, 10))} />
                                                 </div>
-                                                <Button onClick={() => handleSaveChanges(plan.id, rolesForPlan)} disabled={saving}>
+                                                <Button onClick={() => handleSaveChanges(plan.id, rolesForPlan)} disabled={saving} className="w-full sm:w-auto">
                                                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                                     Save Plan Settings
                                                 </Button>

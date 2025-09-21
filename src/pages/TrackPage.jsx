@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -67,16 +68,19 @@ const TrackPage = () => {
 
     return (
         <>
-            <Helmet>
-                <title>Track Your Submission - WhistleBlower.ng</title>
-                <meta name="description" content="Securely track the status of your submitted report or bounty." />
-            </Helmet>
-            <div className="container mx-auto px-4 py-16 md:py-24 min-h-screen">
+            <SEOHead 
+                {...generateSEOMeta({
+                    ...DEFAULT_SEO_PAGES.trackReport,
+                    url: '/track',
+                    type: 'website'
+                })}
+            />
+            <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
                 <div className="max-w-4xl mx-auto">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-                        <h1 className="text-4xl font-bold mb-4">Track Your Submission</h1>
-                        <p className="text-lg text-muted-foreground mb-8">Enter your Report or Bounty ID and password to securely check its status.</p>
-                        <Card className="max-w-xl mx-auto p-6">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">Track Your Submission</h1>
+                        <p className="text-base sm:text-lg text-muted-foreground mb-8 px-4">Enter your Report or Bounty ID and password to securely check its status.</p>
+                        <Card className="max-w-xl mx-auto p-4 sm:p-6">
                             <form onSubmit={handleSearch} className="space-y-4">
                                 <div className="text-left">
                                     <Label htmlFor="trackId">Report / Bounty ID</Label>

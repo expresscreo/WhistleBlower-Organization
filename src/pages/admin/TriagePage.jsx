@@ -107,7 +107,7 @@ const TriagePage = () => {
             description="Assign unmatched reports to the appropriate organizations."
           />
           
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto px-4 sm:px-0">
             {loading.triage ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> :
              !currentReport ? <p className="text-center py-8">No unassigned reports to triage. Great job!</p> :
              (
@@ -126,7 +126,7 @@ const TriagePage = () => {
                      <p className="whitespace-pre-wrap">{currentReport.description}</p>
                    </CardContent>
                  </Card>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-end">
                    <div className="space-y-2">
                      <label className="text-sm font-medium flex items-center"><Building className="mr-2 h-4 w-4" />Assign to Organization</label>
                      <Popover open={open} onOpenChange={setOpen}>

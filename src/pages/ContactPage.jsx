@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const ContactPage = () => {
     const { toast } = useToast();
@@ -59,12 +60,16 @@ const ContactPage = () => {
         { icon: MapPin, title: 'Our Office', content: 'Lagos, Nigeria', href: '#' },
     ];
 
+    // Generate SEO metadata
+    const seoMeta = generateSEOMeta({
+        ...DEFAULT_SEO_PAGES.contact,
+        url: '/contact',
+        type: 'website'
+    });
+
     return (
         <>
-            <Helmet>
-                <title>Contact Us - WhistleBlower.ng</title>
-                <meta name="description" content="Get in touch with the WhistleBlower.ng team. We're here to help with any questions or support you need." />
-            </Helmet>
+            <SEOHead {...seoMeta} />
             <div className="bg-background text-foreground py-20">
                 <div className="container mx-auto px-4">
                     <motion.div

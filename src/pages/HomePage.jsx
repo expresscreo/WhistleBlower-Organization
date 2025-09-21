@@ -1,6 +1,5 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { motion, useInView, animate, AnimatePresence } from 'framer-motion';
 import { Shield, Eye, Award, Users, ArrowRight, FileText, Search, Gift, CheckCircle, Trophy } from 'lucide-react';
@@ -9,6 +8,8 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import TrustedByCarousel from '@/components/home/TrustedByCarousel';
 import BountyAccordion from '@/components/home/BountyAccordion';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const Counter = ({ initialValue, hourlyIncrease = 0, prefix = '', suffix = '', isDecimal = false }) => {
     const ref = useRef(null);
@@ -104,8 +105,40 @@ const HomePage = () => {
     { initialValue: 5640, hourlyIncrease: 9, label: 'Active Users', icon: Users }
   ];
 
+  // Generate SEO metadata
+  const seoMeta = generateSEOMeta({
+    ...DEFAULT_SEO_PAGES.home,
+    url: '/',
+    type: 'website'
+  });
+
+  // Generate structured data
+  const structuredData = [
+    STRUCTURED_DATA_TEMPLATES.organization(),
+    STRUCTURED_DATA_TEMPLATES.website(),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Service',
+      name: 'Crime Reporting Service',
+      description: 'Secure and anonymous crime reporting platform for Nigerian citizens',
+      provider: {
+        '@type': 'Organization',
+        name: 'WhistleBlower.ng'
+      },
+      areaServed: {
+        '@type': 'Country',
+        name: 'Nigeria'
+      },
+      serviceType: 'Crime Reporting'
+    }
+  ];
+
   return (
     <>
+      <SEOHead
+        {...seoMeta}
+        structuredData={structuredData}
+      />
       <section 
         className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed"
         style={{ backgroundImage: `url('https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/3daa1393568b3672dde62804c7a7a732.jpg')`}}

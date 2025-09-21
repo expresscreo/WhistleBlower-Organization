@@ -1,15 +1,19 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { FileText, CheckSquare, Shield, Code, Server, AlertCircle, Edit, Mail } from 'lucide-react';
 
 const TermsOfServicePage = () => {
     return (
         <>
-            <Helmet>
-                <title>Terms of Service - WhistleBlower.ng</title>
-                <meta name="description" content="Read the Terms of Service for using the WhistleBlower.ng platform." />
-            </Helmet>
+            <SEOHead 
+                {...generateSEOMeta({
+                    ...DEFAULT_SEO_PAGES.terms,
+                    url: '/terms-of-service',
+                    type: 'website'
+                })}
+            />
             <div className="bg-background text-foreground py-20">
                 <div className="container mx-auto px-4 max-w-4xl">
                     <motion.div

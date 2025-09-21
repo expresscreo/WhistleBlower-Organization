@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -10,6 +9,9 @@ import { Award } from 'lucide-react';
 import BountyForm from './submit-report/BountyForm';
 import SubmissionSuccess from './submit-report/SubmissionSuccess';
 import { sanitizeFilename } from '@/lib/utils';
+import { uploadFileToLocal } from '@/lib/fileUtils';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const PlaceBountyPage = () => {
     const { toast } = useToast();
@@ -32,25 +34,20 @@ const PlaceBountyPage = () => {
             let evidencePaths = [];
             if (bountyData.evidenceFiles.length > 0) {
                 const uploadPromises = bountyData.evidenceFiles.map(async (file, index) => {
-                    const sanitizedName = sanitizeFilename(file.name);
-                    const filePath = `bounties/${bountyId}/${Date.now()}-${sanitizedName}`;
-                    
-                    const { error: uploadError } = await supabase.storage
-                        .from('wb_evio')
-                        .upload(filePath, file, {
-                            cacheControl: '3600',
-                            upsert: false,
-                            contentType: file.type,
-                        }, (event) => {
-                            if (event.type === 'progress') {
-                                setUploadProgress(prev => ({ ...prev, [index]: (event.loaded / event.total) * 100 }));
-                            }
-                        });
-
-                    if (uploadError) {
-                        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+                    try {
+                        // Update progress
+                        setUploadProgress(prev => ({ ...prev, [index]: 50 }));
+                        
+                        // Upload to local storage (use generic folder name to hide bounty ID)
+                        const filePath = await uploadFileToLocal(file, 'bounties', 'delito');
+                        
+                        // Complete progress
+                        setUploadProgress(prev => ({ ...prev, [index]: 100 }));
+                        
+                        return filePath;
+                    } catch (error) {
+                        throw new Error(`Failed to upload ${file.name}: ${error.message}`);
                     }
-                    return filePath;
                 });
                 evidencePaths = await Promise.all(uploadPromises);
             }
@@ -92,9 +89,34 @@ const PlaceBountyPage = () => {
         />;
     }
   
+    // Generate SEO metadata
+    const seoMeta = generateSEOMeta({
+        ...DEFAULT_SEO_PAGES.placeBounty,
+        url: '/place-bounty',
+        type: 'website'
+    });
+
+    // Generate structured data
+    const structuredData = [
+        {
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'Place a Public Bounty - WhistleBlower.ng',
+            description: 'Place public bounties for specific information or missing persons. Reward citizens for providing valuable intelligence.',
+            mainEntity: {
+                '@type': 'Service',
+                name: 'Public Bounty Placement',
+                description: 'Secure platform for placing public bounties and rewarding information'
+            }
+        }
+    ];
+
     return (
       <>
-        <Helmet><title>Place a Bounty - WhistleBlower.ng</title></Helmet>
+        <SEOHead
+            {...seoMeta}
+            structuredData={structuredData}
+        />
         <div className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-12">

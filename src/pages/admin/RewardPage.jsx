@@ -193,27 +193,30 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     
       const renderOrgView = () => (
         <Tabs defaultValue="wallet" className="w-full">
-            <TabsList>
-                <TabsTrigger value="wallet">Wallet</TabsTrigger>
-                <TabsTrigger value="request">Request Reward</TabsTrigger>
-                <TabsTrigger value="history">Reward History</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+                <TabsList className="w-full sm:w-auto flex-nowrap">
+                    <TabsTrigger value="wallet" className="whitespace-nowrap">Wallet</TabsTrigger>
+                    <TabsTrigger value="request" className="whitespace-nowrap">Request Reward</TabsTrigger>
+                    <TabsTrigger value="history" className="whitespace-nowrap">Reward History</TabsTrigger>
+                </TabsList>
+            </div>
 
             <TabsContent value="wallet">
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="space-y-1.5">
                             <CardTitle className="flex items-center gap-2"><Wallet /> Your Wallet</CardTitle>
                             <CardDescription>Manage your organization's funds for rewards.</CardDescription>
                         </div>
-                        <Button onClick={() => window.open('https://paystack.com/pay/demo-payment', '_blank')}>Deposit Funds</Button>
+                        <Button onClick={() => window.open('https://paystack.com/pay/demo-payment', '_blank')} className="w-full sm:w-auto">Deposit Funds</Button>
                     </CardHeader>
                     <CardContent>
                         <p className="text-4xl font-bold">₦{data.wallet?.balance?.toLocaleString() || '0.00'}</p>
                         
                         <h3 className="text-lg font-semibold mt-6 mb-2">Transaction History</h3>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Type</TableHead><TableHead>Reference</TableHead></TableRow></TableHeader>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Type</TableHead><TableHead>Reference</TableHead></TableRow></TableHeader>
                             <TableBody>
                             {data.walletTransactions.map(tx => (
                                 <TableRow key={tx.id}>
@@ -224,7 +227,8 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
                                 </TableRow>
                             ))}
                             </TableBody>
-                        </Table>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -236,8 +240,9 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
                         <CardDescription>Submit reward requests for reports that have been successfully resolved.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Report ID</TableHead><TableHead>Title</TableHead><TableHead>Date Resolved</TableHead><TableHead>Reward Amount</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Report ID</TableHead><TableHead>Title</TableHead><TableHead>Date Resolved</TableHead><TableHead>Reward Amount</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                         <TableBody>
                         {data.resolvedReports.map(report => (
                             <TableRow key={report.id}>
@@ -249,7 +254,8 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
                             </TableRow>
                         ))}
                         </TableBody>
-                    </Table>
+                        </Table>
+                    </div>
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -294,17 +300,20 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     
       const renderAdminView = () => (
         <Tabs defaultValue="summary" className="w-full">
-          <TabsList>
-            <TabsTrigger value="summary">Organization Summary</TabsTrigger>
-            <TabsTrigger value="requests">Pending Reward Requests</TabsTrigger>
-            <TabsTrigger value="audit">Reward Audit Log</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="w-full sm:w-auto flex-nowrap">
+              <TabsTrigger value="summary" className="whitespace-nowrap">Organization Summary</TabsTrigger>
+              <TabsTrigger value="requests" className="whitespace-nowrap">Pending Reward Requests</TabsTrigger>
+              <TabsTrigger value="audit" className="whitespace-nowrap">Reward Audit Log</TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent value="summary">
             <Card>
               <CardHeader><CardTitle>Organization Summary</CardTitle></CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader><TableRow><TableHead>Organization</TableHead><TableHead>Wallet Balance</TableHead></TableRow></TableHeader>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Organization</TableHead><TableHead>Wallet Balance</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {data.orgSummary.map(org => (
                       <TableRow key={org.id}>
@@ -313,7 +322,8 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,15 +1,19 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { AlertTriangle, BookOpen, Shield, BarChart, Link as LinkIcon, Info, Award } from 'lucide-react';
 
 const DisclaimerPage = () => {
     return (
         <>
-            <Helmet>
-                <title>Disclaimer - WhistleBlower.ng</title>
-                <meta name="description" content="Important disclaimers regarding the use of the WhistleBlower.ng platform." />
-            </Helmet>
+            <SEOHead 
+                {...generateSEOMeta({
+                    ...DEFAULT_SEO_PAGES.disclaimer,
+                    url: '/disclaimer',
+                    type: 'website'
+                })}
+            />
             <div className="bg-background text-foreground py-20">
                 <div className="container mx-auto px-4 max-w-4xl">
                     <motion.div

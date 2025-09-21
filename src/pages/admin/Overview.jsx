@@ -99,14 +99,14 @@ const Overview = () => {
             description="Here's a summary of what's happening."
           />
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Total Reports" value={stats.total} icon={<FileText className="h-4 w-4 text-primary" />} link="/admin/reports" />
           <StatCard title="Under Review" value={stats.underReview} icon={<Search className="h-4 w-4 text-primary" />} link="/admin/reports?status=Under+Review" />
           <StatCard title="Urgent Reports" value={stats.urgent} icon={<AlertTriangle className="h-4 w-4 text-primary" />} link="/admin/reports?urgency=High" />
           <StatCard title="Resolved Reports" value={stats.resolved} icon={<CheckCircle className="h-4 w-4 text-primary" />} link="/admin/reports?status=Resolved" />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader><CardTitle>Reports Over Time (Last 30 Days)</CardTitle></CardHeader>
             <CardContent className="pl-2">
@@ -143,7 +143,7 @@ const Overview = () => {
         </div>
 
         {canSeeAdvancedFeatures && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
@@ -152,15 +152,17 @@ const Overview = () => {
               <CardContent>
                   <div className="space-y-4">
                       {recentActivity.map(report => (
-                          <div key={report.report_id} className="flex items-center">
-                              <div className="flex h-8 w-8 items-center justify-center bg-muted">
-                                  {report.is_anonymous ? <Users className="h-4 w-4 text-muted-foreground" /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+                          <div key={report.report_id} className="flex items-start sm:items-center flex-col sm:flex-row gap-2 sm:gap-0">
+                              <div className="flex items-center flex-1 min-w-0">
+                                  <div className="flex h-8 w-8 items-center justify-center bg-muted flex-shrink-0">
+                                      {report.is_anonymous ? <Users className="h-4 w-4 text-muted-foreground" /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+                                  </div>
+                                  <div className="ml-4 space-y-1 min-w-0 flex-1">
+                                      <p className="text-sm font-medium leading-none truncate">{report.title}</p>
+                                      <p className="text-sm text-muted-foreground">New report #{report.report_id} in {report.category}</p>
+                                  </div>
                               </div>
-                              <div className="ml-4 space-y-1">
-                                  <p className="text-sm font-medium leading-none truncate max-w-[200px] sm:max-w-full">{report.title}</p>
-                                  <p className="text-sm text-muted-foreground">New report #{report.report_id} in {report.category}</p>
-                              </div>
-                              <div className="ml-auto font-medium text-sm text-muted-foreground">{formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}</div>
+                              <div className="font-medium text-sm text-muted-foreground ml-12 sm:ml-auto flex-shrink-0">{formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}</div>
                           </div>
                       ))}
                   </div>

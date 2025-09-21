@@ -287,54 +287,56 @@ const UserManagement = () => {
         </PageHeader>
         
         {/* Search and Filters */}
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-4">
           <Input 
             placeholder="Search by name or email..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
+            className="flex-1 min-w-0"
           />
-          <Select value={selectedOrganization} onValueChange={(value) => {
-            console.log('Organization filter changed to:', value);
-            setSelectedOrganization(value);
-          }}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Organization" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Organizations</SelectItem>
-              {organizations.map(org => (
-                <SelectItem key={org.id} value={org.name}>{org.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedPlan} onValueChange={(value) => {
-            console.log('Plan filter changed to:', value);
-            setSelectedPlan(value);
-          }}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Plan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Plans</SelectItem>
-              {plans.map(plan => (
-                <SelectItem key={plan.id} value={plan.name}>{plan.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedStatus} onValueChange={(value) => {
-            console.log('Status filter changed to:', value);
-            setSelectedStatus(value);
-          }}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
+            <Select value={selectedOrganization} onValueChange={(value) => {
+              console.log('Organization filter changed to:', value);
+              setSelectedOrganization(value);
+            }}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Filter by Organization" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Organizations</SelectItem>
+                {organizations.map(org => (
+                  <SelectItem key={org.id} value={org.name}>{org.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedPlan} onValueChange={(value) => {
+              console.log('Plan filter changed to:', value);
+              setSelectedPlan(value);
+            }}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Filter by Plan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plans</SelectItem>
+                {plans.map(plan => (
+                  <SelectItem key={plan.id} value={plan.name}>{plan.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedStatus} onValueChange={(value) => {
+              console.log('Status filter changed to:', value);
+              setSelectedStatus(value);
+            }}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Filter by Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         {/* Users Table */}

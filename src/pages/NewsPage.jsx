@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Info, Calendar, Tag, Newspaper, Search, Hand, Megaphone } from 'lucide-react';
+import { Loader2, Info, Calendar, Tag, Newspaper, Target, Hand, Megaphone } from 'lucide-react';
 import { format } from 'date-fns';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
+import { getLocalFileUrl } from '@/lib/fileUtils';
+import { Helmet } from 'react-helmet';
 
 const NewsCard = ({ item }) => {
     const bountyPostUrl = item.bounty_id ? `/bounties/${item.bounty_id}` : null;
@@ -23,25 +24,50 @@ const NewsCard = ({ item }) => {
                 </div>
             )}
             <CardHeader>
-                <CardTitle className="text-xl font-bold">{item.title}</CardTitle>
+                {item.category === 'bounty' && item.bounty_id ? (
+                    <Link to={`/bounties/${item.bounty_id}`}>
+                        <CardTitle className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">{item.title}</CardTitle>
+                    </Link>
+                ) : (
+                    <Link to={`/news/post/${item.id}`}>
+                        <CardTitle className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">{item.title}</CardTitle>
+                    </Link>
+                )}
                 <CardDescription className="flex items-center gap-4 pt-2 text-xs">
                     <span className="flex items-center"><Calendar className="mr-1 h-3 w-3" /> {format(new Date(item.created_at), 'PPP')}</span>
                     <span className="flex items-center capitalize"><Tag className="mr-1 h-3 w-3" /> {item.category.replace('_', ' ')}</span>
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
-                <p className="text-muted-foreground text-sm line-clamp-4">{item.content}</p>
+                <div 
+                    className="text-muted-foreground text-sm line-clamp-4 prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ 
+                        __html: item.content?.replace(/<img[^>]*>/g, '[Image]') || '' 
+                    }}
+                />
             </CardContent>
             <CardFooter>
                 {item.category === 'bounty' && bountyPostUrl ? (
                     <Link to={bountyPostUrl} className="w-full">
                         <Button className="w-full">
-                            <Info className="mr-2 h-4 w-4" /> View Bounty
+                            <Target className="mr-2 h-4 w-4" /> View Bounty
                         </Button>
                     </Link>
                 ) : (
                     <Link to={newsPostUrl} className="w-full">
-                        <Button variant="outline" className="w-full">Read More</Button>
+                        <Button variant={item.category === 'bounty' ? 'default' : 'outline'} className="w-full">
+                            {item.category === 'bounty' ? (
+                                <>
+                                    <Target className="mr-2 h-4 w-4" /> View Bounty
+                                </>
+                            ) : item.category === 'most_wanted' ? (
+                                <>
+                                    <Info className="mr-2 h-4 w-4" /> View Alert
+                                </>
+                            ) : (
+                                'Read More'
+                            )}
+                        </Button>
                     </Link>
                 )}
             </CardFooter>
@@ -61,7 +87,7 @@ const categoryDetails = {
         description: 'Catch up on the latest developments, security updates, and stories of impact. Information is power in our collective effort to build a safer community.'
     },
     bounty: {
-        icon: Search,
+        icon: Target,
         title: 'Active Bounties',
         description: 'Explore active bounties placed by individuals and organizations. Your information could be the key to resolving a case and earning a reward.'
     },
@@ -87,6 +113,29 @@ const NewsPage = () => {
     const currentCategory = categoryDetails[category] || categoryDetails.all;
     const Icon = currentCategory.icon;
 
+    // Generate SEO metadata based on category
+    const getPageTitle = (category) => {
+        if (category === 'bounty') {
+            return 'Active Bounties - WhistleBlower.ng';
+        } else if (category === 'most_wanted') {
+            return 'Most Wanted - WhistleBlower.ng';
+        } else if (category === 'news') {
+            return 'Latest News - WhistleBlower.ng';
+        }
+        return 'News & Updates - WhistleBlower.ng';
+    };
+
+    const getPageDescription = (category) => {
+        if (category === 'bounty') {
+            return 'Browse active bounties and earn rewards for providing valuable information. Help solve cases and make Nigeria safer.';
+        } else if (category === 'most_wanted') {
+            return 'View Nigeria\'s most wanted individuals and help law enforcement. Provide anonymous tips to bring fugitives to justice.';
+        } else if (category === 'news') {
+            return 'Stay informed with the latest news and security updates from across Nigeria. Important information for citizen safety.';
+        }
+        return 'Stay updated with the latest news, published bounties, and most wanted alerts from across the nation.';
+    };
+
     const fetchNews = useCallback(async () => {
         setLoading(true);
         try {
@@ -100,24 +149,9 @@ const NewsPage = () => {
 
             if (error) throw error;
 
-            const imagePaths = data.map(item => item.featured_image).filter(Boolean);
-            let imageUrlMap = {};
-
-            if (imagePaths.length > 0) {
-                const { data: signedUrls, error: urlError } = await supabase.storage.from('wb_evio').createSignedUrls(imagePaths, 3600); // 1 hour validity
-                if (urlError) throw urlError;
-
-                signedUrls.forEach(url => {
-                    if (url.signedUrl) {
-                        const path = url.path;
-                        imageUrlMap[path] = url.signedUrl;
-                    }
-                });
-            }
-
             const newsWithImageUrls = data.map(item => ({
                 ...item,
-                featured_image_url: item.featured_image ? imageUrlMap[item.featured_image] : null
+                featured_image_url: getLocalFileUrl(item.featured_image)
             }));
 
             setNews(newsWithImageUrls);
@@ -131,6 +165,33 @@ const NewsPage = () => {
 
     useEffect(() => {
         fetchNews();
+    }, [fetchNews]);
+
+    // Real-time subscription for news updates
+    useEffect(() => {
+        const channel = supabase
+            .channel('news-updates')
+            .on('postgres_changes', 
+                { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'news',
+                    filter: 'status=eq.published'
+                }, 
+                async (payload) => {
+                    console.log('News update received:', payload);
+                    // Refresh news when any published news item is updated
+                    // Add a small delay to ensure database consistency
+                    setTimeout(() => {
+                        fetchNews();
+                    }, 100);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [fetchNews]);
 
     useEffect(() => {
@@ -150,8 +211,8 @@ const NewsPage = () => {
     return (
         <>
             <Helmet>
-                <title>{currentCategory.title} - WhistleBlower.ng</title>
-                <meta name="description" content={currentCategory.description} />
+                <title>{getPageTitle(category)}</title>
+                <meta name="description" content={getPageDescription(category)} />
             </Helmet>
             <div className="container mx-auto px-4 py-16 md:py-24">
                 <div className="text-center mb-12">

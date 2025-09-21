@@ -93,7 +93,8 @@ const Billing = () => {
                                 </div>
                             </>
                         ) : (
-                            <Table>
+                            <div className="overflow-x-auto">
+                                <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Date</TableHead>
@@ -129,6 +130,7 @@ const Billing = () => {
                                     )}
                                 </TableBody>
                             </Table>
+                            </div>
                         )}
                     </CardContent>
                 </Card>

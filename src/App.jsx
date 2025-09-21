@@ -47,6 +47,7 @@ import TrashedReports from '@/pages/admin/TrashedReports';
 import BountiesManagement from '@/pages/admin/BountiesManagement';
 import BountyDetails from '@/pages/admin/BountyDetails';
 import NewsEditor from '@/pages/admin/NewsEditor';
+import NewsEditorPage from '@/pages/admin/NewsEditorPage';
 
 
 
@@ -109,6 +110,8 @@ function App() {
                   <Route path="bounties" element={<BountiesManagement />} />
                   <Route path="bounties/:id" element={<BountyDetails />} />
                   <Route path="news-editor" element={<NewsEditor />} />
+                  <Route path="news-editor/create" element={<NewsEditorPage />} />
+                  <Route path="news-editor/edit/:id" element={<NewsEditorPage />} />
                   <Route path="billing" element={<Billing />} />
                   <Route path="plan-features" element={<PlanFeatures />} />
                   <Route path="plan-management" element={<PlanManagement />} />

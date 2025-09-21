@@ -13,7 +13,7 @@ import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 
 const ITEMS_PER_PAGE = 18;
-const NairaSign = () => <span className="font-sans">₦</span>;
+const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
 const toTitleCase = (str) => {
     if (!str) return '';
@@ -98,27 +98,29 @@ const BountiesManagement = () => {
                     />
                     
                     {/* Filters */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Input className="lg:col-span-2" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        <Select value={filters.type} onValueChange={(v) => setFilters(f => ({ ...f, type: v }))}>
-                            <SelectTrigger><SelectValue placeholder="Filter by Type" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="bounty">Placed Bounty</SelectItem>
-                                <SelectItem value="report">Bounty Report</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
-                            <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                {Object.keys(statusConfig).map(key => <SelectItem key={key} value={key}>{toTitleCase(key)}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <Input className="flex-1 min-w-0" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
+                            <Select value={filters.type} onValueChange={(v) => setFilters(f => ({ ...f, type: v }))}>
+                                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Filter by Type" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Types</SelectItem>
+                                    <SelectItem value="bounty">Placed Bounty</SelectItem>
+                                    <SelectItem value="report">Bounty Report</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
+                                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Filter by Status" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Statuses</SelectItem>
+                                    {Object.keys(statusConfig).map(key => <SelectItem key={key} value={key}>{toTitleCase(key)}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     {/* Bounties Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                 {displayedItems.map(item => {
                                     const isBounty = item.item_type === 'bounty';
                                     const currentStatus = statusConfig[item.status] || { progress: 0, color: 'bg-gray-400', tag: 'bg-gray-100 text-gray-800' };

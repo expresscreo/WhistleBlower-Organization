@@ -1,15 +1,19 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Shield, FileText, Database, Lock, Share2, UserCheck, Edit, Mail } from 'lucide-react';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const PrivacyPolicyPage = () => {
     return (
         <>
-            <Helmet>
-                <title>Privacy Policy - WhistleBlower.ng</title>
-                <meta name="description" content="Our commitment to your privacy. Learn how WhistleBlower.ng handles your data securely and responsibly." />
-            </Helmet>
+            <SEOHead 
+                {...generateSEOMeta({
+                    ...DEFAULT_SEO_PAGES.privacy,
+                    url: '/privacy-policy',
+                    type: 'website'
+                })}
+            />
             <div className="bg-background text-foreground py-20">
                 <div className="container mx-auto px-4 max-w-4xl">
                     <motion.div

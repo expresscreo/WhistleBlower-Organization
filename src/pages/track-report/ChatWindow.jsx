@@ -7,9 +7,14 @@ import { format } from 'date-fns';
 
 const ChatWindow = ({ updates, newMessage, setNewMessage, onSendMessage, isSending, onKeyDown }) => {
   const chatEndRef = useRef(null);
+  const prevUpdatesLength = useRef(0);
   
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only auto-scroll if new messages were added (not on initial load)
+    if (updates.length > 0 && updates.length > prevUpdatesLength.current) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevUpdatesLength.current = updates.length;
   }, [updates]);
 
   const ReadStatusIcon = ({ isRead }) => {

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp, HelpCircle, Shield, FileText, Gift, User, Server, Award } from 'lucide-react';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const FAQPage = () => {
   const [openItems, setOpenItems] = useState({});
@@ -74,12 +75,25 @@ const FAQPage = () => {
     setOpenItems(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // Generate SEO metadata
+  const seoMeta = generateSEOMeta({
+    ...DEFAULT_SEO_PAGES.faq,
+    url: '/faq',
+    type: 'website'
+  });
+
+  // Generate FAQ structured data
+  const allFAQs = faqData.flatMap(category => category.questions);
+  const structuredData = [
+    STRUCTURED_DATA_TEMPLATES.faqPage(allFAQs)
+  ];
+
   return (
     <>
-      <Helmet>
-        <title>FAQ - WhistleBlower.ng</title>
-        <meta name="description" content="Frequently asked questions about WhistleBlower.ng - secure anonymous crime reporting platform for Nigerian citizens" />
-      </Helmet>
+      <SEOHead
+        {...seoMeta}
+        structuredData={structuredData}
+      />
       <div className="min-h-screen py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-16">

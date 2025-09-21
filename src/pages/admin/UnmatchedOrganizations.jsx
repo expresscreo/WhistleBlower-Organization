@@ -86,7 +86,8 @@ const UnmatchedOrganizations = () => {
         {/* Organizations Table */}
         <Card>
           <CardContent>
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Report ID</TableHead>
@@ -119,6 +120,7 @@ const UnmatchedOrganizations = () => {
                 )}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -221,17 +221,16 @@ const TrackReportPage = ({ reportId, password }) => {
         <title>Track Your Report - WhistleBlower.ng</title>
         <meta name="description" content="Securely track the status of your submitted report using your unique Report ID." />
       </Helmet>
-      <div className="container mx-auto px-4 py-16 md:py-24 min-h-screen">
+      <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence>
             {authenticated && reportData && (
               <motion.div key="reportDetails" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold">{reportData.title}</h1>
-                    <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" /> Logout</Button>
+                    <h1 className="text-2xl sm:text-3xl font-bold break-words">{reportData.title}</h1>
                 </div>
                 <div className="space-y-8">
-                    <ReportSummary report={reportData} onUpdateReport={() => setUpdateModalOpen(true)} />
+                    <ReportSummary report={reportData} onUpdateReport={() => setUpdateModalOpen(true)} onLogout={handleLogout} />
                     {!reportData.is_feedback && <RewardSection report={reportData} />}
                     <ChatWindow updates={updates} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={onSendMessage} isSending={isSending} onKeyDown={handleKeyDown} />
                 </div>

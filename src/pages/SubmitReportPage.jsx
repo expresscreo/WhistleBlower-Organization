@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Mic, Text } from 'lucide-react';
@@ -7,6 +6,8 @@ import { FileText, Mic, Text } from 'lucide-react';
 import ReportForm from './submit-report/ReportForm';
 import SubmissionSuccess from './submit-report/SubmissionSuccess';
 import { Button } from '@/components/ui/button';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const SubmitReportPage = () => {
     const [searchParams] = useSearchParams();
@@ -33,10 +34,35 @@ const SubmitReportPage = () => {
             type={submissionData.type} 
         />;
     }
+
+    // Generate SEO metadata
+    const seoMeta = generateSEOMeta({
+        ...DEFAULT_SEO_PAGES.submitReport,
+        url: '/submit-report',
+        type: 'website'
+    });
+
+    // Generate structured data
+    const structuredData = [
+        {
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'Submit Report - WhistleBlower.ng',
+            description: 'Report crimes and misconduct anonymously through Nigeria\'s most secure platform.',
+            mainEntity: {
+                '@type': 'Service',
+                name: 'Anonymous Crime Reporting',
+                description: 'Secure platform for reporting crimes and misconduct in Nigeria'
+            }
+        }
+    ];
   
     return (
       <>
-        <Helmet><title>Submit Report - WhistleBlower.ng</title></Helmet>
+        <SEOHead
+            {...seoMeta}
+            structuredData={structuredData}
+        />
         <div className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-12">
