@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Edit2, FileType2 } from 'lucide-react';
+import { Edit2, FileType2, Mic } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import bcrypt from 'bcryptjs';
@@ -81,11 +81,17 @@ const ReportForm = ({ submissionType, isSubmitting, setIsSubmitting, setIsSubmit
         const feedbackParam = searchParams.get('feedback');
         const bountyIdParam = searchParams.get('bounty_id');
         const bountyTitleParam = searchParams.get('bounty_title');
+        const categoryParam = searchParams.get('category');
+        const mostWantedTypeParam = searchParams.get('most_wanted_type');
 
         if (bountyIdParam) {
             setIsBountyReportMode(true);
             handleInputChange('title', bountyTitleParam || `Information regarding bounty ${bountyIdParam}`);
             handleInputChange('category', 'Bounty');
+        } else if (categoryParam === 'most_wanted' && bountyTitleParam) {
+            setIsBountyReportMode(true);
+            handleInputChange('title', bountyTitleParam);
+            handleInputChange('category', 'Most Wanted');
         }
 
         if (feedbackParam === 'true') {
@@ -230,12 +236,13 @@ const ReportForm = ({ submissionType, isSubmitting, setIsSubmitting, setIsSubmit
                     transition={{ duration: 0.3 }}
                     className="space-y-8"
                 >
-                    {submissionType === 'text' ? (
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="title" className="flex items-center"><Edit2 className="mr-2 h-4 w-4" />Report Title</Label>
-                                <Input id="title" placeholder="e.g., Suspicious financial transactions in Q3" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required disabled={isBountyReportMode} />
-                            </div>
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="title" className="flex items-center"><Edit2 className="mr-2 h-4 w-4" />Report Title</Label>
+                            <Input id="title" placeholder="e.g., Suspicious financial transactions in Q3" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required disabled={isBountyReportMode} />
+                        </div>
+                        
+                        {submissionType === 'text' ? (
                             <div className="space-y-2">
                                 <Label htmlFor="description" className="flex items-center"><FileType2 className="mr-2 h-4 w-4" />Detailed Description</Label>
                                 <Textarea
@@ -247,10 +254,13 @@ const ReportForm = ({ submissionType, isSubmitting, setIsSubmitting, setIsSubmit
                                     required
                                 />
                             </div>
-                        </div>
-                    ) : (
-                        <VoiceRecorder onRecordingComplete={setVoiceNote} />
-                    )}
+                        ) : (
+                            <div className="space-y-2">
+                                <Label className="flex items-center"><Mic className="mr-2 h-4 w-4" />Voice Recording</Label>
+                                <VoiceRecorder onRecordingComplete={setVoiceNote} />
+                            </div>
+                        )}
+                    </div>
                 </motion.div>
             </AnimatePresence>
 
