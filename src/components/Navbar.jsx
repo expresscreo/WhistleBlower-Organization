@@ -5,8 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ArrowRight, ChevronDown, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useMobileMenu } from '@/contexts/MobileMenuContext';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
+import AnimatedHamburger from '@/components/AnimatedHamburger';
+import MobileMenuOverlay from '@/components/MobileMenuOverlay';
 
 const NavItem = ({ name, path, isActive, isExternal = false }) => {
     return isExternal ? (
@@ -211,11 +214,11 @@ const CompanyDropdownNavItem = ({ name, items }) => {
 };
 
 const Navbar = () => {
-  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const location = useLocation();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { isMobileMenuOpen, toggleMobileMenu } = useMobileMenu();
 
   const navItems = [
     { name: 'THE COMPANY', dropdown: true, isCompanyDropdown: true, items: [
@@ -233,9 +236,6 @@ const Navbar = () => {
     { name: 'FAQ', path: '/faq' }
   ];
 
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
 
   const logoLight = "https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/35d0622aeb226f9e365a63265e0667d1.png";
   const logoDark = "https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/064fb39032844b545b5bc953f870bc69.png";
@@ -293,122 +293,21 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="md:hidden">
-            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}>
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+          <div className="md:hidden flex items-center">
+            <AnimatedHamburger 
+              isOpen={isMobileMenuOpen} 
+              onClick={toggleMobileMenu}
+            />
           </div>
         </div>
 
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-background/95 backdrop-blur-sm z-50"
-          >
-            {/* Logo at top */}
-            <div className="flex justify-center items-center pt-6 pb-4">
-              <Link to="/" onClick={() => setMobileMenuOpen(false)}>
-                <img 
-                  src={theme === 'light' ? logoLight : logoDark}
-                  alt="WhistleBlower.ng Logo" 
-                  style={{ width: '220px', height: '32px' }}
-                />
-              </Link>
-            </div>
-
-            {/* Close button */}
-            <div className="absolute top-6 right-6">
-              <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-
-            {/* Navigation items */}
-            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
-              {navItems.map((item) => {
-                if(item.dropdown) {
-                  const isOpen = openDropdown === item.name;
-                  return (
-                    <div key={item.name} className="space-y-2">
-                      <div 
-                        className="flex items-center justify-between py-1 cursor-pointer"
-                        onClick={() => setOpenDropdown(isOpen ? null : item.name)}
-                      >
-                        <span className="text-2xl font-bold text-foreground">{item.name}</span>
-                        <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center">
-                          <ChevronDown className={`h-3 w-3 text-primary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                        </div>
-                      </div>
-                      {isOpen && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="pl-4 space-y-3"
-                        >
-                          {item.items.map(subItem => (
-                            <Link
-                              key={subItem.name}
-                              to={subItem.path}
-                              className="block text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              {subItem.name}
-                            </Link>
-                          ))}
-                        </motion.div>
-                      )}
-                    </div>
-                  );
-                }
-                return item.external ? (
-                  <a
-                    key={item.name}
-                    href={item.path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block text-2xl font-bold text-foreground py-1"
-                  >
-                    {item.name}
-                  </a>
-                ) : (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className="block text-2xl font-bold text-foreground py-1"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Bottom buttons - Fixed at bottom of screen */}
-            <div className="p-4 bg-background">
-              <div className="flex items-center space-x-3">
-                {user && (
-                  <Link to="/admin/overview" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" size="icon" className="w-12 h-12">
-                      <User className="h-5 w-5" />
-                    </Button>
-                  </Link>
-                )}
-                <Link to="/submit-report" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                  <Button className="w-full uppercase tracking-[1px] px-4 bg-primary hover:bg-[#e96601] h-12 text-base font-semibold">
-                    Submit Report
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        <MobileMenuOverlay navItems={navItems} />
       </div>
     </motion.nav>
   );
 };
 
 export default Navbar;
+
+
+

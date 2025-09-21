@@ -196,3 +196,66 @@ body {
     background-position: 0% 50%; 
   }
 }
+
+/* Mobile Menu Safe Area Support */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1.5rem);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 1.5rem);
+}
+
+/* Mobile menu overlay background */
+.mobile-menu-bg {
+  background: hsl(var(--background));
+}
+
+.dark .mobile-menu-bg {
+  background: #0f0f0f;
+}
+
+/* Mobile-specific optimizations */
+@supports (height: 100dvh) {
+  .h-screen-mobile {
+    height: 100dvh;
+  }
+}
+
+/* Touch-optimized button sizing */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Performance optimizations for mobile animations */
+.mobile-menu-overlay {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Orange color variants for mobile menu */
+.mobile-menu-primary {
+  color: #ff5100;
+}
+
+.mobile-menu-primary-bg {
+  background-color: #ff5100;
+}
+
+.mobile-menu-primary-bg-10 {
+  background-color: rgba(255, 81, 0, 0.1);
+}
+
+.mobile-menu-primary-bg-20 {
+  background-color: rgba(255, 81, 0, 0.2);
+}
+
+.mobile-menu-primary-border {
+  border-color: rgba(255, 81, 0, 0.2);
+}
+
+.mobile-menu-primary-shadow {
+  box-shadow: 0 10px 25px -5px rgba(255, 81, 0, 0.1), 0 8px 10px -6px rgba(255, 81, 0, 0.1);
+}

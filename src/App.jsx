@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/SupabaseAuthContext';
+import { MobileMenuProvider } from '@/contexts/MobileMenuContext';
 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -131,32 +132,34 @@ function App() {
 }
 
 const PublicApp = () => (
-  <div className="min-h-screen bg-background text-foreground">
-    <Navbar />
-    <main id="main-content">
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/about-us" element={<AboutUsPageV2 />} />
-        <Route path="/how-we-secure-your-data" element={<HowWeSecureDataPage />} />
-        <Route path="/track" element={<TrackPage />} />
-        <Route path="/bounties/:id" element={<BountyPostPage />} />
-        <Route path="/news" element={<NewsPage />} />
-        <Route path="/news/:category" element={<NewsPage />} />
-        <Route path="/news/post/:id" element={<NewsPostPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/faq" element={<FAQPage />} />
-        <Route path="/partner-program" element={<PartnerPage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-        <Route path="/disclaimer" element={<DisclaimerPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/submit-report" element={<SubmitReportPage />} />
-        <Route path="/place-bounty" element={<PlaceBountyPage />} />
-        <Route path="/sitemap.xml" element={<SitemapPage />} />
-      </Routes>
-    </main>
-    <Footer />
-  </div>
+  <MobileMenuProvider>
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
+      <main id="main-content">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about-us" element={<AboutUsPageV2 />} />
+          <Route path="/how-we-secure-your-data" element={<HowWeSecureDataPage />} />
+          <Route path="/track" element={<TrackPage />} />
+          <Route path="/bounties/:id" element={<BountyPostPage />} />
+          <Route path="/news" element={<NewsPage />} />
+          <Route path="/news/:category" element={<NewsPage />} />
+          <Route path="/news/post/:id" element={<NewsPostPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/partner-program" element={<PartnerPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+          <Route path="/disclaimer" element={<DisclaimerPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/submit-report" element={<SubmitReportPage />} />
+          <Route path="/place-bounty" element={<PlaceBountyPage />} />
+          <Route path="/sitemap.xml" element={<SitemapPage />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
+  </MobileMenuProvider>
 );
 
 export default App;

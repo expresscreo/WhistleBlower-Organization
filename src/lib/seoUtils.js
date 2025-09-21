@@ -7,7 +7,7 @@
 export const SITE_CONFIG = {
   name: 'WhistleBlower.ng',
   url: 'https://whistleblower.ng',
-  defaultImage: 'https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files//banner%20WhistleBlower.jpeg',
+  defaultImage: 'https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files/banner%20WhistleBlower.jpeg',
   description: 'Nigeria\'s premier platform for secure crime reporting and public bounties. Report crimes anonymously, place bounties, and help build a safer Nigeria.',
   twitterHandle: '@WhistleBlowerNG',
   locale: 'en_NG',
@@ -40,37 +40,18 @@ export const generateSEOMeta = ({
 }) => {
   const fullTitle = title.includes(SITE_CONFIG.name) ? title : `${title} - ${SITE_CONFIG.name}`;
   const fullUrl = url ? `${SITE_CONFIG.url}${url}` : SITE_CONFIG.url;
-  const fullImage = image.startsWith('http') ? image : `${SITE_CONFIG.url}${image}`;
+  const fullImage = image && image.startsWith('http') ? image : image ? `${SITE_CONFIG.url}${image}` : SITE_CONFIG.defaultImage;
   
   const meta = {
     title: fullTitle,
     description,
+    image: fullImage,
+    url: fullUrl,
+    type,
     keywords: keywords.length > 0 ? keywords.join(', ') : undefined,
     canonical: canonical || fullUrl,
-    openGraph: {
-      title: fullTitle,
-      description,
-      url: fullUrl,
-      type,
-      siteName: SITE_CONFIG.name,
-      locale: SITE_CONFIG.locale,
-      image: fullImage
-    },
-    twitter: {
-      card: 'summary_large_image',
-      site: SITE_CONFIG.twitterHandle,
-      creator: SITE_CONFIG.twitterHandle,
-      title: fullTitle,
-      description,
-      image: fullImage
-    }
+    article
   };
-
-  // Add article-specific metadata if provided
-  if (article) {
-    meta.openGraph.type = 'article';
-    meta.article = article;
-  }
 
   return meta;
 };
@@ -296,21 +277,23 @@ export const generateNewsPostSEO = (post) => {
     post.category
   ];
 
+  const seoMeta = generateSEOMeta({
+    title,
+    description,
+    image,
+    url: `/news/post/${post.id}`,
+    type: 'article',
+    keywords,
+    article: {
+      publishedTime: post.created_at,
+      modifiedTime: post.updated_at,
+      section: post.category,
+      tags: [post.category, 'whistleblower', 'Nigeria']
+    }
+  });
+
   return {
-    ...generateSEOMeta({
-      title,
-      description,
-      image,
-      url: `/news/post/${post.id}`,
-      type: 'article',
-      keywords,
-      article: {
-        publishedTime: post.created_at,
-        modifiedTime: post.updated_at,
-        section: post.category,
-        tags: [post.category, 'whistleblower', 'Nigeria']
-      }
-    }),
+    ...seoMeta,
     structuredData: STRUCTURED_DATA_TEMPLATES.article(articleData)
   };
 };

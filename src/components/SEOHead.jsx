@@ -24,22 +24,36 @@ const SEOHead = ({
   if (nofollow) robotsContent.push('nofollow');
   if (robotsContent.length === 0) robotsContent.push('index', 'follow');
 
+  // Ensure we have fallback values
+  const safeTitle = title || 'WhistleBlower.ng - Nigeria\'s Premier Crime Reporting Platform';
+  const safeDescription = description || 'Report crimes anonymously, place bounties, and help build a safer Nigeria with WhistleBlower.ng.';
+  const safeImage = image || 'https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files/banner%20WhistleBlower.jpeg';
+  const safeUrl = url || 'https://whistleblower.ng';
+
+  // Debug log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('SEOHead props:', { title: safeTitle, description: safeDescription, image: safeImage, url: safeUrl });
+  }
+
   return (
     <Helmet>
       {/* Basic Meta Tags */}
-      <title>{title}</title>
-      <meta name="description" content={description} />
+      <title>{safeTitle}</title>
+      <meta name="description" content={safeDescription} />
       {keywords && <meta name="keywords" content={keywords} />}
       <meta name="robots" content={robotsContent.join(', ')} />
       
       {/* Canonical URL */}
-      {canonical && <link rel="canonical" href={canonical} />}
+      <link rel="canonical" href={canonical || safeUrl} />
       
-      {/* Open Graph Meta Tags */}
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={image} />
-      <meta property="og:url" content={url} />
+      {/* Open Graph Meta Tags for Facebook, WhatsApp, etc. */}
+      <meta property="og:title" content={safeTitle} />
+      <meta property="og:description" content={safeDescription} />
+      <meta property="og:image" content={safeImage} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={safeTitle} />
+      <meta property="og:url" content={safeUrl} />
       <meta property="og:type" content={type} />
       <meta property="og:site_name" content="WhistleBlower.ng" />
       <meta property="og:locale" content="en_NG" />
@@ -48,9 +62,14 @@ const SEOHead = ({
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@WhistleBlowerNG" />
       <meta name="twitter:creator" content="@WhistleBlowerNG" />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={image} />
+      <meta name="twitter:title" content={safeTitle} />
+      <meta name="twitter:description" content={safeDescription} />
+      <meta name="twitter:image" content={safeImage} />
+      <meta name="twitter:image:alt" content={safeTitle} />
+      
+      {/* Additional meta tags for better social media support */}
+      <meta name="author" content="WhistleBlower.ng" />
+      <meta name="theme-color" content="#ff5100" />
       
       {/* Article-specific meta tags */}
       {article && (
