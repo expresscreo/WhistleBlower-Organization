@@ -11,7 +11,8 @@ export const SITE_CONFIG = {
   description: 'Nigeria\'s premier platform for secure crime reporting and public bounties. Report crimes anonymously, place bounties, and help build a safer Nigeria.',
   twitterHandle: '@WhistleBlowerNG',
   locale: 'en_NG',
-  type: 'website'
+  type: 'website',
+  keywords: ['whistleblower', 'Nigeria', 'crime reporting', 'anonymous reporting', 'bounty', 'security', 'transparency', 'accountability']
 };
 
 /**
@@ -282,6 +283,19 @@ export const generateNewsPostSEO = (post) => {
     url: `${SITE_CONFIG.url}/news/post/${post.id}`
   };
 
+  // Category-specific keywords
+  const categoryKeywords = {
+    bounty: ['bounty', 'reward', 'information', 'case', 'investigation'],
+    most_wanted: ['most wanted', 'fugitive', 'criminal', 'wanted person', 'law enforcement'],
+    news: ['news', 'update', 'security', 'crime', 'alert']
+  };
+
+  const keywords = [
+    ...SITE_CONFIG.keywords,
+    ...(categoryKeywords[post.category] || []),
+    post.category
+  ];
+
   return {
     ...generateSEOMeta({
       title,
@@ -289,6 +303,7 @@ export const generateNewsPostSEO = (post) => {
       image,
       url: `/news/post/${post.id}`,
       type: 'article',
+      keywords,
       article: {
         publishedTime: post.created_at,
         modifiedTime: post.updated_at,

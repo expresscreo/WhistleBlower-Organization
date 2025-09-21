@@ -1,10 +1,11 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, ShieldCheck, Lock, Zap, HeartHandshake as Handshake, CheckCircle } from 'lucide-react';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const AboutPage = () => {
   const values = [
@@ -21,12 +22,36 @@ const AboutPage = () => {
     'Protect reporters’ identities using advanced security measures.',
   ];
 
+  // Generate SEO metadata
+  const seoMeta = generateSEOMeta({
+    ...DEFAULT_SEO_PAGES.about,
+    url: '/about',
+    type: 'website'
+  });
+
+  // Generate structured data
+  const structuredData = [
+    STRUCTURED_DATA_TEMPLATES.organization(),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'AboutPage',
+      name: 'About WhistleBlower.ng',
+      description: 'Learn about WhistleBlower.ng\'s mission to empower Nigerian citizens with secure crime reporting and transparency.',
+      mainEntity: {
+        '@type': 'Organization',
+        name: 'WhistleBlower.ng',
+        foundingDate: '2023',
+        description: 'Nigeria\'s premier platform for secure crime reporting and public bounties'
+      }
+    }
+  ];
+
   return (
     <>
-      <Helmet>
-        <title>About Us - WhistleBlower.ng</title>
-        <meta name="description" content="Learn about WhistleBlower.ng, our mission, vision, and our commitment to empowering Nigerians to report crime safely and securely." />
-      </Helmet>
+      <SEOHead
+        {...seoMeta}
+        structuredData={structuredData}
+      />
 
       {/* Hero Section */}
       <section

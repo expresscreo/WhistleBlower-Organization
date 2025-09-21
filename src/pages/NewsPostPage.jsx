@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -8,6 +7,8 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getLocalFileUrl } from '@/lib/fileUtils';
+import SEOHead from '@/components/SEOHead';
+import { generateNewsPostSEO, generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const NewsPostPage = () => {
     const { id } = useParams();
@@ -227,12 +228,12 @@ const NewsPostPage = () => {
         );
     }
 
+    // Generate SEO metadata for the post
+    const seoMeta = post ? generateNewsPostSEO(post) : null;
+
     return (
         <>
-            <Helmet>
-                <title>{post.title} - WhistleBlower.ng</title>
-                <meta name="description" content={post.content.substring(0, 160)} />
-            </Helmet>
+            {seoMeta && <SEOHead {...seoMeta} />}
             <div className="container mx-auto px-4 py-16 md:py-24">
                 <div className="max-w-4xl mx-auto">
                     <Link to="/news" className="flex items-center text-sm text-muted-foreground hover:text-primary mb-8">

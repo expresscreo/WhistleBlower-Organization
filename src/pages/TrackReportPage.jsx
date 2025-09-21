@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut } from 'lucide-react';
@@ -11,6 +10,8 @@ import ChatWindow from '@/pages/track-report/ChatWindow';
 import RewardSection from '@/pages/track-report/RewardSection';
 import UpdateReportDialog from '@/pages/track-report/UpdateReportDialog';
 import { useNavigate } from 'react-router-dom';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const TrackReportPage = ({ reportId, password }) => {
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,7 @@ const TrackReportPage = ({ reportId, password }) => {
   const handleLogout = useCallback(() => {
     setReportData(null);
     setAuthenticated(false);
-    navigate('/track', { replace: true });
+    navigate('/', { replace: true });
   }, [navigate]);
 
   const handleAuthentication = useCallback(async () => {
@@ -215,12 +216,34 @@ const TrackReportPage = ({ reportId, password }) => {
     return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="h-16 w-16 animate-spin" /></div>;
   }
 
+  // Generate SEO metadata
+  const seoMeta = generateSEOMeta({
+    ...DEFAULT_SEO_PAGES.trackReport,
+    url: '/track-report',
+    type: 'website'
+  });
+
+  // Generate structured data
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Track Your Report - WhistleBlower.ng',
+      description: 'Securely track the status of your submitted report using your unique Report ID.',
+      mainEntity: {
+        '@type': 'Service',
+        name: 'Report Tracking Service',
+        description: 'Secure platform for tracking submitted crime reports and feedback in Nigeria'
+      }
+    }
+  ];
+
   return (
     <>
-      <Helmet>
-        <title>Track Your Report - WhistleBlower.ng</title>
-        <meta name="description" content="Securely track the status of your submitted report using your unique Report ID." />
-      </Helmet>
+      <SEOHead
+        {...seoMeta}
+        structuredData={structuredData}
+      />
       <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence>

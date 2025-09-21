@@ -10,7 +10,8 @@ import { Loader2, Info, Calendar, Tag, Newspaper, Target, Hand, Megaphone } from
 import { format } from 'date-fns';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { getLocalFileUrl } from '@/lib/fileUtils';
-import { Helmet } from 'react-helmet';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const NewsCard = ({ item }) => {
     const bountyPostUrl = item.bounty_id ? `/bounties/${item.bounty_id}` : null;
@@ -208,12 +209,53 @@ const NewsPage = () => {
         navigate(newCategory && newCategory !== 'all' ? `/news/${newCategory}` : '/news');
     };
 
+    // Generate SEO metadata based on category
+    const seoMeta = generateSEOMeta({
+        title: getPageTitle(category),
+        description: getPageDescription(category),
+        url: category === 'all' ? '/news' : `/news/${category}`,
+        keywords: category === 'bounty' ? ['bounty', 'reward', 'active bounties', 'information bounty', 'Nigeria bounty'] :
+                 category === 'most_wanted' ? ['most wanted', 'fugitive', 'criminal', 'wanted person', 'law enforcement'] :
+                 category === 'news' ? ['news', 'latest news', 'security updates', 'crime news', 'Nigeria news'] :
+                 ['news', 'updates', 'bounties', 'most wanted', 'Nigeria security']
+    });
+
+    // Generate structured data for news listing
+    const structuredData = [
+        STRUCTURED_DATA_TEMPLATES.organization(),
+        {
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: getPageTitle(category),
+            description: getPageDescription(category),
+            mainEntity: {
+                '@type': 'ItemList',
+                numberOfItems: news.length,
+                itemListElement: news.slice(0, 10).map((item, index) => ({
+                    '@type': 'ListItem',
+                    position: index + 1,
+                    item: {
+                        '@type': 'Article',
+                        headline: item.title,
+                        description: item.content?.replace(/<[^>]*>/g, '').substring(0, 160),
+                        url: item.bounty_id ? `/bounties/${item.bounty_id}` : `/news/post/${item.id}`,
+                        datePublished: item.created_at,
+                        author: {
+                            '@type': 'Organization',
+                            name: 'WhistleBlower.ng'
+                        }
+                    }
+                }))
+            }
+        }
+    ];
+
     return (
         <>
-            <Helmet>
-                <title>{getPageTitle(category)}</title>
-                <meta name="description" content={getPageDescription(category)} />
-            </Helmet>
+            <SEOHead
+                {...seoMeta}
+                structuredData={structuredData}
+            />
             <div className="container mx-auto px-4 py-16 md:py-24">
                 <div className="text-center mb-12">
                     <Icon className="h-16 w-16 text-primary mx-auto mb-6" />

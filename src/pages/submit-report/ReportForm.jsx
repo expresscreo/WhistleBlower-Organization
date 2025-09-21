@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Edit2, FileType2, Mic } from 'lucide-react';
+import { Edit2, FileType2, Mic, Type } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import bcrypt from 'bcryptjs';
@@ -238,7 +238,7 @@ const ReportForm = ({ submissionType, isSubmitting, setIsSubmitting, setIsSubmit
                 >
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="title" className="flex items-center"><Edit2 className="mr-2 h-4 w-4" />Report Title</Label>
+                            <Label htmlFor="title" className="flex items-center"><Type className="mr-2 h-4 w-4" />Report Title</Label>
                             <Input id="title" placeholder="e.g., Suspicious financial transactions in Q3" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required disabled={isBountyReportMode} />
                         </div>
                         

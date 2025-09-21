@@ -26,6 +26,9 @@ const TrackPage = () => {
     const [trackType, setTrackType] = useState(null);
 
     useEffect(() => {
+        // Scroll to top when component mounts
+        window.scrollTo(0, 0);
+        
         const storedId = sessionStorage.getItem('trackId');
         const storedPassword = sessionStorage.getItem('trackPassword');
         const storedType = sessionStorage.getItem('trackType');

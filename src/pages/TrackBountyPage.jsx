@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, Banknote } from 'lucide-react';
@@ -14,6 +13,8 @@ import { format } from 'date-fns';
 import AttachmentPreview from './track-report/AttachmentPreview';
 import { sanitizeFilename } from '@/lib/utils';
 import { uploadFileToLocal } from '@/lib/fileUtils';
+import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
@@ -106,7 +107,7 @@ const TrackBountyPage = ({ bountyId, password }) => {
         sessionStorage.removeItem('trackType');
         setBountyData(null);
         setAuthenticated(false);
-        navigate('/track', { replace: true });
+        navigate('/', { replace: true });
     };
 
     const handleAuthentication = useCallback(async () => {
@@ -202,12 +203,36 @@ const TrackBountyPage = ({ bountyId, password }) => {
         return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="h-16 w-16 animate-spin" /></div>;
     }
 
+    // Generate SEO metadata
+    const seoMeta = generateSEOMeta({
+        title: 'Track Your Bounty Status',
+        description: 'Securely track the progress of your submitted bounty in real-time. Monitor bounty updates and stay informed about the status of your submissions.',
+        url: '/track-bounty',
+        keywords: ['track bounty', 'bounty status', 'bounty tracking', 'whistleblower bounty', 'bounty progress'],
+        type: 'website'
+    });
+
+    // Generate structured data
+    const structuredData = [
+        {
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'Track Your Bounty - WhistleBlower.ng',
+            description: 'Securely track the status of your submitted bounty using your unique Bounty ID.',
+            mainEntity: {
+                '@type': 'Service',
+                name: 'Bounty Tracking Service',
+                description: 'Secure platform for tracking submitted bounties in Nigeria'
+            }
+        }
+    ];
+
     return (
         <>
-            <Helmet>
-                <title>Track Your Bounty - WhistleBlower.ng</title>
-                <meta name="description" content="Securely track the status of your submitted bounty." />
-            </Helmet>
+            <SEOHead
+                {...seoMeta}
+                structuredData={structuredData}
+            />
             <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
                 <div className="max-w-4xl mx-auto">
                     <AnimatePresence>
