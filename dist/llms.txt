@@ -1,8 +1,6 @@
 ## Pages
 - [- Coming Soon](/comingsoon): No description available
 - [- WhistleBlower.ng](/bountypost): No description available
-- [- WhistleBlower.ng](/newspost): No description available
-- [About Us - WhistleBlower.ng](/about): Learn about WhistleBlower.ng, our mission, vision, and our commitment to empowering Nigerians to report crime safely and securely.
 - [Audit Logs - WhistleBlower.ng](/auditlogs): No description available
 - [Billing - WhistleBlower.ng](/billing): No description available
 - [Bounties Management - WhistleBlower.ng](/bountiesmanagement): No description available
@@ -23,8 +21,6 @@
 - [Reward Management - WhistleBlower.ng](/reward): No description available
 - [Sitemap - WhistleBlower.ng](/sitemap): No description available
 - [Submit Report - WhistleBlower.ng](/submitreport): No description available
-- [Track Your Bounty - WhistleBlower.ng](/trackbounty): Securely track the status of your submitted bounty.
-- [Track Your Report - WhistleBlower.ng](/trackreport): Securely track the status of your submitted report using your unique Report ID.
 - [Trash - WhistleBlower.ng](/trashedreports): No description available
 - [Triage Reports - WhistleBlower.ng](/triage): No description available
 - [Unmatched Organizations - WhistleBlower.ng](/unmatchedorganizations): No description available
