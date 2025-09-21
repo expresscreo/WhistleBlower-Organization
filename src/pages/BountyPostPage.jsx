@@ -6,7 +6,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Info, MapPin, Calendar, Banknote } from 'lucide-react';
+import { Loader2, ArrowLeft, Info, MapPin, Calendar, Banknote, Coins } from 'lucide-react';
 import { format } from 'date-fns';
 import { getLocalFileUrl } from '@/lib/fileUtils';
 
@@ -252,10 +252,10 @@ const BountyPostPage = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
                                 <div className="flex items-start gap-3">
-                                    <div className="h-6 w-6 text-primary mt-1 flex items-center justify-center"><MoneyIcon /></div>
+                                    <Coins className="h-6 w-6 text-primary mt-1" />
                                     <div>
                                         <p className="text-sm text-muted-foreground">Bounty Amount</p>
-                                        <p className="font-bold text-2xl text-primary flex items-center"><MoneyIcon />{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p>
+                                        <p className="font-bold text-2xl text-primary">{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
