@@ -1,12 +1,12 @@
 
-    import React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Moon, Sun, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Moon, Sun, Monitor, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const Footer = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeMode, setAutoMode, setLightMode, setDarkMode } = useTheme();
 
   const quickLinks = [
     { name: 'Submit a Report', href: '/submit-report' },
@@ -109,17 +109,50 @@ const Footer = () => {
             © {new Date().getFullYear()} WhistleBlower.ng. All rights reserved.
           </p>
           
-          {/* Theme Toggle */}
-          <div className="flex items-center space-x-2 mt-4 md:mt-0">
+          {/* Theme Switcher */}
+          <div className="flex items-center space-x-3 mt-4 md:mt-0">
             <span className="text-sm text-[#b4b4b4]">Theme:</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="h-8 w-8 text-[#b4b4b4] hover:text-[#ff5100]"
-            >
-              {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-            </Button>
+            <div className="bg-[#2a2a2a] rounded-lg p-1 flex items-center space-x-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={setAutoMode}
+                className={`h-8 w-8 rounded-md transition-all ${
+                  themeMode === 'auto' 
+                    ? 'bg-[#ff5100] text-white' 
+                    : 'text-white hover:bg-white/10'
+                }`}
+                title="Auto (Time-based)"
+              >
+                <Monitor className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={setLightMode}
+                className={`h-8 w-8 rounded-md transition-all ${
+                  themeMode === 'manual' && theme === 'light' 
+                    ? 'bg-[#ff5100] text-white' 
+                    : 'text-white hover:bg-white/10'
+                }`}
+                title="Light Mode"
+              >
+                <Sun className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={setDarkMode}
+                className={`h-8 w-8 rounded-md transition-all ${
+                  themeMode === 'manual' && theme === 'dark' 
+                    ? 'bg-[#ff5100] text-white' 
+                    : 'text-white hover:bg-white/10'
+                }`}
+                title="Dark Mode"
+              >
+                <Moon className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
