@@ -24,69 +24,58 @@ const SEOHead = ({
   if (nofollow) robotsContent.push('nofollow');
   if (robotsContent.length === 0) robotsContent.push('index', 'follow');
 
-  // Ensure we have fallback values
-  const safeTitle = title || 'WhistleBlower.ng - Nigeria\'s Premier Crime Reporting Platform';
-  const safeDescription = description || 'Report crimes anonymously, place bounties, and help build a safer Nigeria with WhistleBlower.ng.';
-  const safeImage = image || 'https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files/banner%20WhistleBlower.jpeg';
-  const safeUrl = url || 'https://whistleblower.ng';
+  // Ensure we have safe string values
+  const toSafeString = (val, fallback = '') => {
+    if (typeof val === 'symbol') return fallback;
+    if (val === null || val === undefined) return fallback;
+    if (typeof val === 'object') return fallback;
+    return String(val);
+  };
 
-  // Debug log in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('SEOHead props:', { title: safeTitle, description: safeDescription, image: safeImage, url: safeUrl });
-  }
+  const stripSymbols = (value) => {
+    try {
+      return JSON.parse(JSON.stringify(value, (key, v) => (typeof v === 'symbol' ? undefined : v)));
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const safeTitle = toSafeString(title, 'WhistleBlower.ng - Nigeria\'s Premier Crime Reporting Platform');
+  const safeDescription = toSafeString(description, 'Report crimes anonymously, place bounties, and help build a safer Nigeria with WhistleBlower.ng.');
+  const safeImage = toSafeString(image, 'https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg');
+  const safeUrl = toSafeString(url, 'https://whistleblower.ng');
+  const safeKeywords = toSafeString(keywords);
+
+  const safeStructuredData = Array.isArray(structuredData) || (structuredData && typeof structuredData === 'object')
+    ? stripSymbols(structuredData)
+    : null;
 
   return (
     <Helmet>
-      {/* Basic Meta Tags */}
       <title>{safeTitle}</title>
       <meta name="description" content={safeDescription} />
-      {keywords && <meta name="keywords" content={keywords} />}
+      {safeKeywords && <meta name="keywords" content={safeKeywords} />}
       <meta name="robots" content={robotsContent.join(', ')} />
-      
-      {/* Canonical URL */}
       <link rel="canonical" href={canonical || safeUrl} />
-      
-      {/* Open Graph Meta Tags for Facebook, WhatsApp, etc. */}
+
       <meta property="og:title" content={safeTitle} />
       <meta property="og:description" content={safeDescription} />
       <meta property="og:image" content={safeImage} />
-      <meta property="og:image:width" content="1200" />
-      <meta property="og:image:height" content="630" />
-      <meta property="og:image:alt" content={safeTitle} />
       <meta property="og:url" content={safeUrl} />
       <meta property="og:type" content={type} />
       <meta property="og:site_name" content="WhistleBlower.ng" />
       <meta property="og:locale" content="en_NG" />
-      
-      {/* Twitter Card Meta Tags */}
+
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@WhistleBlowerNG" />
       <meta name="twitter:creator" content="@WhistleBlowerNG" />
       <meta name="twitter:title" content={safeTitle} />
       <meta name="twitter:description" content={safeDescription} />
       <meta name="twitter:image" content={safeImage} />
-      <meta name="twitter:image:alt" content={safeTitle} />
-      
-      {/* Additional meta tags for better social media support */}
-      <meta name="author" content="WhistleBlower.ng" />
-      <meta name="theme-color" content="#ff5100" />
-      
-      {/* Article-specific meta tags */}
-      {article && (
-        <>
-          <meta property="article:published_time" content={article.publishedTime} />
-          {article.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
-          {article.section && <meta property="article:section" content={article.section} />}
-          {article.tags && article.tags.map((tag, index) => (
-            <meta key={index} property="article:tag" content={tag} />
-          ))}
-        </>
-      )}
-      
-      {/* Structured Data */}
-      {structuredData && (
+
+      {safeStructuredData && (
         <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
+          {JSON.stringify(safeStructuredData)}
         </script>
       )}
     </Helmet>

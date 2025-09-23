@@ -1,11 +1,12 @@
-import { POPUP_STYLES } from './plugins/visual-editor/visual-editor-config.js';
+// Use an absolute import so it works from nested routes like /news/post/...
+import { POPUP_STYLES } from '/plugins/visual-editor/visual-editor-config.js';
 
 const PLUGIN_APPLY_EDIT_API_URL = '/api/apply-edit';
 
 const ALLOWED_PARENT_ORIGINS = [
-	'https://horizons.hostinger.com',
-	'https://horizons.hostinger.dev',
-	'https://horizons-frontend-local.hostinger.dev',
+	'https://whistleblower.ng',
+	'https://localhost:3000',
+	'https://localhost:5173',
 	'http://localhost:4000',
 ];
 

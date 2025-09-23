@@ -32,7 +32,7 @@ const Footer = () => {
     { icon: Linkedin, href: 'https://linkedin.com/company/hiwhistleblower' }
   ];
   
-  const logoUrl = "https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/064fb39032844b545b5bc953f870bc69.png";
+  const logoUrl = "/WBMedia/general/whistleblower-logo-dark.png";
 
   return (
     <footer className="bg-[#0f0f0f] text-[#b4b4b4] border-t border-gray-800">

@@ -10,6 +10,7 @@
 - [Loading Report Details - WhistleBlower.ng](/reportdetails): No description available
 - [Loading Reward Management - WhistleBlower.ng](/reward): No description available
 - [Loading Settings - WhistleBlower.ng](/settings): No description available
+- [Login - WhistleBlower.ng](/login): No description available
 - [News Editor - WhistleBlower.ng](/newseditor): No description available
 - [News Item - WhistleBlower.ng](/newseditor): No description available
 - [Organizations Management - WhistleBlower.ng](/companiesmanagement): No description available
@@ -17,6 +18,7 @@
 - [Payment Successful! - WhistleBlower.ng](/paymentsuccess): Your payment was successful. Your account has been activated. Proceed to login.
 - [Plan Features - WhistleBlower.ng](/planfeatures): No description available
 - [Plan Permissions Management - WhistleBlower.ng](/planmanagement): No description available
+- [Register - WhistleBlower.ng](/register): No description available
 - [Reports - WhistleBlower.ng](/reports): No description available
 - [Reward Management - WhistleBlower.ng](/reward): No description available
 - [Sitemap - WhistleBlower.ng](/sitemap): No description available

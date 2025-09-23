@@ -11,32 +11,32 @@ const slides = [
     {
         industry: "Financial Institutions",
         description: "Enhancing transparency and accountability in banking by providing a secure channel for reporting fraud and misconduct.",
-        imageSrc: "https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/33d6fdfa6552e8feeec072ae6a8ea863.png",
-        alt: "A modern bank building with large glass windows reflecting the sky."
+        imageSrc: "/WBMedia/general/Financial-Institutions.webp",
+        alt: "Financial institutions and banking sector representation."
     },
     {
         industry: "Government Agencies",
         description: "Empowering civil servants and the public to report corruption and inefficiency, fostering better governance.",
-        imageSrc: "https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/95f0cc895f061d86774ac29668081a54.jpg",
-        alt: "The Nigerian National Assembly building in Abuja."
+        imageSrc: "/WBMedia/general/Government-Agencies.webp",
+        alt: "Government agencies and public sector representation."
     },
     {
         industry: "Healthcare Sector",
         description: "Ensuring patient safety and ethical practices by enabling anonymous reporting of malpractice and negligence.",
-        imageSrc: "https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/8d20b6d3d9c6233608510c07c0a6fe8c.jpg",
-        alt: "A modern hospital ward in Nigeria with beds and medical equipment."
+        imageSrc: "/WBMedia/general/Healthcare-Sector.webp",
+        alt: "Healthcare sector and medical services representation."
     },
     {
         industry: "Educational Institutions",
         description: "Promoting a safe and fair learning environment by addressing issues like bullying, harassment, and academic fraud.",
-        imageSrc: "https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/e1d852b087ea6f36b5691ad48ce6f7df.jpg",
-        alt: "An aerial view of a large, modern university campus in Nigeria."
+        imageSrc: "/WBMedia/general/Educational-Institutions.webp",
+        alt: "Educational institutions and academic sector representation."
     },
     {
         industry: "Corporate & Private Sector",
         description: "Upholding corporate integrity through a confidential system for employees to report unethical behavior and compliance breaches.",
-        imageSrc: "https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/86e531342c83a07406b1f9790a7a426f.jpg",
-        alt: "A group of diverse professionals collaborating in a modern, open-plan office."
+        imageSrc: "/WBMedia/general/Corporate-Private-Sector.webp",
+        alt: "Corporate and private sector business representation."
     }
 ];
 

@@ -13,7 +13,8 @@ import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { Progress } from '@/components/ui/progress';
 import { sanitizeFilename, formatNumberWithCommas } from '@/lib/utils';
 
-const NairaSign = () => <span className="font-sans">₦</span>;
+import { Banknote } from 'lucide-react';
+const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
 const crimeTypes = [
     "Theft", "Murderer", "Fraud", "Assault", "Scam", "Sex Predator", "Armed Robbery", "Kidnapping", "Vandalism", "Missing Person", "Cybercrime", "Other"
@@ -149,7 +150,7 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                 )}
             </div>
             <div className="space-y-2">
-                <Label htmlFor="bounty-amount" className="flex items-center"><NairaSign />Bounty Amount (Refundable if not approved)</Label>
+                <Label htmlFor="bounty-amount" className="flex items-center"><MoneyIcon />Bounty Amount (Refundable if not approved)</Label>
                 <Input id="bounty-amount" placeholder="e.g., 50,000" value={formData.bountyAmount} onChange={handleBountyAmountChange} required />
             </div>
             <div className="space-y-4 pt-4 border-t">

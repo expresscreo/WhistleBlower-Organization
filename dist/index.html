@@ -2,8 +2,8 @@
 <html lang="en-NG">
 	<head>
 		<meta charset="UTF-8" />
-		<link rel="icon" type="image/png" href="https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/18209913301aadd3b188648225837304.png" />
-		<meta name="generator" content="Hostinger Horizons" />
+		<link rel="icon" type="image/png" href="/WBMedia/general/FAVICON-WhistleBlower.png" />
+		<meta name="generator" content="Vite" />
     
     <title>WhistleBlower.ng — Report Crime Securely, Earn Rewards</title>
     <meta name="description" content="Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.">
@@ -11,14 +11,14 @@
 
     <meta property="og:title" content="WhistleBlower.ng — Report Crime Securely, Earn Rewards">
     <meta property="og:description" content="Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.">
-    <meta property="og:image" content="https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files//banner%20WhistleBlower.jpeg">
+    <meta property="og:image" content="https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg">
     <meta property="og:url" content="https://whistleblower.ng/">
     <meta property="og:type" content="website">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="WhistleBlower.ng — Report Crime Securely, Earn Rewards">
     <meta name="twitter:description" content="Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.">
-    <meta name="twitter:image" content="https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files//banner%20WhistleBlower.jpeg">
+    <meta name="twitter:image" content="https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#FF5100">
@@ -33,7 +33,7 @@
       "@type": "Organization",
       "name": "WhistleBlower.ng",
       "url": "https://whistleblower.ng",
-      "logo": "https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files//banner%20WhistleBlower.jpeg",
+      "logo": "https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg",
       "contactPoint": {
         "@type": "ContactPoint",
         "email": "support@whistleblower.ng",
@@ -67,97 +67,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
-		<script type="module" crossorigin src="/assets/index-1d947b5b.js"></script>
-		<link rel="stylesheet" href="/assets/index-c675d660.css">
-		<script type="module">
-window.onerror = (message, source, lineno, colno, errorObj) => {
-	const errorDetails = errorObj ? JSON.stringify({
-		name: errorObj.name,
-		message: errorObj.message,
-		stack: errorObj.stack,
-		source,
-		lineno,
-		colno,
-	}) : null;
-
-	window.parent.postMessage({
-		type: 'horizons-runtime-error',
-		message,
-		error: errorDetails
-	}, '*');
-};
-</script>
-		<script type="module">
-const observer = new MutationObserver((mutations) => {
-	for (const mutation of mutations) {
-		for (const addedNode of mutation.addedNodes) {
-			if (
-				addedNode.nodeType === Node.ELEMENT_NODE &&
-				(
-					addedNode.tagName?.toLowerCase() === 'vite-error-overlay' ||
-					addedNode.classList?.contains('backdrop')
-				)
-			) {
-				handleViteOverlay(addedNode);
-			}
-		}
-	}
-});
-
-observer.observe(document.documentElement, {
-	childList: true,
-	subtree: true
-});
-
-function handleViteOverlay(node) {
-	if (!node.shadowRoot) {
-		return;
-	}
-
-	const backdrop = node.shadowRoot.querySelector('.backdrop');
-
-	if (backdrop) {
-		const overlayHtml = backdrop.outerHTML;
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(overlayHtml, 'text/html');
-		const messageBodyElement = doc.querySelector('.message-body');
-		const fileElement = doc.querySelector('.file');
-		const messageText = messageBodyElement ? messageBodyElement.textContent.trim() : '';
-		const fileText = fileElement ? fileElement.textContent.trim() : '';
-		const error = messageText + (fileText ? ' File:' + fileText : '');
-
-		window.parent.postMessage({
-			type: 'horizons-vite-error',
-			error,
-		}, '*');
-	}
-}
-</script>
-		<script type="module">
-const originalConsoleError = console.error;
-console.error = function(...args) {
-	originalConsoleError.apply(console, args);
-
-	let errorString = '';
-
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i];
-		if (arg instanceof Error) {
-			errorString = arg.stack || `${arg.name}: ${arg.message}`;
-			break;
-		}
-	}
-
-	if (!errorString) {
-		errorString = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
-	}
-
-	window.parent.postMessage({
-		type: 'horizons-console-error',
-		error: errorString
-	}, '*');
-};
-</script>
+		<script type="module" crossorigin src="/assets/index-98c15f0e.js"></script>
+		<link rel="stylesheet" href="/assets/index-1b5eb1db.css">
 		<script type="module">
 const originalFetch = window.fetch;
 

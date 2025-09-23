@@ -132,7 +132,7 @@ const AboutUsPageV2 = () => {
                                 <img
                                     className="absolute inset-0 w-full h-full object-cover"
                                     alt="A diverse group of determined Nigerian citizens looking towards the future"
-                                    src="https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/4289273a61f202436eafe08251d6c500.jpg" />
+                                    src="/WBMedia/general/about-us-team.jpg" />
                             </motion.div>
                         </div>
                     </div>

@@ -6,16 +6,18 @@ import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Info, Calendar, Tag, Newspaper, Target, Hand, Megaphone } from 'lucide-react';
+import { Loader2, Info, Calendar, Bookmark, Newspaper, Target, Hand, Megaphone } from 'lucide-react';
 import { format } from 'date-fns';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
-import { getLocalFileUrl } from '@/lib/fileUtils';
+import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { slugify } from '@/lib/utils';
 
 const NewsCard = ({ item }) => {
-    const bountyPostUrl = item.bounty_id ? `/bounties/${item.bounty_id}` : null;
-    const newsPostUrl = `/news/post/${item.id}`;
+    const bountyPostUrl = item.bounty_id ? `/bounties/${slugify(item.title)}` : null;
+    const slug = item.slug || slugify(item.title);
+    const newsPostUrl = `/news/post/${slug}`;
 
     return (
         <Card className="flex flex-col h-full overflow-hidden">
@@ -26,17 +28,17 @@ const NewsCard = ({ item }) => {
             )}
             <CardHeader>
                 {item.category === 'bounty' && item.bounty_id ? (
-                    <Link to={`/bounties/${item.bounty_id}`}>
+                    <Link to={`/bounties/${slugify(item.title)}`}>
                         <CardTitle className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">{item.title}</CardTitle>
                     </Link>
                 ) : (
-                    <Link to={`/news/post/${item.id}`}>
+                    <Link to={`/news/post/${slug}` }>
                         <CardTitle className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">{item.title}</CardTitle>
                     </Link>
                 )}
                 <CardDescription className="flex items-center gap-4 pt-2 text-xs">
                     <span className="flex items-center"><Calendar className="mr-1 h-3 w-3" /> {format(new Date(item.created_at), 'PPP')}</span>
-                    <span className="flex items-center capitalize"><Tag className="mr-1 h-3 w-3" /> {item.category.replace('_', ' ')}</span>
+                    <span className="flex items-center capitalize"><Bookmark className="mr-1 h-3 w-3" /> {item.category.replace('_', ' ')}</span>
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
@@ -152,7 +154,7 @@ const NewsPage = () => {
 
             const newsWithImageUrls = data.map(item => ({
                 ...item,
-                featured_image_url: getLocalFileUrl(item.featured_image)
+                featured_image_url: resolveImageUrl(item.featured_image)
             }));
 
             setNews(newsWithImageUrls);
@@ -238,7 +240,7 @@ const NewsPage = () => {
                         '@type': 'Article',
                         headline: item.title,
                         description: item.content?.replace(/<[^>]*>/g, '').substring(0, 160),
-                        url: item.bounty_id ? `/bounties/${item.bounty_id}` : `/news/post/${item.id}`,
+                        url: item.bounty_id ? `/bounties/${slugify(item.title)}` : `/news/post/${item.slug || `${slugify(item.title)}`}`,
                         datePublished: item.created_at,
                         author: {
                             '@type': 'Organization',

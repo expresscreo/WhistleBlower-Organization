@@ -141,7 +141,7 @@ const HomePage = () => {
       />
       <section 
         className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed"
-        style={{ backgroundImage: `url('https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/3daa1393568b3672dde62804c7a7a732.jpg')`}}
+        style={{ backgroundImage: `url('/WBMedia/general/hero-section-background.jpg')`}}
       >
         <div className="absolute inset-0 bg-black/60" />
         

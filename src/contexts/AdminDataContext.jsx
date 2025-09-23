@@ -89,7 +89,9 @@ export const AdminDataProvider = ({ children }) => {
       });
       
       if (error) throw error;
-      return data;
+      // Exclude bounty-category submissions from general Reports; they are handled in Bounties
+      const filtered = Array.isArray(data) ? data.filter(r => String(r.category || '').toLowerCase() !== 'bounty') : [];
+      return filtered;
     }, [profile?.id, profile?.user_type, profile?.organization_id]);
   }, [fetchData, profile]);
 
@@ -102,22 +104,39 @@ export const AdminDataProvider = ({ children }) => {
       
       const { data: reports, error: reportsError } = await supabase
         .from('reports')
-        .select('*, bounty_reports!inner(bounty_id)')
+        .select('*, bounty_reports(bounty_id)')
         .eq('category', 'Bounty')
         .eq('is_trashed', false);
 
-      if (bountiesError || reportsError) {
-        throw bountiesError || reportsError;
+      // Include direct submissions from bounty news (stored as bounty_updates)
+      const { data: bountyUpdates, error: updatesError } = await supabase
+        .from('bounty_updates')
+        .select('id, bounty_id, message, created_at')
+        .order('created_at', { ascending: false });
+
+      if (bountiesError || reportsError || updatesError) {
+        throw bountiesError || reportsError || updatesError;
       }
 
       const formattedBounties = bounties.map(b => ({ ...b, item_type: 'bounty' }));
       const formattedReports = reports.map(r => ({ 
         ...r, 
         item_type: 'report', 
-        bounty_id: r.bounty_reports[0]?.bounty_id 
+        bounty_id: Array.isArray(r.bounty_reports) && r.bounty_reports.length > 0 ? r.bounty_reports[0]?.bounty_id : r.bounty_id
+      }));
+      const formattedBountyUpdates = (bountyUpdates || []).map(u => ({
+        id: u.id,
+        item_type: 'report',
+        bounty_id: u.bounty_id,
+        title: 'New Bounty Information',
+        description: u.message,
+        status: 'Pending',
+        created_at: u.created_at,
+        submitted_at: u.created_at,
+        evidence_path: [],
       }));
       
-      return [...formattedBounties, ...formattedReports];
+      return [...formattedBounties, ...formattedReports, ...formattedBountyUpdates];
     }, []);
   }, [fetchData]);
 

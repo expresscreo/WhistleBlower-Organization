@@ -15,3 +15,15 @@ export const formatNumberWithCommas = (value) => {
   if (isNaN(Number(stringValue))) return value;
   return Number(stringValue).toLocaleString('en-US');
 };
+
+// Create URL-safe slugs from titles
+export const slugify = (input) => {
+  if (!input) return '';
+  return String(input)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};

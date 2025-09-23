@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote } from 'lucide-react';
+import { slugify } from '@/lib/utils';
 import { Helmet } from 'react-helmet';
 import NavbarLoader from '@/components/admin/NavbarLoader';
+import { formatNumberWithCommas } from '@/lib/utils';
 
 const NewsEditorPage = () => {
     const navigate = useNavigate();
@@ -25,7 +27,8 @@ const NewsEditorPage = () => {
         category: 'news',
         status: 'draft',
         featured_image: null,
-        bounty_id: null
+        bounty_id: null,
+        bounty_amount: ''
     });
     const [featuredImageFile, setFeaturedImageFile] = useState(null);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
@@ -56,7 +59,10 @@ const NewsEditorPage = () => {
 
             if (error) throw error;
 
-            setCurrentItem(data);
+            setCurrentItem({
+                ...data,
+                bounty_amount: data?.bounty_amount || ''
+            });
             setEditorContent(data.content || '');
             setFeaturedImageUrl(getLocalFileUrl(data.featured_image));
             
@@ -398,8 +404,14 @@ const NewsEditorPage = () => {
             
             // Upload featured image if changed
             if (featuredImageFile) {
-                const uploadedPath = await uploadFileToLocal(featuredImageFile, 'news', currentItem.id || 'new');
-                featuredImagePath = uploadedPath;
+                try {
+                    const uploadedPath = await uploadFileToLocal(featuredImageFile, 'news', currentItem.id || slugify(currentItem.title) || 'new');
+                    featuredImagePath = uploadedPath;
+                } catch (e) {
+                    console.error('Featured image upload failed:', e);
+                    // Non-blocking: allow publish without featured image
+                    featuredImagePath = currentItem.featured_image || null;
+                }
             }
 
             // Upload inline images and replace preview URLs with actual URLs
@@ -408,18 +420,45 @@ const NewsEditorPage = () => {
                 const subfolder = currentItem.id || 'new';
                 
                 for (const image of inlineImages) {
-                    const uploadedFilePath = await uploadFileToLocal(image.file, 'news', subfolder);
-                    const localImageUrl = getLocalFileUrl(uploadedFilePath);
-                    
-                    finalContent = finalContent.replace(
-                        new RegExp(image.previewUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-                        localImageUrl
-                    );
+                    try {
+                        const uploadedFilePath = await uploadFileToLocal(image.file, 'news', subfolder);
+                        const localImageUrl = getLocalFileUrl(uploadedFilePath);
+                        
+                        finalContent = finalContent.replace(
+                            new RegExp(image.previewUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                            localImageUrl
+                        );
+                    } catch (e) {
+                        console.error('Inline image upload failed:', e);
+                        // keep preview URL if upload fails; doesn't block publish
+                    }
                 }
                 
                 inlineImages.forEach(image => {
                     URL.revokeObjectURL(image.previewUrl);
                 });
+            }
+
+            // Generate slug from title
+            const baseSlug = slugify(currentItem.title);
+            let finalSlug = baseSlug;
+
+            // Try to ensure unique slug if column exists by checking conflicts
+            try {
+                const { data: existing } = await supabase
+                    .from('news')
+                    .select('slug')
+                    .ilike('slug', `${baseSlug}%`);
+
+                if (Array.isArray(existing) && existing.length > 0) {
+                    const existingSlugs = new Set(existing.map(e => e.slug));
+                    let suffix = 2;
+                    while (existingSlugs.has(finalSlug)) {
+                        finalSlug = `${baseSlug}-${suffix++}`;
+                    }
+                }
+            } catch (_) {
+                // If the query fails (e.g., slug column doesn't exist), we'll fallback below
             }
 
             const newsData = {
@@ -429,30 +468,48 @@ const NewsEditorPage = () => {
                 status: currentItem.status,
                 featured_image: featuredImagePath,
                 bounty_id: currentItem.bounty_id,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                // Include slug optimistically; we'll retry without it if DB doesn't have the column
+                slug: finalSlug
             };
 
-            if (isEditing) {
-                const { error } = await supabase
-                    .from('news')
-                    .update(newsData)
-                    .eq('id', id);
-                
-                if (error) throw error;
-                toast({ title: 'Success', description: 'News item updated successfully!' });
-            } else {
-                const { error } = await supabase
-                    .from('news')
-                    .insert([newsData]);
-                
-                if (error) throw error;
-                toast({ title: 'Success', description: 'News item created successfully!' });
+            const saveWithData = async (payload, edit) => {
+                if (edit) {
+                    return supabase.from('news').update(payload).eq('id', id);
+                }
+                return supabase.from('news').insert([payload]);
+            };
+
+            // First attempt: with slug
+            let result = await saveWithData(newsData, isEditing);
+
+            // Fallback: if slug column doesn't exist, retry without slug
+            if (result.error && /slug/i.test(result.error.message || '')) {
+                const { slug, ...withoutSlug } = newsData;
+                result = await saveWithData(withoutSlug, isEditing);
             }
+
+            if (result.error) throw result.error;
+
+            // If bounty news with linked bounty, propagate amount to bounty record (news table may not have bounty_amount)
+            if (currentItem.category === 'bounty' && currentItem.bounty_id && currentItem.bounty_amount) {
+                const numericAmount = Number(String(currentItem.bounty_amount).replace(/,/g, ''));
+                try {
+                    await supabase
+                        .from('bounties')
+                        .update({ bounty_amount: numericAmount })
+                        .eq('id', currentItem.bounty_id);
+                } catch (e) {
+                    console.warn('Could not update bounty amount on bounty record:', e);
+                }
+            }
+
+            toast({ title: 'Success', description: `News item ${isEditing ? 'updated' : 'created'} successfully!` });
 
             navigate('/admin/news-editor');
         } catch (error) {
             console.error('Error saving news item:', error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save news item' });
+            toast({ variant: 'destructive', title: 'Error', description: `Failed to save news item: ${error.message || error}` });
         } finally {
             setIsUploading(false);
         }
@@ -726,6 +783,22 @@ const NewsEditorPage = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {/* Bounty Amount (only for bounty category) */}
+                                    {currentItem.category === 'bounty' && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="bounty_amount">Bounty Amount</Label>
+                                            <Input
+                                                id="bounty_amount"
+                                                placeholder="e.g., 50,000"
+                                                value={currentItem.bounty_amount}
+                                                onChange={(e) => {
+                                                    const formatted = formatNumberWithCommas(e.target.value);
+                                                    setCurrentItem(prev => ({ ...prev, bounty_amount: formatted }));
+                                                }}
+                                            />
+                                        </div>
+                                    )}
 
                                     {/* Status */}
                                     <div className="space-y-2">

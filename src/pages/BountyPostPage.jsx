@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { slugify } from '@/lib/utils';
 import { Helmet } from 'react-helmet';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -8,12 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Info, MapPin, Calendar, Banknote, Coins } from 'lucide-react';
 import { format } from 'date-fns';
-import { getLocalFileUrl } from '@/lib/fileUtils';
+import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 
 const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
 const BountyPostPage = () => {
-    const { id } = useParams(); // This is the bounty's internal UUID from the URL
+    const { slug } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
     const [bounty, setBounty] = useState(null);
@@ -30,13 +31,38 @@ const BountyPostPage = () => {
     const fetchBounty = useCallback(async () => {
         setLoading(true);
         
-        // First, check if there's a published news item for this bounty
-        const { data: newsData, error: newsError } = await supabase
+        // Try to resolve bounty by slug: prefer news.slug == slug, else match by title slug
+        let bountyId = null;
+        const { data: newsBySlug } = await supabase
             .from('news')
             .select('*')
-            .eq('bounty_id', id)
+            .eq('slug', slug)
             .eq('status', 'published')
-            .single();
+            .maybeSingle();
+
+        if (newsBySlug) {
+            bountyId = newsBySlug.bounty_id || newsBySlug.id;
+        } else {
+            // Fallback: search published news by normalized title matching slug
+            const { data: newsList } = await supabase
+                .from('news')
+                .select('*')
+                .eq('status', 'published');
+            const match = (newsList || []).find(n => slugify(n.title) === slug);
+            if (match) bountyId = match.bounty_id || match.id;
+        }
+
+        // If we have a matching published news, prefer it
+        let newsData = null;
+        if (bountyId) {
+            const res = await supabase
+                .from('news')
+                .select('*')
+                .eq('bounty_id', bountyId)
+                .eq('status', 'published')
+                .single();
+            newsData = res.data;
+        }
 
         // If there's a published news item, use it
         if (newsData && !newsError) {
@@ -46,7 +72,7 @@ const BountyPostPage = () => {
             const { data: bountyData, error: bountyError } = await supabase
                 .from('bounties')
                 .select('*')
-                .eq('id', id)
+                .eq('id', bountyId)
                 .single();
             
             if (bountyError || !bountyData) {
@@ -68,7 +94,7 @@ const BountyPostPage = () => {
             
             // Set featured image URL if available
             if (newsData.featured_image) {
-                const imageUrl = getLocalFileUrl(newsData.featured_image);
+                const imageUrl = resolveImageUrl(newsData.featured_image);
                 setFeaturedImageUrl(imageUrl);
             } else {
                 setFeaturedImageUrl(null);
@@ -81,7 +107,7 @@ const BountyPostPage = () => {
         const { data: bountyData, error: bountyError } = await supabase
             .from('bounties')
             .select('*')
-            .eq('id', id)
+            .ilike('title', slug.replace(/-/g, ' '))
             .eq('status', 'published')
             .single();
 
@@ -97,7 +123,7 @@ const BountyPostPage = () => {
         setBounty(bountyData);
         setFeaturedImageUrl(null);
         setLoading(false);
-    }, [id, toast, navigate]);
+    }, [slug, toast, navigate]);
 
     useEffect(() => {
         fetchBounty();
@@ -105,16 +131,16 @@ const BountyPostPage = () => {
 
     // Real-time subscription for bounty updates (when updated through news editor)
     useEffect(() => {
-        if (!id) return;
+        if (!bounty?.id) return;
 
         const channel = supabase
-            .channel(`bounty-updates-${id}`)
+            .channel(`bounty-updates-${bounty.id}`)
             .on('postgres_changes', 
                 { 
                     event: 'UPDATE', 
                     schema: 'public', 
                     table: 'bounties',
-                    filter: `id=eq.${id}`
+                    filter: `id=eq.${bounty.id}`
                 }, 
                 (payload) => {
                     console.log('Bounty update received:', payload);
@@ -129,7 +155,7 @@ const BountyPostPage = () => {
                     event: 'UPDATE', 
                     schema: 'public', 
                     table: 'news',
-                    filter: `bounty_id=eq.${id}`
+                    filter: `bounty_id=eq.${bounty.id}`
                 }, 
                 (payload) => {
                     console.log('Bounty news update received:', payload);
@@ -144,7 +170,7 @@ const BountyPostPage = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [id, fetchBounty]);
+    }, [bounty, fetchBounty]);
 
     if (loading) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="h-16 w-16 animate-spin" /></div>;
     if (!bounty) return null;
@@ -255,7 +281,7 @@ const BountyPostPage = () => {
                                     <Coins className="h-6 w-6 text-primary mt-1" />
                                     <div>
                                         <p className="text-sm text-muted-foreground">Bounty Amount</p>
-                                        <p className="font-bold text-2xl text-primary">{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p>
+                                        <p className="font-bold text-2xl text-primary">{(bounty.bounty_amount || bounty.news_bounty_amount) ? `${Number(bounty.bounty_amount || bounty.news_bounty_amount).toLocaleString()}` : 'Not specified'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">

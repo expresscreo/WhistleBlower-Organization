@@ -127,13 +127,13 @@ const HowWeSecureDataPage = () => {
                         </div>
                         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
                             <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                                <img src="https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/9cd7f828710731ecd43fef1e5ae63cb9.webp" alt="GDPR Compliant Badge" className="h-32 object-contain" />
+                                <img src="/WBMedia/general/gdpr-compliant-badge.webp" alt="GDPR Compliant Badge" className="h-32 object-contain" />
                             </motion.div>
                             <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}>
-                                <img src="https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/005ea96ab75a190dac940ba91a19df31.webp" alt="NDPC Nigeria Data Protection Commission Logo" className="h-20 object-contain" />
+                                <img src="/WBMedia/general/ndpc-logo.webp" alt="NDPC Nigeria Data Protection Commission Logo" className="h-20 object-contain" />
                             </motion.div>
                              <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}>
-                                <img src="https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/0aeb3a2bb7de0d95540e7e7e2bcea3bd.webp" alt="Cyber Threat Defense Penetration Tested Badge" className="h-28 object-contain" />
+                                <img src="/WBMedia/general/cyber-threat-defense-badge.webp" alt="Cyber Threat Defense Penetration Tested Badge" className="h-28 object-contain" />
                             </motion.div>
                         </div>
                     </div>

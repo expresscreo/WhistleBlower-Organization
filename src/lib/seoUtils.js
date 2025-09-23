@@ -7,7 +7,7 @@
 export const SITE_CONFIG = {
   name: 'WhistleBlower.ng',
   url: 'https://whistleblower.ng',
-  defaultImage: 'https://dvdhllhdbbybixwhtgnm.supabase.co/storage/v1/object/public/whistleblower-files/banner%20WhistleBlower.jpeg',
+  defaultImage: 'https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg',
   description: 'Nigeria\'s premier platform for secure crime reporting and public bounties. Report crimes anonymously, place bounties, and help build a safer Nigeria.',
   twitterHandle: '@WhistleBlowerNG',
   locale: 'en_NG',
@@ -38,9 +38,11 @@ export const generateSEOMeta = ({
   article = null,
   canonical = null
 }) => {
-  const fullTitle = title.includes(SITE_CONFIG.name) ? title : `${title} - ${SITE_CONFIG.name}`;
+  const baseTitle = typeof title === 'string' ? title : String(title || '');
+  const fullTitle = baseTitle.includes(SITE_CONFIG.name) ? baseTitle : `${baseTitle} - ${SITE_CONFIG.name}`;
   const fullUrl = url ? `${SITE_CONFIG.url}${url}` : SITE_CONFIG.url;
-  const fullImage = image && image.startsWith('http') ? image : image ? `${SITE_CONFIG.url}${image}` : SITE_CONFIG.defaultImage;
+  const img = typeof image === 'string' ? image : String(image || '');
+  const fullImage = img && img.startsWith('http') ? img : img ? `${SITE_CONFIG.url}${img}` : SITE_CONFIG.defaultImage;
   
   const meta = {
     title: fullTitle,
@@ -48,7 +50,7 @@ export const generateSEOMeta = ({
     image: fullImage,
     url: fullUrl,
     type,
-    keywords: keywords.length > 0 ? keywords.join(', ') : undefined,
+    keywords: Array.isArray(keywords) && keywords.length > 0 ? keywords.join(', ') : undefined,
     canonical: canonical || fullUrl,
     article
   };
@@ -252,7 +254,7 @@ export const generateNewsPostSEO = (post) => {
     : `Read about ${post.title} on WhistleBlower.ng`;
   
   const image = post.featured_image 
-    ? (post.featured_image.startsWith('http') ? post.featured_image : `${SITE_CONFIG.url}${post.featured_image}`)
+    ? (post.featured_image.startsWith('http') ? post.featured_image : `${SITE_CONFIG.url}${post.featured_image.startsWith('/') ? '' : '/'}${post.featured_image}`)
     : SITE_CONFIG.defaultImage;
 
   const articleData = {
@@ -281,7 +283,7 @@ export const generateNewsPostSEO = (post) => {
     title,
     description,
     image,
-    url: `/news/post/${post.id}`,
+    url: post.slug ? `/news/post/${post.slug}` : `/news/post/${title?.toLowerCase()?.replace(/[^\w\s-]/g, '').trim().replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')}`,
     type: 'article',
     keywords,
     article: {

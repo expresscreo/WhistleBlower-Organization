@@ -67,8 +67,11 @@ const BountiesManagement = () => {
     }, [allItems, searchTerm, filters, currentPage]);
 
     const handleCardClick = (item) => {
-        if (item.item_type === 'bounty') {
-            navigate(`/admin/bounties/${item.id}`);
+        // Route all bounty-related submissions to the bounty details page
+        if (item.item_type === 'bounty' || item.bounty_id) {
+            // If item already has numeric id and is a bounty, use it; otherwise use bounty_id
+            const targetId = item.item_type === 'bounty' ? item.id : item.bounty_id;
+            navigate(`/admin/bounties/${targetId}`);
         } else {
             navigate(`/admin/reports/${item.id}`);
         }
@@ -138,7 +141,7 @@ const BountiesManagement = () => {
                                                     <MessageSquare className="w-5 h-5 text-primary hover:text-primary/80" />
                                                 </div>
                                                 <CardTitle className="text-sm font-semibold uppercase text-muted-foreground pt-2">
-                                                    {isBounty ? `Bounty ID: ${item.bounty_id}` : `Report ID: ${item.report_id}`}
+                                                    {isBounty ? `Bounty ID: ${item.bounty_id}` : item.bounty_id ? `Bounty ID: ${item.bounty_id}` : `Report ID: ${item.report_id}`}
                                                 </CardTitle>
                                                 <div className="w-full bg-muted h-2.5 my-1 overflow-hidden">
                                                     <div className={cn('h-2.5', currentStatus.color)} style={{ width: `${currentStatus.progress}%` }}></div>

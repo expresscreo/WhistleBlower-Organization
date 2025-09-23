@@ -56,7 +56,7 @@ const AboutPage = () => {
       {/* Hero Section */}
       <section
         className="relative h-[50vh] min-h-[400px] flex items-center justify-center text-center text-white bg-cover bg-center"
-        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1599493343939-403946147b12?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')` }}
+        style={{ backgroundImage: `url('/WBMedia/general/hero-background.jpg')` }}
       >
         <div className="absolute inset-0 bg-black/60" />
         <motion.div

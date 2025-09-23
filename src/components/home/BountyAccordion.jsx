@@ -86,7 +86,7 @@ const BountyAccordion = () => {
             <img
               className="absolute inset-0 w-full h-full object-cover"
               alt="A person looking at a phone screen with a magnifying glass icon, symbolizing searching for information."
-             src="https://images.unsplash.com/photo-1701783646331-10977357db92" />
+             src="/WBMedia/general/bounty-accordion-image.jpg" />
           </div>
           <div>
             <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-900 dark:text-white">

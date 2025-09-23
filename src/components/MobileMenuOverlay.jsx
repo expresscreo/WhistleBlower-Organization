@@ -15,8 +15,8 @@ const MobileMenuOverlay = ({ navItems }) => {
   const { theme } = useTheme();
   const location = useLocation();
 
-  const logoLight = "https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/35d0622aeb226f9e365a63265e0667d1.png";
-  const logoDark = "https://storage.googleapis.com/hostinger-horizons-assets-prod/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/064fb39032844b545b5bc953f870bc69.png";
+  const logoLight = "/WBMedia/general/WhistleBlower-Logo-Light.png";
+  const logoDark = "/WBMedia/general/whistleblower-logo-dark.png";
 
   const toggleExpanded = (itemName) => {
     setExpandedItems(prev => ({

@@ -3,6 +3,7 @@
  */
 
 import { sanitizeFilename } from './utils';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Upload a file to the local WBMedia directory
@@ -19,19 +20,20 @@ export const uploadFileToLocal = async (file, category = 'general', subfolder = 
         const timestamp = Date.now();
         const fileName = `${timestamp}-${sanitizedName}`;
         
-        // Determine the file path
-        let filePath;
+        // Determine the destination path inside the public folder
+        let relativePath;
         if (subfolder) {
-            filePath = `WBMedia/${category}/${subfolder}`;
+            relativePath = `WBMedia/${category}/${subfolder}`;
         } else {
-            filePath = `WBMedia/${category}`;
+            relativePath = `WBMedia/${category}`;
         }
-        
+
+        const destinationPath = `public/${relativePath}`;
+
         formData.append('file', file);
-        formData.append('path', filePath);
-        
-        // Upload to the server
-        const response = await fetch('/api/upload', {
+
+        // Upload to the server (pass path via query to ensure it's available in destination)
+        const response = await fetch(`/api/upload?path=${encodeURIComponent(destinationPath)}`, {
             method: 'POST',
             body: formData,
         });
@@ -67,17 +69,43 @@ export const getLocalFileUrl = (filePath) => {
     // If it's already a local path starting with /WBMedia/, return as is
     if (filePath.startsWith('/WBMedia/')) return filePath;
     
-    // If it's a Supabase path, convert to local path
+    // If it's a Supabase path, prefer fetching a public URL (works in localhost and prod)
     if (filePath.includes('wb_evio')) {
-        // Extract filename from Supabase path
-        const fileName = filePath.split('/').pop();
-        return `/WBMedia/${fileName}`;
+        try {
+            const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
+            return data?.publicUrl || filePath;
+        } catch (_) {
+            return filePath;
+        }
     }
     
     // If it's a relative path without leading slash, add it
     if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
     
     // Default: assume it's a filename and prepend WBMedia
+    return `/WBMedia/${filePath}`;
+};
+
+/**
+ * Resolve an image/file path to a URL usable in both localhost and production.
+ * - http(s) URLs are returned as-is
+ * - Supabase storage paths are converted to public URLs
+ * - Local WBMedia relative paths are normalized with a leading slash
+ */
+export const resolveImageUrl = (filePath) => {
+    if (!filePath) return null;
+    if (typeof filePath !== 'string') return null;
+    if (filePath.startsWith('http')) return filePath;
+    if (filePath.includes('wb_evio')) {
+        try {
+            const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
+            return data?.publicUrl || filePath;
+        } catch (_) {
+            return filePath;
+        }
+    }
+    if (filePath.startsWith('/WBMedia/')) return filePath;
+    if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
     return `/WBMedia/${filePath}`;
 };
 

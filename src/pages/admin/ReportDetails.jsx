@@ -167,35 +167,77 @@ const ReportDetails = () => {
 
   useEffect(() => {
     if (id && user?.id) {
+        console.log('Setting up ReportDetails real-time subscription for report:', id);
+        
         const channel = supabase
-            .channel(`report_updates_${id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'report_updates', filter: `report_id=eq.${id}` }, async (payload) => {
-                if (payload.new?.updated_by !== user.id) {
-                    await fetchUpdates(true);
+            .channel(`report_details_main_${id}`)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'report_updates', 
+                filter: `report_id=eq.${id}` 
+            }, async (payload) => {
+                console.log('ReportDetails main subscription received INSERT:', payload.new);
+                
+                const newUpdate = payload.new;
+                
+                // Add message immediately to state if it's from reporter (not current admin user)
+                if (!newUpdate.updated_by) {
+                    console.log('Adding reporter message to admin chat immediately');
+                    setUpdates(prev => {
+                        const exists = prev.find(u => u.id === newUpdate.id);
+                        if (exists) {
+                            console.log('Message already exists, skipping');
+                            return prev;
+                        }
+                        console.log('Adding new reporter message to state');
+                        return [...prev, newUpdate];
+                    });
+                } else if (newUpdate.updated_by !== user.id) {
+                    console.log('Adding other admin message to chat immediately');
+                    setUpdates(prev => {
+                        const exists = prev.find(u => u.id === newUpdate.id);
+                        if (exists) return prev;
+                        return [...prev, newUpdate];
+                    });
                 }
-                if (document.visibilityState === 'visible') {
-                    await markMessagesAsRead(id, user.id);
+                
+                // Mark messages as read if page is visible
+                if (document.visibilityState === 'visible' && !newUpdate.updated_by) {
+                    setTimeout(() => markMessagesAsRead(id, user.id), 500);
                 }
             })
-            .subscribe();
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'report_updates', 
+                filter: `report_id=eq.${id}` 
+            }, async (payload) => {
+                console.log('ReportDetails main subscription received UPDATE:', payload.new);
+                // Handle read status updates by refreshing
+                setTimeout(() => fetchUpdates(true), 300);
+            })
+            .subscribe((status) => {
+                console.log('ReportDetails main subscription status:', status);
+            });
 
-        // Disable visibility change handler completely to prevent reloading
-        // const handleVisibilityChange = async () => {
-        //     if (document.visibilityState === 'visible') {
-        //         await markMessagesAsRead(id, user.id);
-        //         // Use debounced fetch to prevent rapid successive calls
-        //         debouncedFetchUpdates();
-        //     }
-        // };
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'visible') {
+                await markMessagesAsRead(id, user.id);
+            }
+        };
 
-        // document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
+            console.log('Cleaning up ReportDetails main subscription');
             supabase.removeChannel(channel);
-            // document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }
-  }, [id, user?.id, markMessagesAsRead]); // Removed fetchUpdates from dependencies
+  }, [id, user?.id, markMessagesAsRead, fetchUpdates]);
+
+  // Removed excessive polling that was causing performance issues
 
   const handleStatusUpdate = useCallback(async (newStatus) => {
     const { error } = await supabase.from('reports').update({ status: newStatus }).eq('id', id);
@@ -247,7 +289,12 @@ const ReportDetails = () => {
     
     try {
         await supabase.from('reports').update({ reporter_has_viewed: false }).eq('id', id);
-        const { error } = await supabase.from('report_updates').insert({ report_id: id, message: newUpdate.message, updated_by: user.id, is_read: false });
+        const { error } = await supabase.from('report_updates').insert({ 
+          report_id: id, 
+          message: newUpdate.message, 
+          updated_by: user.id, 
+          is_read: false 
+        });
         
         if(error) {
             toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
@@ -340,7 +387,37 @@ const ReportDetails = () => {
               <CardHeader><CardTitle className="text-2xl">{report.title}</CardTitle></CardHeader>
               <CardContent><p className="whitespace-pre-wrap">{report.description}</p></CardContent>
             </Card>
-            <ReportChat updates={updates} user={user} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} />
+            <ReportChat 
+              report={report}
+              updates={updates.filter(upd => upd.message)} 
+              user={user} 
+              newMessage={newMessage} 
+              setNewMessage={setNewMessage} 
+              onSendMessage={handleSendMessage} 
+              isSending={isSending}
+              onNewMessage={(newUpdate) => {
+                console.log('ReportChat component received new message:', newUpdate);
+                // Force immediate update
+                setUpdates(prev => {
+                  const exists = prev.find(u => u.id === newUpdate.id);
+                  if (exists) {
+                    console.log('Message already exists in ReportChat callback');
+                    return prev;
+                  }
+                  console.log('Adding message via ReportChat callback');
+                  return [...prev, newUpdate];
+                });
+                
+                // Auto-mark messages as read for admin if it's from reporter
+                if (!newUpdate.updated_by) {
+                  setTimeout(() => markMessagesAsRead(id, user.id), 1000);
+                }
+              }}
+              onRefreshUpdates={() => {
+                console.log('Admin refreshing updates');
+                fetchUpdates(true);
+              }}
+            />
           </div>
 
           <div className="space-y-8">

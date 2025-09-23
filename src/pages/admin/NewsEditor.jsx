@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Edit, Trash2, PlusCircle, Eye } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
+import { slugify } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getLocalFileUrl } from '@/lib/fileUtils';
 
@@ -70,9 +71,11 @@ const NewsEditor = () => {
 
     const handleViewPost = (item) => {
         if (item.category === 'bounty' && item.bounty_id) {
-            window.open(`/bounties/${item.bounty_id}`, '_blank');
+            const slug = slugify(item.title);
+            window.open(`/bounties/${slug}`, '_blank');
         } else {
-            window.open(`/news/post/${item.id}`, '_blank');
+            const slug = slugify(item.title);
+            window.open(`/news/post/${slug}`, '_blank');
         }
     };
 
@@ -120,20 +123,18 @@ const NewsEditor = () => {
                         {newsItems.map((item) => (
                             <Card key={item.id} className="hover:shadow-lg transition-shadow">
                                 <CardHeader>
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-lg line-clamp-2">
-                                                {item.title}
-                                            </CardTitle>
-                                            <CardDescription className="mt-1">
+                                    <div className="flex-1">
+                                        <CardTitle className="text-lg line-clamp-2">
+                                            {item.title}
+                                        </CardTitle>
+                                        <div className="mt-1 flex items-center gap-2 flex-wrap text-muted-foreground">
+                                            <CardDescription>
                                                 {format(new Date(item.created_at), 'MMM dd, yyyy')}
                                             </CardDescription>
-                                        </div>
-                                        <div className="flex flex-col gap-2 ml-4">
-                                            <Badge className={getCategoryColor(item.category)}>
-                                                {item.category}
+                                            <Badge className={`${getCategoryColor(item.category)} rounded-none uppercase`}>
+                                                {String(item.category || '').replace(/_/g, ' ')}
                                             </Badge>
-                                            <Badge className={getStatusColor(item.status)}>
+                                            <Badge className={`${getStatusColor(item.status)} rounded-none uppercase`}>
                                                 {item.status}
                                             </Badge>
                                         </div>

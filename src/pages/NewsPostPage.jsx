@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Calendar, Tag, ArrowLeft, Info } from 'lucide-react';
+import { Loader2, Calendar, Bookmark, ArrowLeft, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getLocalFileUrl } from '@/lib/fileUtils';
+import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import SEOHead from '@/components/SEOHead';
 import { generateNewsPostSEO, generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { slugify } from '@/lib/utils';
 
 const NewsPostPage = () => {
-    const { id } = useParams();
+    const { slug } = useParams();
+    const navigate = useNavigate();
     const { toast } = useToast();
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -144,14 +146,24 @@ const NewsPostPage = () => {
 
     const fetchPost = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase
+        let data = null;
+        let error = null;
+
+        // Try to fetch by slug column if DB supports it
+        // Fetch all published posts and resolve by title-based slug to avoid relying on a slug column
+        const { data: list, error: listError } = await supabase
             .from('news')
             .select('*')
-            .eq('id', id)
-            .eq('status', 'published')
-            .single();
+            .eq('status', 'published');
 
-        if (error || !data) {
+        if (!listError && Array.isArray(list)) {
+            const match = list.find(n => slugify(n.title) === slug);
+            if (match) data = match;
+        } else if (listError) {
+            error = listError;
+        }
+
+        if (!data) {
             toast({ variant: 'destructive', title: 'Error', description: 'News post not found.' });
             setPost(null);
             setFeaturedImageUrl(null);
@@ -159,14 +171,14 @@ const NewsPostPage = () => {
             setPost(data);
             // Generate fresh image URL to avoid cache issues
             if (data.featured_image) {
-                const imageUrl = getLocalFileUrl(data.featured_image);
+                const imageUrl = resolveImageUrl(data.featured_image);
                 setFeaturedImageUrl(imageUrl);
             } else {
                 setFeaturedImageUrl(null);
             }
         }
         setLoading(false);
-    }, [id, toast]);
+    }, [slug, toast]);
 
     useEffect(() => {
         fetchPost();
@@ -174,16 +186,16 @@ const NewsPostPage = () => {
 
     // Real-time subscription for specific post updates
     useEffect(() => {
-        if (!id) return;
+        if (!post?.id) return;
 
         const channel = supabase
-            .channel(`news-post-${id}`)
+            .channel(`news-post-${post.id}`)
             .on('postgres_changes', 
                 { 
                     event: 'UPDATE', 
                     schema: 'public', 
                     table: 'news',
-                    filter: `id=eq.${id}`
+                    filter: `id=eq.${post.id}`
                 }, 
                 (payload) => {
                     console.log('News post update received:', payload);
@@ -192,7 +204,7 @@ const NewsPostPage = () => {
                         setPost(payload.new);
                         // Update image URL to ensure fresh content
                         if (payload.new.featured_image) {
-                            const imageUrl = getLocalFileUrl(payload.new.featured_image);
+                            const imageUrl = resolveImageUrl(payload.new.featured_image);
                             setFeaturedImageUrl(imageUrl);
                         } else {
                             setFeaturedImageUrl(null);
@@ -205,13 +217,12 @@ const NewsPostPage = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [id]);
+    }, [post]);
 
     const getImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        const { data } = supabase.storage.from('wb_evio').getPublicUrl(path);
-        return data.publicUrl;
+        return resolveImageUrl(path);
     };
 
     if (loading) {
@@ -228,8 +239,11 @@ const NewsPostPage = () => {
         );
     }
 
-    // Generate SEO metadata for the post
-    const seoMeta = post ? generateNewsPostSEO(post) : null;
+    // Generate SEO metadata for the post (uses title slug URL)
+    const seoMeta = post ? generateNewsPostSEO({
+        ...post,
+        slug: slugify(post.title)
+    }) : null;
 
     return (
         <>
@@ -250,7 +264,7 @@ const NewsPostPage = () => {
                             <CardTitle className="text-3xl md:text-4xl font-bold">{post.title}</CardTitle>
                             <CardDescription className="flex items-center gap-4 pt-4 text-sm">
                                 <span className="flex items-center"><Calendar className="mr-1.5 h-4 w-4" /> {format(new Date(post.created_at), 'PPP')}</span>
-                                <span className="flex items-center capitalize"><Tag className="mr-1.5 h-4 w-4" /> {post.category}</span>
+                                <span className="flex items-center capitalize"><Bookmark className="mr-1.5 h-4 w-4" /> {post.category}</span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-8">

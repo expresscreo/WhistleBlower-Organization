@@ -18,9 +18,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Link } from 'react-router-dom';
-import { sanitizeFilename } from '@/lib/utils';
+import { sanitizeFilename, slugify } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { uploadFileToLocal } from '@/lib/fileUtils';
 
 const SubmitReportPage = () => {
     const { toast } = useToast();
@@ -100,6 +101,102 @@ const SubmitReportPage = () => {
         setUploadProgress({});
         
         try {
+            // Route to bounty management when category is Bounty (or bounty_id present)
+            const bountyIdFromQuery = searchParams.get('bounty_id');
+            const isBountyCategory = String(formData.category || '').toLowerCase() === 'bounty';
+            if (bountyIdFromQuery || isBountyCategory) {
+                let evidencePaths = [];
+                const subfolder = bountyIdFromQuery || slugify(formData.title || 'bounty');
+
+                // Voice note upload (local)
+                if (submissionType === 'voice' && voiceNote) {
+                    try {
+                        const uploadedPath = await uploadFileToLocal(voiceNote, 'bounties', subfolder);
+                        evidencePaths.push(uploadedPath);
+                    } catch (e) {
+                        console.error('Voice upload failed:', e);
+                    }
+                }
+
+                // Evidence files upload (local)
+                if (evidenceFiles.length > 0) {
+                    for (const file of evidenceFiles) {
+                        try {
+                            const uploadedPath = await uploadFileToLocal(file, 'bounties', subfolder);
+                            evidencePaths.push(uploadedPath);
+                        } catch (e) {
+                            console.error('Evidence upload failed:', e);
+                        }
+                    }
+                }
+
+                const composedMessage = [
+                    formData.title?.trim() ? `Title: ${formData.title.trim()}` : null,
+                    formData.description?.trim() ? formData.description.trim() : null,
+                    evidencePaths.length > 0 ? `Attached ${evidencePaths.length} file(s).` : null
+                ].filter(Boolean).join('\n\n');
+
+                // Determine bounty id. If not provided in query, try to resolve or create a bounty placeholder
+                let targetBountyId = bountyIdFromQuery ? Number(bountyIdFromQuery) : null;
+                if (!targetBountyId) {
+                    // Try match an existing bounty by title
+                    const { data: existingBounty } = await supabase
+                        .from('bounties')
+                        .select('id')
+                        .ilike('title', formData.title || '')
+                        .maybeSingle();
+                    if (existingBounty?.id) {
+                        targetBountyId = existingBounty.id;
+                    }
+                }
+
+                // If still no bounty, create a minimal pending bounty record for management
+                if (!targetBountyId) {
+                    const { data: created, error: createError } = await supabase
+                        .from('bounties')
+                        .insert({
+                            title: formData.title || 'Bounty Report',
+                            description: formData.description || '',
+                            status: 'pending_review',
+                            evidence: evidencePaths.length > 0 ? evidencePaths : [],
+                        })
+                        .select('id')
+                        .single();
+                    if (createError) throw createError;
+                    targetBountyId = created.id;
+                }
+
+                const { error: tipError } = await supabase
+                    .from('bounty_updates')
+                    .insert({ bounty_id: targetBountyId, message: composedMessage, updated_by: null });
+
+                if (tipError) throw tipError;
+
+                // Append evidence to bounty record for easier access
+                if (evidencePaths.length > 0) {
+                    const { data: bountyData } = await supabase
+                        .from('bounties')
+                        .select('id, evidence')
+                        .eq('id', targetBountyId)
+                        .single();
+                    const updatedEvidence = [...(bountyData?.evidence || []), ...evidencePaths];
+                    await supabase
+                        .from('bounties')
+                        .update({ evidence: updatedEvidence })
+                        .eq('id', targetBountyId);
+                }
+
+                toast({ title: 'Thank you!', description: 'Your information has been sent to the bounty handlers.' });
+
+                const bountyTitle = searchParams.get('bounty_title');
+                if (bountyTitle) {
+                    navigate(`/bounties/${slugify(bountyTitle)}`);
+                } else {
+                    navigate('/news');
+                }
+                return;
+            }
+
             const newReportId = generateReportId();
             
             const salt = bcrypt.genSaltSync(10);

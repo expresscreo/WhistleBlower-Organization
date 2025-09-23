@@ -6,7 +6,7 @@ import { Loader2, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import ReportSummary from '@/pages/track-report/ReportSummary';
-import ChatWindow from '@/pages/track-report/ChatWindow';
+import Chat from '@/components/Chat';
 import RewardSection from '@/pages/track-report/RewardSection';
 import UpdateReportDialog from '@/pages/track-report/UpdateReportDialog';
 import { useNavigate } from 'react-router-dom';
@@ -15,10 +15,8 @@ import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@
 
 const TrackReportPage = ({ reportId, password }) => {
   const [loading, setLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [updates, setUpdates] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
   const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
@@ -141,33 +139,6 @@ const TrackReportPage = ({ reportId, password }) => {
     }
   }, [reportData, fetchUpdates, markMessagesAsRead]);
 
-  const onSendMessage = async () => {
-    if (!reportData || !newMessage.trim()) return;
-    setIsSending(true);
-
-    const tempId = `temp-${Date.now()}`;
-    const newUpdate = { id: tempId, report_id: reportData.id, message: newMessage, created_at: new Date().toISOString(), updated_by: null, is_read: false };
-    setUpdates(prev => [...prev, newUpdate]);
-    setNewMessage('');
-
-    const { error } = await supabase.from('report_updates').insert([{ report_id: reportData.id, message: newUpdate.message, updated_by: null }]);
-
-    if (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to send message. Please try again.' });
-        setUpdates(prev => prev.filter(u => u.id !== tempId));
-    } else {
-        await supabase.from('reports').update({ admin_has_viewed: false }).eq('id', reportData.id);
-        fetchUpdates(reportData, true);
-    }
-    setIsSending(false);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSendMessage();
-    }
-  };
 
   const handleUpdateReport = async () => {
     if (!updateMessage.trim() && newEvidenceFiles.length === 0) {
@@ -255,7 +226,29 @@ const TrackReportPage = ({ reportId, password }) => {
                 <div className="space-y-8">
                     <ReportSummary report={reportData} onUpdateReport={() => setUpdateModalOpen(true)} onLogout={handleLogout} />
                     {!reportData.is_feedback && <RewardSection report={reportData} />}
-                    <ChatWindow updates={updates} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={onSendMessage} isSending={isSending} onKeyDown={handleKeyDown} />
+                    <Chat 
+                      report={reportData}
+                      updates={updates}
+                      onNewMessage={(newUpdate) => {
+                        console.log('Reporter TrackReportPage received new message:', newUpdate);
+                        // Add the new message to updates immediately
+                        setUpdates(prev => {
+                          // Check if message already exists to avoid duplicates
+                          const exists = prev.find(u => u.id === newUpdate.id);
+                          if (exists) return prev;
+                          return [...prev, newUpdate];
+                        });
+                        
+                        // Mark admin messages as read when visible
+                        if (document.visibilityState === 'visible' && newUpdate.updated_by) {
+                          setTimeout(() => markMessagesAsRead(reportData.id), 500);
+                        }
+                      }}
+                      onRefreshUpdates={() => {
+                        console.log('Reporter refreshing updates');
+                        fetchUpdates(reportData, true);
+                      }}
+                    />
                 </div>
               </motion.div>
             )}

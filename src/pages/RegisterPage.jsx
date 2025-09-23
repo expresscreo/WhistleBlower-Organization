@@ -116,7 +116,7 @@ const RegisterPage = () => {
     }
   };
 
-  const logo = "https://horizons-cdn.hostinger.com/7f090466-6ac5-4c98-9b96-8cfeb2ebf340/26b8d68d03d277369a7b5d5d30c844f8.png";
+  const logo = "/WBMedia/general/whistleblower-logo-dark.png";
 
   return (
     <>

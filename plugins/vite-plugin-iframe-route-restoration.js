@@ -6,7 +6,7 @@ export default function iframeRouteRestorationPlugin() {
       const script = `
         // Check to see if the page is in an iframe
         if (window.self !== window.top) {
-          const STORAGE_KEY = 'horizons-iframe-saved-route';
+          const STORAGE_KEY = 'whistleblower-iframe-saved-route';
 
           const getCurrentRoute = () => location.pathname + location.search + location.hash;
 

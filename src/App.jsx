@@ -88,6 +88,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <Router>
+          <ErrorBoundary>
           <ScrollToTop />
           <LogoutTracker />
           <Routes>
@@ -124,6 +125,7 @@ function App() {
               </AdminLayoutWrapper>
             } />
           </Routes>
+          </ErrorBoundary>
           <Toaster />
         </Router>
       </ThemeProvider>
@@ -141,10 +143,10 @@ const PublicApp = () => (
           <Route path="/about-us" element={<AboutUsPageV2 />} />
           <Route path="/how-we-secure-your-data" element={<HowWeSecureDataPage />} />
           <Route path="/track" element={<TrackPage />} />
-          <Route path="/bounties/:id" element={<BountyPostPage />} />
+          <Route path="/bounties/:slug" element={<BountyPostPage />} />
           <Route path="/news" element={<NewsPage />} />
           <Route path="/news/:category" element={<NewsPage />} />
-          <Route path="/news/post/:id" element={<NewsPostPage />} />
+          <Route path="/news/post/:slug" element={<NewsPostPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/partner-program" element={<PartnerPage />} />
@@ -163,3 +165,34 @@ const PublicApp = () => (
 );
 
 export default App;
+
+// Simple error boundary to prevent full-blank pages and surface runtime errors
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    // eslint-disable-next-line no-console
+    console.error('App render error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 text-center">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+            <p className="text-muted-foreground mb-4">A runtime error prevented the page from rendering.</p>
+            <pre className="text-xs bg-muted p-3 overflow-auto max-w-xl mx-auto rounded">
+              {String(this.state.error)}
+            </pre>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
