@@ -238,7 +238,7 @@ const Navbar = () => {
   ];
 
 
-  const logoLight = "/WBMedia/general/WhistleBlower-Logo-Light.png";
+  const logoLight = "/WBMedia/general/whistleblower-logo-light.png";
   const logoDark = "/WBMedia/general/whistleblower-logo-dark.png";
   
   const navRef = useRef(null);

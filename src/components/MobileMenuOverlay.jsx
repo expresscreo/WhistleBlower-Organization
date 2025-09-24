@@ -15,7 +15,7 @@ const MobileMenuOverlay = ({ navItems }) => {
   const { theme } = useTheme();
   const location = useLocation();
 
-  const logoLight = "/WBMedia/general/WhistleBlower-Logo-Light.png";
+  const logoLight = "/WBMedia/general/whistleblower-logo-light.png";
   const logoDark = "/WBMedia/general/whistleblower-logo-dark.png";
 
   const toggleExpanded = (itemName) => {
