@@ -226,12 +226,7 @@ const HomePage = () => {
                   Search For Bounties
                 </Button>
               </Link>
-              <Link to="/sticky-scroll-sample" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full uppercase tracking-[1px] px-8 py-4 text-sm whitespace-nowrap bg-transparent text-white border-[#ffffff1a] hover:backdrop-blur-sm hover:text-white sm:w-[220px]" style={{'--hover-bg': 'rgba(59, 59, 59, 0.45)'}} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(59, 59, 59, 0.45)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
-                  <Zap className="mr-2 h-4 w-4" />
-                  Test Sticky Scroll
-                </Button>
-              </Link>
+              {/* Test Sticky Scroll button removed as requested */}
             </div>
           </motion.div>
         </div>

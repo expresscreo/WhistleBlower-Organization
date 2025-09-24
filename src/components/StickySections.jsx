@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom';
 const StickySections = () => {
   const containerRef = useRef(null);
   const secondSectionRef = useRef(null);
+  const thirdSectionRef = useRef(null);
+  const fourthSectionRef = useRef(null);
+  const fifthSectionRef = useRef(null);
 
   // Fade out the headline block in the first section as the second section scrolls into view
   const { scrollYProgress } = useScroll({
@@ -12,11 +15,21 @@ const StickySections = () => {
     offset: ["start 90%", "start 50%"],
   });
   const headingOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+  // Overlay opacities for each section as the NEXT section scrolls in
+  const overlay1 = useTransform(scrollYProgress, [0, 1], [0, 0.5]);
+  const { scrollYProgress: p2 } = useScroll({ target: thirdSectionRef, offset: ["start 90%", "start 50%"] });
+  const overlay2 = useTransform(p2, [0, 1], [0, 0.5]);
+  const { scrollYProgress: p3 } = useScroll({ target: fourthSectionRef, offset: ["start 90%", "start 50%"] });
+  const overlay3 = useTransform(p3, [0, 1], [0, 0.5]);
+  const { scrollYProgress: p4 } = useScroll({ target: fifthSectionRef, offset: ["start 90%", "start 50%"] });
+  const overlay4 = useTransform(p4, [0, 1], [0, 0.5]);
 
   return (
     <div ref={containerRef} className="relative">
       {/* First Section */}
       <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-20 px-4 sm:px-8 pt-12 sm:pt-16 lg:pt-8 relative">
+        {/* Fade overlay for first section as second approaches */}
+        <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay1 }} />
         {/* Global headline inside first sticky section */}
         <motion.div className="hidden sm:block absolute top-24 left-0 right-0 px-8 pointer-events-none" style={{ opacity: headingOpacity }}>
           <div className="max-w-7xl mx-auto text-center">
@@ -59,7 +72,9 @@ const StickySections = () => {
       </div>
 
       {/* Second Section */}
-      <div ref={secondSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-white dark:bg-background z-30 px-8 pt-20 lg:pt-8">
+      <div ref={secondSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-white dark:bg-background z-30 px-8 pt-20 lg:pt-8 relative">
+        {/* Fade overlay for second section as third approaches */}
+        <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay2 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
             <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
@@ -84,7 +99,9 @@ const StickySections = () => {
       </div>
 
       {/* Third Section (Rewards & Payments) */}
-      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-40 px-8 pt-20 lg:pt-8">
+      <div ref={thirdSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-40 px-8 pt-20 lg:pt-8 relative">
+        {/* Fade overlay for third section as fourth approaches */}
+        <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay3 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
             <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
@@ -109,7 +126,9 @@ const StickySections = () => {
       </div>
 
       {/* Fourth Section (Bounty System) */}
-      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-white dark:bg-background z-40 px-8 pt-20 lg:pt-8">
+      <div ref={fourthSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-white dark:bg-background z-40 px-8 pt-20 lg:pt-8 relative">
+        {/* Fade overlay for fourth section as fifth approaches */}
+        <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay4 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
             <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
@@ -134,7 +153,7 @@ const StickySections = () => {
       </div>
 
       {/* Fifth Section */}
-      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-50 px-8 pt-20 lg:pt-8">
+      <div ref={fifthSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-50 px-8 pt-20 lg:pt-8">
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
             <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">

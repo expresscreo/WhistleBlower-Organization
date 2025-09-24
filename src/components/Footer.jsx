@@ -35,7 +35,7 @@ const Footer = () => {
   const logoUrl = "/WBMedia/general/whistleblower-logo-dark.png";
 
   return (
-    <footer className="bg-[#0f0f0f] text-[#b4b4b4] border-t border-gray-800">
+    <footer className="bg-[#0f0f0f] text-[#b4b4b4] border-t border-[#2e2e2e]">
       <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo and Description */}
@@ -104,7 +104,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+        <div className="border-t border-[#2e2e2e] mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-[#b4b4b4]">
             © {new Date().getFullYear()} WhistleBlower.ng. All rights reserved.
           </p>

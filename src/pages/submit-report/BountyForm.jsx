@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Loader2, Edit2, FileType2, List, MapPin, Eye, EyeOff, Upload, X } from 'lucide-react';
+import { Loader2, Award, FileType2, List, MapPin, Eye, EyeOff, Upload, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,8 +13,7 @@ import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { Progress } from '@/components/ui/progress';
 import { sanitizeFilename, formatNumberWithCommas } from '@/lib/utils';
 
-import { Banknote } from 'lucide-react';
-const MoneyIcon = () => <Banknote className="h-4 w-4" />;
+ 
 
 const crimeTypes = [
     "Theft", "Murderer", "Fraud", "Assault", "Scam", "Sex Predator", "Armed Robbery", "Kidnapping", "Vandalism", "Missing Person", "Cybercrime", "Other"
@@ -27,6 +26,7 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
         description: '',
         typeOfCrime: '',
         state: '',
+            fullAddress: '',
         lga: '',
         bountyAmount: '',
         password: '',
@@ -76,6 +76,10 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
             toast({ title: 'Terms and Conditions', description: 'You must agree to the terms and conditions.', variant: 'destructive' });
             return;
         }
+        if (formData.evidenceFiles.length === 0) {
+            toast({ title: 'Supporting Files Required', description: 'Please attach at least one supporting file for your bounty.', variant: 'destructive' });
+            return;
+        }
         if (formData.password.length < 8 || formData.password !== formData.confirmPassword) {
             toast({ title: 'Password Error', description: 'Passwords must be at least 8 characters long and must match.', variant: 'destructive' });
             return;
@@ -90,7 +94,7 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
     return (
         <motion.form onSubmit={handleSubmit} className="space-y-8 bg-card p-8 border">
             <div className="space-y-2">
-                <Label htmlFor="bounty-title" className="flex items-center"><Edit2 className="mr-2 h-4 w-4" />Bounty Title</Label>
+                <Label htmlFor="bounty-title" className="flex items-center"><Award className="mr-2 h-4 w-4" />Bounty Title</Label>
                 <Input id="bounty-title" placeholder="e.g., Information leading to recovery of stolen vehicle" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
             </div>
             <div className="space-y-2">
@@ -113,18 +117,22 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="bounty-lga" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />Location/Branch</Label>
+                    <Label htmlFor="bounty-lga" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />Local Government Area</Label>
                     <Select value={formData.lga} onValueChange={(v) => handleInputChange('lga', v)} disabled={!formData.state} required>
                         <SelectTrigger><SelectValue placeholder="Select LGA" /></SelectTrigger>
                         <SelectContent>{lgas.map(lga => <SelectItem key={lga} value={lga}>{lga}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
+                <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="bounty-address" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />Full Address (Optional)</Label>
+                    <Input id="bounty-address" placeholder="e.g., 123 Akure Road, Ikeja, Lagos" value={formData.fullAddress} onChange={(e) => handleInputChange('fullAddress', e.target.value)} />
+                </div>
             </div>
             <div className="space-y-4">
-                <Label>Evidence Upload (Optional)</Label>
+                <Label>Attach Supporting Files</Label>
                 <div className="border-2 border-dashed p-8 text-center flex flex-col items-center">
                     <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4">Upload images, videos, or documents (Max 25MB each)</p>
+                    <p className="text-muted-foreground mb-4">Upload images, videos, or documents (Max 25MB each). At least one file is required.</p>
                     <Label htmlFor="file-upload" className="cursor-pointer inline-flex items-center justify-center h-10 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90">
                         Choose Files
                     </Label>
@@ -149,9 +157,12 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                     </div>
                 )}
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="bounty-amount" className="flex items-center"><MoneyIcon />Bounty Amount (Refundable if not approved)</Label>
-                <Input id="bounty-amount" placeholder="e.g., 50,000" value={formData.bountyAmount} onChange={handleBountyAmountChange} required />
+            <div className="rounded-md bg-orange-500 border border-orange-600 p-6 text-center space-y-3">
+                <div className="flex items-center justify-center text-white">
+                    <Label htmlFor="bounty-amount" className="text-white font-semibold text-lg">SET THE BOUNTY AMOUNT</Label>
+                </div>
+                <Input id="bounty-amount" placeholder="e.g., 50,000" value={formData.bountyAmount} onChange={handleBountyAmountChange} required className="mx-auto max-w-sm text-center text-lg h-12 bg-white text-orange-900 placeholder-orange-700/60 border-[#00000026] focus:border-[#00000026] outline-none focus:outline-none ring-0 focus:ring-0 focus-visible:ring-0 shadow-none focus:shadow-none" />
+                <p className="text-xs text-white/80">(Refundable if not approved)</p>
             </div>
             <div className="space-y-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground">Create a password to securely track your bounty's status. <strong>Keep it safe</strong>—it cannot be recovered.</p>

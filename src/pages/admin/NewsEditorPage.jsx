@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow } from 'lucide-react';
 import { slugify } from '@/lib/utils';
 import { Helmet } from 'react-helmet';
 import NavbarLoader from '@/components/admin/NavbarLoader';
@@ -125,6 +125,7 @@ const NewsEditorPage = () => {
         img.className = 'inline-image max-w-full h-auto rounded-md my-4 cursor-pointer';
         img.style.maxWidth = '100%';
         img.style.height = 'auto';
+        img.style.width = '100%';
         img.dataset.imageId = image.id;
         
         img.addEventListener('click', (e) => {
@@ -152,20 +153,35 @@ const NewsEditorPage = () => {
         const image = inlineImages.find(img => img.id === imageId);
         if (!image) return;
 
-        const shouldRemove = window.confirm('Do you want to remove this image from the content?');
-        if (shouldRemove) {
-            // Remove image from DOM
-            const imgElement = editorRef.current?.querySelector(`[data-image-id="${imageId}"]`);
-            if (imgElement) {
-                imgElement.remove();
-            }
+        const imgElement = editorRef.current?.querySelector(`[data-image-id="${imageId}"]`);
+        if (!imgElement) return;
 
+        const input = window.prompt('Enter image width percentage (10-100). Type "remove" to delete. Leave blank to cancel.', '100');
+        if (input === null) {
+            return; // cancelled
+        }
+        const trimmed = input.trim().toLowerCase();
+        if (trimmed === 'remove') {
+            // Remove image from DOM
+            imgElement.remove();
             // Remove from state
             setInlineImages(prev => prev.filter(img => img.id !== imageId));
             URL.revokeObjectURL(image.previewUrl);
-
             updateEditorContent();
             toast({ title: 'Image removed', description: 'Image has been removed from the content.' });
+            return;
+        }
+        if (trimmed !== '') {
+            const value = Number(trimmed);
+            if (!Number.isNaN(value) && value >= 10 && value <= 100) {
+                imgElement.style.width = `${value}%`;
+                imgElement.style.height = 'auto';
+                imgElement.style.maxWidth = '100%';
+                updateEditorContent();
+                toast({ title: 'Image resized', description: `Set width to ${value}%.` });
+            } else {
+                toast({ variant: 'destructive', title: 'Invalid size', description: 'Please enter a number between 10 and 100, or type remove.' });
+            }
         }
     };
 
@@ -215,16 +231,31 @@ const NewsEditorPage = () => {
                     }
                     
                     if (headerParent) {
-                        // Already in a header, remove header formatting
-                        const headerContent = headerParent.innerHTML;
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = headerContent;
-                        
-                        range.selectNodeContents(headerParent);
-                        range.deleteContents();
-                        range.insertNode(document.createTextNode(tempDiv.textContent));
-                        selection.removeAllRanges();
-                        selection.addRange(range);
+                        // If the same header level is clicked, toggle to paragraph
+                        if (headerParent.tagName === `H${level}`) {
+                            const p = document.createElement('p');
+                            p.innerHTML = headerParent.innerHTML;
+                            // Replace header with paragraph while preserving content
+                            headerParent.replaceWith(p);
+                            // Re-select paragraph contents
+                            range.selectNodeContents(p);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        } else {
+                            // Change to a different header level, preserving content
+                            const newHeader = document.createElement(`h${level}`);
+                            newHeader.innerHTML = headerParent.innerHTML;
+                            // Apply header styles
+                            newHeader.style.margin = '16px 0 8px 0';
+                            newHeader.style.fontWeight = 'bold';
+                            newHeader.style.fontSize = level === 1 ? '2em' : level === 2 ? '1.5em' : '1.25em';
+                            newHeader.style.lineHeight = '1.2';
+                            newHeader.style.display = 'block';
+                            headerParent.replaceWith(newHeader);
+                            range.selectNodeContents(newHeader);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        }
                     } else {
                         // Create new header element
                         const headerElement = document.createElement(`h${level}`);
@@ -265,6 +296,50 @@ const NewsEditorPage = () => {
                 selection.addRange(range);
             }
         }
+        updateEditorContent();
+    };
+
+    const convertToParagraph = () => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        editor.focus();
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        let container = range.commonAncestorContainer;
+        while (container && container !== editor && container.nodeType !== Node.ELEMENT_NODE) {
+            container = container.parentNode;
+        }
+
+        // Find nearest block element (H1-H6 or P)
+        let block = container;
+        while (block && block !== editor && block.nodeType === Node.ELEMENT_NODE && !/^H[1-6]$|^P$/.test(block.tagName)) {
+            block = block.parentNode;
+        }
+
+        if (block && /^H[1-6]$/.test(block.tagName)) {
+            const p = document.createElement('p');
+            p.innerHTML = block.innerHTML;
+            block.replaceWith(p);
+            range.selectNodeContents(p);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } else if (!block || block === editor) {
+            // If no block found, wrap selection contents in a paragraph
+            const p = document.createElement('p');
+            const contents = range.extractContents();
+            if (contents.childNodes.length === 0) {
+                p.innerHTML = '&nbsp;';
+            } else {
+                p.appendChild(contents);
+            }
+            range.insertNode(p);
+            range.selectNodeContents(p);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
         updateEditorContent();
     };
 
@@ -366,20 +441,94 @@ const NewsEditorPage = () => {
     };
 
     const handleEditorPaste = (e) => {
+        // Preserve formatting from clipboard by inserting sanitized HTML when available
         e.preventDefault();
         const clipboardData = e.clipboardData || window.clipboardData;
-        const text = clipboardData.getData('text/plain');
-        
+        const html = clipboardData.getData('text/html');
+        const plain = clipboardData.getData('text/plain');
+
+        const sanitizeHtml = (unsafeHtml) => {
+            // Basic, lightweight sanitizer: removes script/style tags and event handlers
+            // Allows common formatting tags and attributes like href/src
+            const template = document.createElement('template');
+            template.innerHTML = unsafeHtml || '';
+
+            const disallowedTags = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'META', 'LINK']);
+
+            const walk = (node) => {
+                // Remove disallowed elements
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    const el = node;
+                    if (disallowedTags.has(el.tagName)) {
+                        el.remove();
+                        return;
+                    }
+                    // Strip event handlers and javascript: urls
+                    [...el.attributes].forEach((attr) => {
+                        const name = attr.name.toLowerCase();
+                        const value = attr.value;
+                        if (name.startsWith('on')) {
+                            el.removeAttribute(attr.name);
+                            return;
+                        }
+                        if ((name === 'href' || name === 'src') && typeof value === 'string') {
+                            const trimmed = value.trim().toLowerCase();
+                            if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:text/html')) {
+                                el.removeAttribute(attr.name);
+                            }
+                        }
+                    });
+                }
+                // Recurse
+                let child = node.firstChild;
+                while (child) {
+                    const next = child.nextSibling;
+                    walk(child);
+                    child = next;
+                }
+            };
+
+            walk(template.content);
+            return template.innerHTML;
+        };
+
         const selection = window.getSelection();
+        if (!selection) return;
+
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             range.deleteContents();
-            range.insertNode(document.createTextNode(text));
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
+
+            if (html) {
+                const cleaned = sanitizeHtml(html);
+                // Insert as DocumentFragment to preserve structure
+                const fragment = range.createContextualFragment(cleaned);
+                range.insertNode(fragment);
+                // Move cursor to end of inserted content
+                selection.removeAllRanges();
+                const newRange = document.createRange();
+                if (range.endContainer) {
+                    newRange.setStartAfter(range.endContainer);
+                }
+                // Fallback: collapse at editor end
+                newRange.collapse(true);
+                selection.addRange(newRange);
+            } else if (plain) {
+                // Preserve newlines in plain text
+                const lines = plain.split(/\r?\n/);
+                lines.forEach((line, idx) => {
+                    if (idx > 0) {
+                        range.insertNode(document.createElement('br'));
+                        range.collapse(false);
+                    }
+                    range.insertNode(document.createTextNode(line));
+                    range.collapse(false);
+                });
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
         }
-        
+
         updateEditorContent();
     };
 
@@ -540,9 +689,11 @@ const NewsEditorPage = () => {
                             <h1 className="text-3xl font-bold">
                                 {isEditing ? 'Edit' : 'Create'} News Item
                             </h1>
-                            <p className="text-muted-foreground">
-                                {isEditing ? 'Update the news item details' : 'Create a new news item'}
-                            </p>
+                            {isEditing && (
+                                <p className="text-muted-foreground">
+                                    Update the news item details
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -644,7 +795,7 @@ const NewsEditorPage = () => {
                                                 </Button>
                                             </div>
                                             
-                                            {/* Second Row - Headers, Lists, and Media */}
+                                            {/* Second Row - Headers, Lists, Paragraph, and Media */}
                                             <div className="flex items-center gap-1 p-2">
                                                 {/* Headers */}
                                                 <Button
@@ -676,6 +827,16 @@ const NewsEditorPage = () => {
                                                 >
                                                     <Type className="h-4 w-4" />
                                                     <span className="ml-1 text-xs">H3</span>
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={convertToParagraph}
+                                                    title="Paragraph"
+                                                >
+                                                    <Pilcrow className="h-4 w-4" />
+                                                    <span className="ml-1 text-xs">P</span>
                                                 </Button>
                                                 
                                                 <div className="h-4 w-px bg-gray-300 mx-2" />
@@ -812,7 +973,7 @@ const NewsEditorPage = () => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="draft">Draft</SelectItem>
-                                                <SelectItem value="published">Published</SelectItem>
+                                                <SelectItem value="published">Publish</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -901,12 +1062,12 @@ const NewsEditorPage = () => {
                                     {isUploading ? (
                                         <>
                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                            Saving...
+                                            {currentItem.status === 'published' ? 'Publishing...' : 'Saving...'}
                                         </>
                                     ) : (
                                         <>
                                             <Save className="mr-2 h-4 w-4" />
-                                            {isEditing ? 'Update' : 'Create'} News Item
+                                            {currentItem.status === 'published' ? 'PUBLISH' : 'SAVE'}
                                         </>
                                     )}
                                 </Button>
