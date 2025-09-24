@@ -223,7 +223,8 @@ const Navbar = () => {
   const navItems = [
     { name: 'THE COMPANY', dropdown: true, isCompanyDropdown: true, items: [
         { name: 'About Us', path: '/about-us', description: 'Learn about our mission to protect whistleblowers and ensure transparency.' },
-        { name: 'How We Secure Your Data', path: '/how-we-secure-your-data', description: 'Discover our advanced security measures and data protection protocols.' }
+        { name: 'How We Secure Your Data', path: '/how-we-secure-your-data', description: 'Discover our advanced security measures and data protection protocols.' },
+        { name: 'Rewards for Information', path: '/rewards-for-information', description: 'Learn about our cash reward system and how to claim rewards for valuable information.' }
     ]},
     { name: 'NEWS', dropdown: true, isNewsDropdown: true, items: [
         { name: 'All News', path: '/news', description: 'Stay informed with all the latest whistleblower news and updates.' },
@@ -247,7 +248,7 @@ const Navbar = () => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       ref={navRef}
-      className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border"
+      className="sticky top-0 z-[9999] bg-background/80 backdrop-blur-md border-b border-border"
     >
       <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-[80px]">

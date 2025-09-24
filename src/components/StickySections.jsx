@@ -1,0 +1,166 @@
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { Link } from 'react-router-dom';
+
+const StickySections = () => {
+  const containerRef = useRef(null);
+  const secondSectionRef = useRef(null);
+
+  // Fade out the headline block in the first section as the second section scrolls into view
+  const { scrollYProgress } = useScroll({
+    target: secondSectionRef,
+    offset: ["start 90%", "start 50%"],
+  });
+  const headingOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* First Section */}
+      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-20 px-4 sm:px-8 pt-12 sm:pt-16 lg:pt-8 relative">
+        {/* Global headline inside first sticky section */}
+        <motion.div className="hidden sm:block absolute top-24 left-0 right-0 px-8 pointer-events-none" style={{ opacity: headingOpacity }}>
+          <div className="max-w-7xl mx-auto text-center">
+            <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0 leading-tight">
+              <span style={{ color: '#707070' }} className="dark:text-muted-foreground">What You Can </span>
+              <span className="text-[#171717] dark:text-white">Do On </span>
+              <span className="text-[#171717] dark:text-white">WhistleBlower.ng</span>
+            </h3>
+          </div>
+        </motion.div>
+        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
+          {/* Mobile inline headline above content */}
+          <motion.div className="w-full text-center mb-0 sm:hidden" style={{ opacity: headingOpacity }}>
+            <h3 className="text-2xl font-bold leading-tight">
+              <span style={{ color: '#707070' }} className="dark:text-muted-foreground">What You Can </span>
+              <span className="text-[#171717] dark:text-white">Do On </span>
+              <span className="block text-[#171717] dark:text-white">WhistleBlower.ng</span>
+            </h3>
+          </motion.div>
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+            <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=640&h=640&fit=crop" alt="Anonymous Reporting" className="w-full h-full object-cover" />
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
+            <div className="mb-6">
+              <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#ff5100' }}>Anonymous Reporting</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Report Crimes Securely And Anonymously</h2>
+            <p className="text-lg text-gray-800 dark:text-white/90 leading-relaxed mb-8">Submit reports anonymously using our encrypted platform. Your identity is protected while your voice is heard by the right authorities.</p>
+            <div className="flex items-center justify-center lg:justify-start">
+              <div className="flex-1 h-px bg-gray-900/30 dark:bg-white/30 mr-4 max-w-xs"></div>
+              <Link to="/submit-report" className="group flex items-center text-gray-900 dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300 whitespace-nowrap">
+                <span className="mr-2">Submit a report</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Second Section */}
+      <div ref={secondSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-white dark:bg-background z-30 px-8 pt-20 lg:pt-8">
+        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+            <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=640&h=640&fit=crop" alt="Real-time Tracking" className="w-full h-full object-cover" />
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
+            <div className="mb-6">
+              <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#00C853' }}>Real-time Tracking</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Track Your Report Progress Instantly</h2>
+            <p className="text-lg text-gray-800 dark:text-white leading-relaxed mb-8">Monitor your report status in real-time with our secure tracking system. Get updates on investigation progress and see your impact.</p>
+            <div className="flex items-center justify-center lg:justify-start">
+              <div className="flex-1 h-px bg-gray-900/30 dark:bg-white/30 mr-4 max-w-xs"></div>
+              <Link to="/track" className="group flex items-center text-gray-900 dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300 whitespace-nowrap">
+                <span className="mr-2">Track your report</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Third Section (Rewards & Payments) */}
+      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-40 px-8 pt-20 lg:pt-8">
+        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+            <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=640&h=640&fit=crop" alt="Rewards & Payments" className="w-full h-full object-cover" />
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
+            <div className="mb-6">
+              <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FF0000' }}>Rewards & Payments</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Place Bounties For Information</h2>
+            <p className="text-lg text-gray-800 dark:text-white/90 leading-relaxed mb-8">Earn rewards for valuable information through our secure PayCode system. Your contribution to justice doesn't go unnoticed.</p>
+            <div className="flex items-center justify-center lg:justify-start">
+              <div className="flex-1 h-px bg-gray-900/30 dark:bg-white/30 mr-4 max-w-xs"></div>
+              <Link to="/rewards-for-information" className="group flex items-center text-gray-900 dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300 whitespace-nowrap">
+                <span className="mr-2">Learn about rewards</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fourth Section (Bounty System) */}
+      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-white dark:bg-background z-40 px-8 pt-20 lg:pt-8">
+        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+            <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=640&h=640&fit=crop" alt="Bounty System" className="w-full h-full object-cover" />
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
+            <div className="mb-6">
+              <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FFA000' }}>Bounty System</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Place Bounties For Information</h2>
+            <p className="text-lg text-gray-800 dark:text-white/90 leading-relaxed mb-8">Need specific information? Put a price on it. Create public bounties to crowdsource intelligence for investigations and asset recovery.</p>
+            <div className="flex items-center justify-center lg:justify-start">
+              <div className="flex-1 h-px bg-gray-900/30 dark:bg-white/30 mr-4 max-w-xs"></div>
+              <Link to="/place-bounty" className="group flex items-center text-gray-900 dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300 whitespace-nowrap">
+                <span className="mr-2">Place a bounty</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fifth Section */}
+      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-50 px-8 pt-20 lg:pt-8">
+        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+            <div className="w-[300px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1504711331083-9c895941bf81?w=640&h=640&fit=crop" alt="News & Updates" className="w-full h-full object-cover" />
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
+            <div className="mb-6">
+              <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#4285F4' }}>News & Updates</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Stay Informed With Latest News</h2>
+            <p className="text-lg text-gray-800 dark:text-white/90 leading-relaxed mb-8">Get the latest updates on investigations, successful reports, and important announcements from our platform and authorities.</p>
+            <div className="flex items-center justify-center lg:justify-start">
+              <div className="flex-1 h-px bg-gray-900/30 dark:bg-white/30 mr-4 max-w-xs"></div>
+              <Link to="/news" className="group flex items-center text-gray-900 dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300 whitespace-nowrap">
+                <span className="mr-2">Read latest news</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StickySections;
+
+
