@@ -3,26 +3,53 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, ShieldCheck, Target, Eye, Lock, TrendingUp, HeartHandshake as Handshake, CheckSquare, Award } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Target, Eye, Lock, TrendingUp, HeartHandshake as Handshake, CheckSquare, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { useCursorProximity } from '@/hooks/useCursorProximity';
 
-const StatCard = ({ icon, value, label, index }) => (
+const StatCard = ({ icon, value, label, index }) => {
+  const cardRef = useCursorProximity(100); // 100px proximity radius
+
+  return (
     <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: index * 0.1 }}
-        className="bg-[#ededed70] dark:bg-black/50 backdrop-blur-sm p-6 text-center border border-black/10 dark:border-white/10"
+      ref={cardRef}
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      className="feature-card p-6 text-center rounded-lg"
     >
-        <div className="mb-4">
-            {icon}
-        </div>
-        <p className="text-4xl font-bold text-primary">{value}</p>
-        <p className="text-sm text-muted-foreground uppercase tracking-wider mt-2">{label}</p>
+      <div className="mb-4">
+        {icon}
+      </div>
+      <p className="text-4xl font-bold text-primary">{value}</p>
+      <p className="text-sm text-muted-foreground uppercase tracking-wider mt-2">{label}</p>
     </motion.div>
-);
+  );
+};
+
+const PrincipleCard = ({ icon: Icon, title, description, index, color }) => {
+  const cardRef = useCursorProximity(100); // 100px proximity radius
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      viewport={{ once: true }}
+      className="feature-card p-6 text-center rounded-lg"
+    >
+      <div className="flex justify-center mb-4">
+        <Icon className="h-10 w-10" style={{ color }} strokeWidth={2.5} />
+      </div>
+      <h3 className="text-xl font-bold text-[#171717] dark:text-white mb-2">{title}</h3>
+      <p className="text-[#707070] dark:text-[#A0A0A0] text-sm leading-relaxed">{description}</p>
+    </motion.div>
+  );
+};
 
 const AboutUsPageV2 = () => {
     const stats = [
@@ -206,7 +233,7 @@ const AboutUsPageV2 = () => {
                                     >
                                         <div className={cn(
                                             'w-full md:w-1/2',
-                                            item.align === 'right' ? 'md:ml-auto md:pl-16 text-left pl-12' : 'md:pr-16 md:text-right pl-12 md:pl-0 text-left'
+                                            item.align === 'right' ? 'md:ml-auto md:pl-8 text-left pl-12' : 'md:pr-8 md:text-right pl-12 md:pl-0 text-left'
                                         )}>
                                             <p className="text-2xl font-bold text-primary">{item.year}</p>
                                             <h3 className="text-xl font-semibold mt-1">{item.title}</h3>
@@ -228,21 +255,27 @@ const AboutUsPageV2 = () => {
                             <p className="mt-4 text-lg text-muted-foreground">The values that guide every decision we make.</p>
                         </div>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                            <Card className="p-6 text-center">
-                                <Lock className="h-10 w-10 text-primary mx-auto mb-4" />
-                                <h3 className="text-xl font-bold">Unyielding Security</h3>
-                                <p className="text-muted-foreground mt-2">Your identity is sacred. We use end-to-end encryption and advanced security protocols to ensure your anonymity is absolute.</p>
-                            </Card>
-                            <Card className="p-6 text-center">
-                                <CheckSquare className="h-10 w-10 text-primary mx-auto mb-4" />
-                                <h3 className="text-xl font-bold">Verified Impact</h3>
-                                <p className="text-muted-foreground mt-2">We don't just collect reports; we ensure they reach the right authorities and track them to drive real, measurable outcomes.</p>
-                            </Card>
-                            <Card className="p-6 text-center">
-                                <Award className="h-10 w-10 text-primary mx-auto mb-4" />
-                                <h3 className="text-xl font-bold">Rewarding Courage</h3>
-                                <p className="text-muted-foreground mt-2">We believe courage should be recognized. Our system offers rewards for verified, impactful reports and bounties, incentivizing citizen action.</p>
-                            </Card>
+                            <PrincipleCard
+                                icon={Lock}
+                                title="Unyielding Security"
+                                description="Your identity is sacred. We use end-to-end encryption and advanced security protocols to ensure your anonymity is absolute."
+                                index={0}
+                                color="#EF4444"
+                            />
+                            <PrincipleCard
+                                icon={CheckSquare}
+                                title="Verified Impact"
+                                description="We don't just collect reports; we ensure they reach the right authorities and track them to drive real, measurable outcomes."
+                                index={1}
+                                color="#10B981"
+                            />
+                            <PrincipleCard
+                                icon={Gift}
+                                title="Rewarding Courage"
+                                description="We believe courage should be recognized. Our system offers rewards for verified, impactful reports and bounties, incentivizing citizen action."
+                                index={2}
+                                color="#F59E0B"
+                            />
                         </div>
                     </div>
                 </section>

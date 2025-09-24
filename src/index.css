@@ -259,3 +259,98 @@ body {
 .mobile-menu-primary-shadow {
   box-shadow: 0 10px 25px -5px rgba(255, 81, 0, 0.1), 0 8px 10px -6px rgba(255, 81, 0, 0.1);
 }
+
+/* Interactive Mouse-Border Gradient Effect for Feature Cards */
+.feature-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dark .feature-card {
+  background: rgba(33, 33, 33, 0.8);
+  border: 1px solid rgba(49, 49, 49, 0.8);
+}
+
+/* Analytics cards on dark hero background */
+.feature-card.text-white {
+  background: rgba(15, 15, 15, 0.5);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient overlay using ::before pseudo-element */
+.feature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: radial-gradient(
+    circle at var(--gradient-x, 50%) var(--gradient-y, 50%), 
+    rgba(147, 51, 234, 0.9) 0%,
+    rgba(59, 130, 246, 0.8) 15%,
+    rgba(16, 185, 129, 0.7) 30%,
+    rgba(245, 158, 11, 0.6) 45%,
+    rgba(239, 68, 68, 0.4) 55%,
+    rgba(236, 72, 153, 0.3) 65%,
+    rgba(147, 51, 234, 0.2) 75%,
+    rgba(59, 130, 246, 0.1) 85%,
+    transparent 100%
+  );
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Full border mode for when cursor is inside card */
+.feature-card[style*="--full-border: 1"]::before {
+  background: linear-gradient(90deg, 
+    #9333ea, 
+    #3b82f6, 
+    #10b981, 
+    #f59e0b, 
+    #ef4444, 
+    #ec4899, 
+    #9333ea
+  );
+  background-size: 400% 100%;
+  animation: gradient-animation 4s ease-in-out infinite;
+}
+
+/* Activation state */
+.feature-card.gradient-active::before {
+  opacity: 1;
+}
+
+/* Gradient animation */
+@keyframes gradient-animation {
+  0% { 
+    background-position: 0% 50%; 
+  }
+  50% { 
+    background-position: 100% 50%; 
+  }
+  100% { 
+    background-position: 0% 50%; 
+  }
+}
+
+/* Ensure card content is above gradient overlay */
+.feature-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Hover effect for better UX */
+.feature-card:hover {
+  transform: translateY(-2px);
+}

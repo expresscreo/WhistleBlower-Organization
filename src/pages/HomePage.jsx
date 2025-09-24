@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView, animate, AnimatePresence } from 'framer-motion';
-import { Shield, Eye, Award, Users, ArrowRight, FileText, Search, Gift, CheckCircle, Trophy } from 'lucide-react';
+import { Shield, Eye, Award, Users, ArrowRight, FileText, Search, Gift, CheckCircle, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import TrustedByCarousel from '@/components/home/TrustedByCarousel';
 import BountyAccordion from '@/components/home/BountyAccordion';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { useCursorProximity } from '@/hooks/useCursorProximity';
 
 const Counter = ({ initialValue, hourlyIncrease = 0, prefix = '', suffix = '', isDecimal = false }) => {
     const ref = useRef(null);
@@ -81,13 +82,61 @@ const AnimatedText = () => {
     );
 };
 
+const FeatureCard = ({ feature, index }) => {
+  const cardRef = useCursorProximity(100); // 100px proximity radius
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      viewport={{ once: true }}
+      className="feature-card p-8 text-center rounded-lg"
+    >
+      <div className="flex justify-center mb-6">
+        <feature.icon 
+          className="h-12 w-12" 
+          style={{ color: feature.color }}
+          strokeWidth={2}
+        />
+      </div>
+      <h3 className="text-xl font-bold text-[#171717] dark:text-white mb-4">{feature.title}</h3>
+      <p className="text-[#707070] dark:text-[#A0A0A0] text-sm leading-relaxed">{feature.description}</p>
+    </motion.div>
+  );
+};
+
+const StatCard = ({ stat, index }) => {
+  const cardRef = useCursorProximity(100); // 100px proximity radius
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.5 + index * 0.1 }}
+      viewport={{ once: true }}
+      className="feature-card p-6 text-white text-center rounded-lg"
+    >
+      <stat.icon className="h-8 w-8 text-[#7f7f7f] mx-auto mb-4" />
+      <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
+        <Counter {...stat} />
+      </div>
+      <div className="text-sm text-gray-300">
+        {stat.label}
+      </div>
+    </motion.div>
+  );
+};
+
 
 const HomePage = () => {
   const features = [
-    { icon: Shield, title: '100% Secure & Anonymous', description: 'Your identity is completely protected with end-to-end encryption and anonymous reporting options.' },
-    { icon: Award, title: 'Reward-Backed Reporting', description: 'Get rewarded for verified reports through our secure Interswitch PayCode system.' },
-    { icon: Users, title: 'Connected to Relevant Authorities', description: 'Reports are directly routed to appropriate government agencies and public organizations.' },
-    { icon: Eye, title: 'Transparent & Trackable', description: 'Track your report progress in real-time with our secure tracking system.' }
+    { icon: Shield, title: '100% Secure & Anonymous', description: 'Your identity is completely protected with end-to-end encryption.', color: '#4285F4' },
+    { icon: Gift, title: 'Reward-Backed Reporting', description: 'Get rewarded for verified reports through our secure PayCode system.', color: '#00C853' },
+    { icon: Users, title: 'Connected to Relevant Authorities', description: 'Reports are directly routed to appropriate government agencies and public organizations.', color: '#FFA000' },
+    { icon: Eye, title: 'Transparent & Trackable System', description: 'Track your report progress in real-time with our secure tracking system.', color: '#FF0000' }
   ];
 
   const steps = [
@@ -181,22 +230,11 @@ const HomePage = () => {
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:mt-auto sm:mb-10">
              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               {stats.map((stat, index) => (
-                <motion.div
+                <StatCard
                   key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 + index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="bg-[#0f0f0f80] dark:bg-black/50 backdrop-blur-sm p-6 text-white border border-[#ffffff1a] text-center"
-                >
-                  <stat.icon className="h-8 w-8 text-[#7f7f7f] mx-auto mb-4" />
-                  <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                    <Counter {...stat} />
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    {stat.label}
-                  </div>
-                </motion.div>
+                  stat={stat}
+                  index={index}
+                />
               ))}
             </div>
         </div>
@@ -206,38 +244,19 @@ const HomePage = () => {
         <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold">
-                <span style={{ color: '#707070' }} className="dark:text-muted-foreground">Why Choose </span>
+                <span className="text-[#707070] dark:text-muted-foreground">Why Choose </span>
                 <span className="text-[#171717] dark:text-white">WhistleBlower.ng</span>
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-3xl mx-auto">Our platform provides the most secure and effective way to report crimes and misconduct while protecting your identity.</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-8">
-              {features.slice(0, 2).map((feature) => (
-                <Card key={feature.title} className="p-6 flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-[#f6f6f6] dark:bg-primary/10 flex items-center justify-center">
-                    <feature.icon className="w-6 h-6 text-[#171717] dark:text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-            <div className="space-y-8">
-              {features.slice(2, 4).map((feature) => (
-                <Card key={feature.title} className="p-6 flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-[#f6f6f6] dark:bg-primary/10 flex items-center justify-center">
-                    <feature.icon className="w-6 h-6 text-[#171717] dark:text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
-                  </div>
-                </Card>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <FeatureCard
+                key={feature.title}
+                feature={feature}
+                index={index}
+              />
+            ))}
           </div>
         </div>
       </section>
