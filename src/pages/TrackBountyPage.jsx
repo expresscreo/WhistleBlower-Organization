@@ -123,11 +123,8 @@ const TrackBountyPage = ({ bountyId, password }) => {
         }
 
         // Verify password using Web Crypto API
-        // Handle both old format (just hash) and new format (hash:salt)
-        const passwordData = data.password.includes(':') ? data.password.split(':') : [data.password, ''];
-        const [storedHash, storedSalt] = passwordData;
-        
-        const isValidPassword = await verifyPassword(password, storedHash, storedSalt);
+        // The verifyPassword function handles all format detection internally
+        const isValidPassword = await verifyPassword(password, data.password, '');
 
         if (!isValidPassword) {
             toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
