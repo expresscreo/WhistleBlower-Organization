@@ -10,9 +10,20 @@
 export async function hashPassword(password, salt = null) {
     try {
         // Generate a random salt if none provided
-        const saltBytes = salt ? 
-            new Uint8Array(Array.from(salt, c => c.charCodeAt(0))) : 
-            crypto.getRandomValues(new Uint8Array(16));
+        const saltBytes = (() => {
+            if (salt === null || salt === undefined) {
+                // Generate a random salt if none provided
+                return crypto.getRandomValues(new Uint8Array(16));
+            } else if (typeof salt === 'string') {
+                // If salt is a string, assume it's base64 encoded and convert to bytes
+                return new Uint8Array(Array.from(atob(salt), c => c.charCodeAt(0)));
+            } else if (salt instanceof Uint8Array) {
+                // If salt is already a Uint8Array, use it directly
+                return salt;
+            } else {
+                throw new Error('Invalid salt format. Must be string (base64), Uint8Array, or null.');
+            }
+        })();
         
         // Convert password to bytes
         const passwordBytes = new TextEncoder().encode(password);
