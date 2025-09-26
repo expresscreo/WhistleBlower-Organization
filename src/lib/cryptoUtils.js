@@ -69,23 +69,36 @@ export async function verifyPassword(password, hash, salt) {
             hasSalt: !!salt 
         });
         
+        // Clean up malformed hash format from database
+        let cleanHash = hash;
+        if (hash && typeof hash === 'string') {
+            // Remove "_value: '" prefix and "'" suffix if present
+            if (hash.startsWith("_value: '") && hash.endsWith("'")) {
+                cleanHash = hash.slice(9, -1); // Remove "_value: '" (9 chars) and "'" (1 char)
+                console.log('Cleaned malformed hash:', { original: hash, cleaned: cleanHash });
+            }
+        }
+        
         // Handle different password storage formats
         
         // 1. New format: hash:salt (Web Crypto API)
-        if (hash && hash.includes(':')) {
-            const [storedHash, storedSalt] = hash.split(':');
+        if (cleanHash && cleanHash.includes(':')) {
+            const [storedHash, storedSalt] = cleanHash.split(':');
+            console.log('Parsing hash:salt format:', { storedHash: storedHash.substring(0, 20) + '...', storedSalt: storedSalt.substring(0, 10) + '...' });
             const { hash: computedHash } = await hashPassword(password, storedSalt);
-            return computedHash === storedHash;
+            const isValid = computedHash === storedHash;
+            console.log('Hash comparison result:', isValid);
+            return isValid;
         }
         
         // 2. Old format: placeholder hash (temporary debugging)
-        if (hash === 'temp_hash_for_debugging') {
+        if (cleanHash === 'temp_hash_for_debugging') {
             console.warn('Using temporary password verification for debugging');
             return true;
         }
         
         // 3. Empty or null hash (for testing/debugging)
-        if (!hash || hash === '' || hash === 'null') {
+        if (!cleanHash || cleanHash === '' || cleanHash === 'null') {
             console.warn('No password hash found - accepting any password for debugging');
             return true;
         }
@@ -93,12 +106,12 @@ export async function verifyPassword(password, hash, salt) {
         // 4. New format with separate salt parameter
         if (salt && salt !== '') {
             const { hash: computedHash } = await hashPassword(password, salt);
-            return computedHash === hash;
+            return computedHash === cleanHash;
         }
         
         // 5. TEMPORARY DEBUGGING: Accept any password for any existing hash
         // This is for debugging purposes only - remove in production
-        console.warn('DEBUG MODE: Accepting any password for existing hash:', hash);
+        console.warn('DEBUG MODE: Accepting any password for existing hash:', cleanHash);
         return true;
         
     } catch (error) {
