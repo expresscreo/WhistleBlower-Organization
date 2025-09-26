@@ -110,8 +110,8 @@ export default defineConfig({
 		addTransformIndexHtml
 	],
 	define: {
-		'process.dcodeIO': '{}',
 		'global': 'globalThis',
+		'process.env.NODE_ENV': '"production"',
 	},
 	server: {
 		cors: true,

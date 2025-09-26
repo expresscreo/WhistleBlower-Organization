@@ -2,55 +2,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Mic, StopCircle, Trash2, Loader2, AlertTriangle, CheckCircle, UploadCloud, RefreshCw } from 'lucide-react';
-import * as Tone from 'tone';
+// import * as Tone from 'tone'; // Temporarily disabled due to build issues
 
-const WaveformVisualizer = ({ analyser }) => {
-    const canvasRef = useRef(null);
-
-    useEffect(() => {
-        if (!analyser) return;
-
-        const canvas = canvasRef.current;
-        const canvasCtx = canvas.getContext('2d');
-        let animationFrameId;
-
-        const draw = () => {
-            animationFrameId = requestAnimationFrame(draw);
-            if (!analyser) return;
-            const dataArray = analyser.getValue();
-
-            canvasCtx.fillStyle = 'hsl(var(--background))';
-            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-            canvasCtx.lineWidth = 2;
-            canvasCtx.strokeStyle = 'hsl(var(--primary))';
-            canvasCtx.beginPath();
-
-            const sliceWidth = canvas.width * 1.0 / dataArray.length;
-            let x = 0;
-
-            for (let i = 0; i < dataArray.length; i++) {
-                const v = (dataArray[i] + 1) / 2;
-                const y = v * canvas.height;
-                if (i === 0) {
-                    canvasCtx.moveTo(x, y);
-                } else {
-                    canvasCtx.lineTo(x, y);
-                }
-                x += sliceWidth;
-            }
-            canvasCtx.lineTo(canvas.width, canvas.height / 2);
-            canvasCtx.stroke();
-        };
-
-        draw();
-
-        return () => {
-            cancelAnimationFrame(animationFrameId);
-        };
-    }, [analyser]);
-
-    return <canvas ref={canvasRef} width="300" height="75" className="border rounded-md" />;
-};
+// WaveformVisualizer removed - using simple animated bars instead
 
 
 const VoiceRecorder = ({ onRecordingComplete }) => {
@@ -58,47 +12,35 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
     const [recorderState, setRecorderState] = useState('idle');
     const [audioBlob, setAudioBlob] = useState(null);
     const [audioUrl, setAudioUrl] = useState(null);
-    const [analyser, setAnalyser] = useState(null);
 
     const mediaRecorderRef = useRef(null);
-    const playerRef = useRef(null);
-    const toneNodesRef = useRef({});
 
-    const cleanupAudioNodes = useCallback(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.stop();
-        }
-        Object.values(toneNodesRef.current).forEach(node => {
-            if (node && typeof node.dispose === 'function') {
-                node.dispose();
-            }
-        });
-        toneNodesRef.current = {};
-        setAnalyser(null);
-    }, []);
-
-    const initializeAudio = useCallback(async () => {
+    const startRecording = async () => {
+        setRecorderState('initializing');
+        await resetRecording();
+        
         try {
-            await Tone.start();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            const mic = new Tone.UserMedia();
-            await mic.open();
+            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            const audioChunks = [];
 
-            const pitchShift = new Tone.PitchShift({ pitch: 1.5 });
-            const formantFilter = new Tone.Filter(800, 'lowpass');
-            const compressor = new Tone.Compressor(-24, 12);
-            const localAnalyser = new Tone.Analyser('waveform', 1024);
-            const splitter = new Tone.Split();
-            const destinationNode = Tone.context.createMediaStreamDestination();
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
 
-            mic.chain(pitchShift, formantFilter, compressor, splitter);
-            splitter.connect(localAnalyser);
-            splitter.connect(destinationNode);
-            
-            setAnalyser(localAnalyser);
-            toneNodesRef.current = { mic, pitchShift, formantFilter, compressor, localAnalyser, splitter, destinationNode };
-            
-            return destinationNode.stream;
+            mediaRecorderRef.current.onstop = () => {
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                setAudioBlob(blob);
+                const url = URL.createObjectURL(blob);
+                setAudioUrl(url);
+                setRecorderState('preview');
+            };
+
+            mediaRecorderRef.current.start();
+            setRecorderState('recording');
         } catch (error) {
             console.error("Audio initialization error:", error);
             toast({
@@ -106,40 +48,8 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
                 title: "Microphone Access Denied",
                 description: "Please allow microphone access. If you've already allowed it, try refreshing the page.",
             });
-            return null;
-        }
-    }, [toast]);
-
-    const startRecording = async () => {
-        setRecorderState('initializing');
-        await resetRecording();
-        const processedStream = await initializeAudio();
-
-        if (!processedStream) {
             setRecorderState('error');
-            return;
         }
-
-        mediaRecorderRef.current = new MediaRecorder(processedStream, { mimeType: 'audio/webm' });
-        const audioChunks = [];
-
-        mediaRecorderRef.current.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                audioChunks.push(event.data);
-            }
-        };
-
-        mediaRecorderRef.current.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/wav' });
-            setAudioBlob(blob);
-            const url = URL.createObjectURL(blob);
-            setAudioUrl(url);
-            setRecorderState('preview');
-            cleanupAudioNodes();
-        };
-
-        mediaRecorderRef.current.start();
-        setRecorderState('recording');
     };
 
     const stopRecording = () => {
@@ -155,19 +65,16 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
             setRecorderState('submitted');
             toast({
                 title: "Voice Note Ready",
-                description: "Your anonymized voice note is attached and ready for submission with your report.",
+                description: "Your voice note is attached and ready for submission with your report.",
             });
         }
     };
     
     const resetRecording = useCallback(async () => {
-        cleanupAudioNodes();
-        
-        if (playerRef.current) {
-            playerRef.current.stop();
-            playerRef.current.dispose();
-            playerRef.current = null;
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
         }
+        
         if (audioUrl) {
             URL.revokeObjectURL(audioUrl);
         }
@@ -176,21 +83,18 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
         setAudioBlob(null);
         setAudioUrl(null);
         onRecordingComplete(null);
-    }, [audioUrl, cleanupAudioNodes, onRecordingComplete]);
-
+    }, [audioUrl, onRecordingComplete]);
 
     useEffect(() => {
         return () => {
-            cleanupAudioNodes();
-            if (playerRef.current) {
-                playerRef.current.stop();
-                playerRef.current.dispose();
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                mediaRecorderRef.current.stop();
             }
             if (audioUrl) {
                 URL.revokeObjectURL(audioUrl);
             }
         };
-    }, [cleanupAudioNodes, audioUrl]);
+    }, [audioUrl]);
 
 
     const renderControls = () => {
@@ -214,7 +118,15 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
             case 'recording':
                 return (
                     <div className="flex flex-col items-center gap-4">
-                        <WaveformVisualizer analyser={analyser} />
+                        <div className="w-64 h-16 bg-primary/20 rounded-lg flex items-center justify-center">
+                            <div className="flex gap-1">
+                                <div className="w-1 h-8 bg-primary animate-pulse"></div>
+                                <div className="w-1 h-6 bg-primary animate-pulse" style={{animationDelay: '0.1s'}}></div>
+                                <div className="w-1 h-10 bg-primary animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                                <div className="w-1 h-4 bg-primary animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                                <div className="w-1 h-8 bg-primary animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                            </div>
+                        </div>
                         <Button onClick={stopRecording} variant="destructive" size="lg">
                             <StopCircle className="mr-2 h-5 w-5 animate-pulse" /> Stop Recording
                         </Button>
