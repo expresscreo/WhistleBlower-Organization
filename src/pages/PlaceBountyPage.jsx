@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { Award } from 'lucide-react';
 
 import BountyForm from './submit-report/BountyForm';

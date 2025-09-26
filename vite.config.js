@@ -109,6 +109,10 @@ export default defineConfig({
 		react(),
 		addTransformIndexHtml
 	],
+	define: {
+		'process.dcodeIO': '{}',
+		'global': 'globalThis',
+	},
 	server: {
 		cors: true,
 		headers: {

@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Edit2, FileType2, Mic, Type } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 
 import OrganizationSearch from './OrganizationSearch';
 import IncidentDetails from './IncidentDetails';
