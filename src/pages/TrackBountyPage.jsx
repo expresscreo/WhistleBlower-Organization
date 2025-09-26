@@ -113,18 +113,30 @@ const TrackBountyPage = ({ bountyId, password }) => {
 
     const handleAuthentication = useCallback(async () => {
         setLoading(true);
+        console.log('Starting authentication for bounty:', bountyId, 'with password:', password);
+        
         const { data, error } = await supabase.from('bounties').select('*').eq('bounty_id', bountyId).single();
 
         if (error || !data) {
+            console.error('Bounty not found:', error);
             toast({ variant: 'destructive', title: 'Bounty Not Found', description: 'Please check the Bounty ID and try again.' });
             setLoading(false);
             handleLogout();
             return;
         }
 
+        console.log('Bounty data found:', {
+            bounty_id: data.bounty_id,
+            has_password: !!data.password,
+            password_value: data.password,
+            password_length: data.password?.length
+        });
+
         // Verify password using Web Crypto API
         // The verifyPassword function handles all format detection internally
         const isValidPassword = await verifyPassword(password, data.password, '');
+
+        console.log('Password verification result:', isValidPassword);
 
         if (!isValidPassword) {
             toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
