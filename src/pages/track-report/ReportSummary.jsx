@@ -18,7 +18,8 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
     
     const currentStatus = statusConfig[report.status] || { progress: 0, color: 'bg-gray-400' };
 
-    const evidencePaths = Array.isArray(report.evidence_path) ? report.evidence_path : [];
+    const evidencePaths = Array.isArray(report.evidence_path) ? report.evidence_path : 
+                          Array.isArray(report.evidence) ? report.evidence : [];
 
     return (
         <div className="bg-card p-6 md:p-8 border">

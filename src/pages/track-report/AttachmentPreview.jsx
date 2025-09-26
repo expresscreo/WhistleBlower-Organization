@@ -21,8 +21,7 @@ const AttachmentPreview = ({ path }) => {
   const generateUrl = async () => {
     setLoading(true);
     try {
-      // Use local file URL instead of Supabase signed URL
-      const localUrl = getLocalFileUrl(path);
+      const localUrl = await getLocalFileUrl(path);
       setUrl(localUrl);
       return localUrl;
     } catch (e) {

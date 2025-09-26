@@ -22,6 +22,8 @@ import { sanitizeFilename, slugify } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { uploadFileToLocal } from '@/lib/fileUtils';
+import { generateReportId } from '@/lib/utils';
+import { hashPassword } from '@/lib/cryptoUtils';
 
 const SubmitReportPage = () => {
     const { toast } = useToast();
@@ -186,14 +188,45 @@ const SubmitReportPage = () => {
                         .eq('id', targetBountyId);
                 }
 
-                toast({ title: 'Thank you!', description: 'Your information has been sent to the bounty handlers.' });
+                // Create a report record for tracking purposes
+                const newReportId = generateReportId();
+                const { hash: passwordHash, salt } = await hashPassword(formData.password);
+                
+                const { error: reportError } = await supabase.rpc('create_report_with_evidence', {
+                    report_id_param: newReportId,
+                    organization_id_param: formData.organizationId,
+                    organization_name_param: formData.organizationId ? null : formData.organizationName,
+                    title_param: formData.title || 'Bounty Report',
+                    description_param: composedMessage,
+                    category_param: 'Bounty',
+                    state_param: formData.state,
+                    lga_param: formData.lga,
+                    incident_address_param: formData.incidentAddress,
+                    incident_date_param: formData.incidentDate,
+                    is_anonymous_param: true,
+                    anonymous_password_hash_param: `${passwordHash}:${salt}`,
+                    evidence_paths_param: evidencePaths.length > 0 ? evidencePaths : null,
+                    report_type_param: submissionType,
+                    is_voice_note_param: submissionType === 'voice',
+                    is_feedback_param: false,
+                });
 
-                const bountyTitle = searchParams.get('bounty_title');
-                if (bountyTitle) {
-                    navigate(`/bounties/${slugify(bountyTitle)}`);
+                if (reportError) {
+                    console.error('Failed to create report record:', reportError);
+                    // Don't fail the whole submission, just log the error
                 } else {
-                    navigate('/news');
+                    // Link the report to the bounty
+                    const { error: bountyReportError } = await supabase
+                        .from('bounty_reports')
+                        .insert({ bounty_id: targetBountyId, report_id: newReportId });
+                    if (bountyReportError) {
+                        console.error('Failed to link report to bounty:', bountyReportError);
+                    }
                 }
+
+                // Show success page with report ID for tracking
+                setSubmissionData({ reportId: newReportId, password: formData.password });
+                setIsSubmitted(true);
                 return;
             }
 

@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Edit, Trash2, PlusCircle, Eye } from 'lucide-react';
+import { Loader2, Edit, Trash2, PlusCircle, Eye, CheckCircle } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { slugify } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -137,6 +137,12 @@ const NewsEditor = () => {
                                             <Badge className={`${getStatusColor(item.status)} rounded-none uppercase`}>
                                                 {item.status}
                                             </Badge>
+                                            {item.category === 'bounty' && item.bounty_id && item.bounty_amount && (
+                                                <span className="inline-flex items-center text-xs text-green-600">
+                                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                                    ₦{Number(item.bounty_amount).toLocaleString()}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </CardHeader>

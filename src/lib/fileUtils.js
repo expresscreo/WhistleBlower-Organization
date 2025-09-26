@@ -5,6 +5,37 @@
 import { sanitizeFilename } from './utils';
 import { supabase } from '@/lib/customSupabaseClient';
 
+// Upload to Supabase storage as a fallback when the local upload endpoint
+// is not available (e.g., on production static hosting).
+async function uploadFileToSupabaseFallback(file, category, subfolder, fileName) {
+    const bucket = 'wb_evio';
+    const pathParts = [category];
+    if (subfolder) pathParts.push(subfolder);
+    pathParts.push(fileName);
+    const storagePath = pathParts.join('/');
+
+    const { error: uploadError } = await supabase
+        .storage
+        .from(bucket)
+        .upload(storagePath, file, {
+            upsert: true,
+            cacheControl: '3600',
+            contentType: file.type || 'application/octet-stream',
+        });
+
+    if (uploadError) {
+        throw new Error(`Supabase upload failed: ${uploadError.message}`);
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+    const publicUrl = data?.publicUrl;
+    if (!publicUrl) {
+        // Fallback to path if for some reason public URL cannot be generated
+        return storagePath;
+    }
+    return publicUrl;
+}
+
 /**
  * Upload a file to the local WBMedia directory
  * @param {File} file - The file to upload
@@ -28,27 +59,61 @@ export const uploadFileToLocal = async (file, category = 'general', subfolder = 
             relativePath = `WBMedia/${category}`;
         }
 
-        const destinationPath = `public/${relativePath}`;
+        // Destination used by different servers:
+        // - Node server (dev) expects a path starting with "public/"
+        // - PHP endpoint (prod) expects a path relative to docroot (no leading "public/")
+        const destinationPathDev = `public/${relativePath}`;
+        const destinationPathProd = `${relativePath}`;
 
         formData.append('file', file);
 
-        // Upload to the server (pass path via query to ensure it's available in destination)
-        const response = await fetch(`/api/upload?path=${encodeURIComponent(destinationPath)}`, {
-            method: 'POST',
-            body: formData,
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Upload failed: ${response.statusText}`);
+        // Decide upload target:
+        // - In development (localhost) use Node server /api/upload
+        // - In production, use PHP endpoint /upload.php to save under WBMedia
+        // - Only for reporter evidence flows elsewhere should we fall back to Supabase
+        try {
+            const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+            const endpoint = isLocalhost
+                ? `/api/upload?path=${encodeURIComponent(destinationPathDev)}`
+                : `/upload.php?path=${encodeURIComponent(destinationPathProd)}`;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+            });
+
+            // If server returns non-2xx, try fallback
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+            }
+
+            // Try to parse JSON safely; if this fails for any reason, fallback to Supabase
+            try {
+                // Validate content-type before parsing JSON
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Unexpected response content-type. First 120 chars: ${text.slice(0, 120)}`);
+                }
+
+                const result = await response.json();
+                if (!result?.success || !result?.filePath) {
+                    throw new Error(result?.error || 'Upload failed: invalid JSON payload');
+                }
+
+                return result.filePath;
+            } catch (jsonErr) {
+                // If JSON parsing fails or payload invalid, use Supabase fallback
+                console.warn('Local upload returned non-JSON or invalid payload; using Supabase fallback:', jsonErr?.message || jsonErr);
+                // For bounties/news we want local WBMedia, but if PHP/Node is unavailable,
+                // still upload to WBMedia via Supabase and return a public URL.
+                return await uploadFileToSupabaseFallback(file, category, subfolder, fileName);
+            }
+        } catch (err) {
+            console.warn('Local upload failed, falling back to Supabase storage:', err?.message || err);
+            // Fallback to Supabase storage (works in production/static hosting)
+            return await uploadFileToSupabaseFallback(file, category, subfolder, fileName);
         }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Upload failed');
-        }
-        
-        return result.filePath;
     } catch (error) {
         console.error('Error uploading file:', error);
         throw new Error(`Failed to upload file: ${error.message}`);
@@ -77,6 +142,52 @@ export const getLocalFileUrl = (filePath) => {
         } catch (_) {
             return filePath;
         }
+    }
+    
+    // Handle bounty report evidence paths - these come from uploadFileToLocal
+    // and should be in WBMedia/bounties/delito/ format
+    if (filePath.includes('bounties/delito') || filePath.includes('bounties/')) {
+        // If it's a relative path without leading slash, add it
+        if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
+        // If it doesn't start with WBMedia, assume it's a filename and prepend the bounty path
+        if (!filePath.startsWith('/')) return `/WBMedia/bounties/delito/${filePath}`;
+        return filePath;
+    }
+    
+    // Handle regular report evidence paths - these come from Supabase storage
+    if (filePath.includes('reports/')) {
+        // Try to create a signed URL since public URL is not working
+        // For now, return a promise that will be handled by the calling component
+        return new Promise(async (resolve) => {
+            try {
+                const { data, error } = await supabase.storage
+                    .from('wb_evio')
+                    .createSignedUrl(filePath, 3600); // 1 hour expiry
+                
+                if (error) {
+                    console.error('Error creating signed URL:', error);
+                    resolve(filePath);
+                    return;
+                }
+                
+                if (data?.signedUrl) {
+                    console.log('Generated signed URL:', data.signedUrl);
+                    resolve(data.signedUrl);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error generating signed URL:', error);
+            }
+            
+            // Fallback: try public URL
+            try {
+                const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
+                resolve(data?.publicUrl || filePath);
+            } catch (error) {
+                console.error('Error generating public URL:', error);
+                resolve(filePath);
+            }
+        });
     }
     
     // If it's a relative path without leading slash, add it

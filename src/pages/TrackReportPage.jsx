@@ -165,23 +165,45 @@ const TrackReportPage = ({ reportId, password }) => {
       }
     }
     
-    const { error: updateError } = await supabase.from('report_updates').insert({ report_id: reportData.id, message: `${updateMessage}\n\n${newPaths.length > 0 ? `Added ${newPaths.length} new file(s).` : ''}`.trim(), updated_by: null });
+    // Update the report description with the new message
+    const timestamp = new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    const updateIdentifier = `\n\n--- UPDATE (${timestamp}) ---\n${updateMessage}`;
+    const updatedDescription = reportData.description + updateIdentifier;
+    const updatedEvidence = [...(reportData.evidence_path || []), ...newPaths];
     
-    if (updateError) {
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not add your update.' });
+    const { data: updatedReportData, error: reportUpdateError } = await supabase.from('reports').update({ 
+      description: updatedDescription,
+      evidence_path: updatedEvidence, 
+      admin_has_viewed: false 
+    }).eq('id', reportData.id).select().single();
+    
+    if (reportUpdateError) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update your report.' });
     } else {
-      const updatedEvidence = [...(reportData.evidence_path || []), ...newPaths];
-      const { data: updatedReportData, error: reportUpdateError } = await supabase.from('reports').update({ evidence_path: updatedEvidence, admin_has_viewed: false }).eq('id', reportData.id).select().single();
+      // Also add a chat message for the update
+      const { error: updateError } = await supabase.from('report_updates').insert({ 
+        report_id: reportData.id, 
+        message: `Report updated: ${updateMessage}${newPaths.length > 0 ? `\n\nAdded ${newPaths.length} new file(s).` : ''}`.trim(), 
+        updated_by: null 
+      });
       
-      if (!reportUpdateError) {
-        setReportData(updatedReportData);
-        toast({ title: "Success", description: "Your report has been updated." });
-        setUpdateModalOpen(false);
-        setUpdateMessage('');
-        setNewEvidenceFiles([]);
-      } else {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save new evidence links.' });
+      if (updateError) {
+        console.error('Failed to add chat message:', updateError);
+        // Don't fail the whole update if chat message fails
       }
+      
+      setReportData(updatedReportData);
+      toast({ title: "Success", description: "Your report has been updated." });
+      setUpdateModalOpen(false);
+      setUpdateMessage('');
+      setNewEvidenceFiles([]);
     }
     setIsUpdating(false);
   };

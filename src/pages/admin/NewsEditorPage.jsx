@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow, CheckCircle } from 'lucide-react';
 import { slugify } from '@/lib/utils';
 import { Helmet } from 'react-helmet';
 import NavbarLoader from '@/components/admin/NavbarLoader';
@@ -36,10 +36,21 @@ const NewsEditorPage = () => {
     const [inlineImages, setInlineImages] = useState([]);
     const [editorContent, setEditorContent] = useState('');
     const [bountyEvidence, setBountyEvidence] = useState([]);
+    const [bountyAmountVerified, setBountyAmountVerified] = useState(false);
     
     const { toast } = useToast();
     const editorRef = useRef(null);
     const contentInitializedRef = useRef(false);
+
+    // Prefill bounty amount when navigated from BountyDetails
+    useEffect(() => {
+        const prefill = location.state?.prefillBountyAmount;
+        if (prefill !== undefined && prefill !== null && prefill !== '' && !isEditing) {
+            setCurrentItem(prev => ({ ...prev, category: 'bounty', bounty_amount: formatNumberWithCommas(String(prefill)) }));
+            setBountyAmountVerified(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Load existing item if editing
     useEffect(() => {
@@ -59,10 +70,19 @@ const NewsEditorPage = () => {
 
             if (error) throw error;
 
+            // If we navigated from BountyDetails with a prefilled amount, prefer that
+            const prefill = location.state?.prefillBountyAmount;
+            const bountyAmountPrefilled = prefill !== undefined && prefill !== null && prefill !== ''
+                ? formatNumberWithCommas(String(prefill))
+                : (data?.bounty_amount ? formatNumberWithCommas(String(data.bounty_amount)) : '');
+
             setCurrentItem({
                 ...data,
-                bounty_amount: data?.bounty_amount || ''
+                bounty_amount: bountyAmountPrefilled,
+                category: data?.category || 'bounty'
             });
+
+            setBountyAmountVerified(Boolean(prefill));
             setEditorContent(data.content || '');
             setFeaturedImageUrl(getLocalFileUrl(data.featured_image));
             
@@ -640,16 +660,31 @@ const NewsEditorPage = () => {
 
             if (result.error) throw result.error;
 
-            // If bounty news with linked bounty, propagate amount to bounty record (news table may not have bounty_amount)
-            if (currentItem.category === 'bounty' && currentItem.bounty_id && currentItem.bounty_amount) {
-                const numericAmount = Number(String(currentItem.bounty_amount).replace(/,/g, ''));
-                try {
-                    await supabase
-                        .from('bounties')
-                        .update({ bounty_amount: numericAmount })
-                        .eq('id', currentItem.bounty_id);
-                } catch (e) {
-                    console.warn('Could not update bounty amount on bounty record:', e);
+            // If linked to a bounty, propagate changes
+            if (currentItem.category === 'bounty' && currentItem.bounty_id) {
+                // 1) Update bounty amount, if provided
+                if (currentItem.bounty_amount) {
+                    const numericAmount = Number(String(currentItem.bounty_amount).replace(/,/g, ''));
+                    try {
+                        await supabase
+                            .from('bounties')
+                            .update({ bounty_amount: numericAmount })
+                            .eq('id', currentItem.bounty_id);
+                    } catch (e) {
+                        console.warn('Could not update bounty amount on bounty record:', e);
+                    }
+                }
+
+                // 2) If the news item is being published, mark the bounty as published
+                if (currentItem.status === 'published') {
+                    try {
+                        await supabase
+                            .from('bounties')
+                            .update({ status: 'published' })
+                            .eq('id', currentItem.bounty_id);
+                    } catch (e) {
+                        console.warn('Could not update bounty status to published:', e);
+                    }
                 }
             }
 
@@ -948,7 +983,15 @@ const NewsEditorPage = () => {
                                     {/* Bounty Amount (only for bounty category) */}
                                     {currentItem.category === 'bounty' && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="bounty_amount">Bounty Amount</Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="bounty_amount">Bounty Amount</Label>
+                                                {bountyAmountVerified && (
+                                                    <span className="inline-flex items-center text-xs text-green-600">
+                                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                                        Verified from bounty
+                                                    </span>
+                                                )}
+                                            </div>
                                             <Input
                                                 id="bounty_amount"
                                                 placeholder="e.g., 50,000"
@@ -956,6 +999,7 @@ const NewsEditorPage = () => {
                                                 onChange={(e) => {
                                                     const formatted = formatNumberWithCommas(e.target.value);
                                                     setCurrentItem(prev => ({ ...prev, bounty_amount: formatted }));
+                                                    setBountyAmountVerified(false);
                                                 }}
                                             />
                                         </div>

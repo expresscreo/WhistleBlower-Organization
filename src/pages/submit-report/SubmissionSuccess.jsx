@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,8 +66,19 @@ const SubmissionSuccess = ({ id, password, type = 'report' }) => {
         doc.save(`whistleblower_${type}_${id}.pdf`);
     };
 
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        // Smoothly bring the success content into view on mount
+        if (containerRef.current) {
+            containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, []);
+
     return (
-        <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div ref={containerRef} className="min-h-screen flex items-start justify-center pt-8 pb-16 px-4 sm:px-6 lg:px-8">
             <Card className="max-w-2xl w-full">
                 <CardHeader className="text-center">
                     <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4"/>

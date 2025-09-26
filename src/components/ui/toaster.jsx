@@ -15,7 +15,7 @@ export function Toaster() {
 
 	return (
 		<ToastProvider>
-			{toasts.map(({ id, title, description, action, variant, ...props }) => {
+            {toasts.map(({ id, title, description, action, variant, dismiss: _dismiss, update: _update, ...props }) => {
 				return (
 					<Toast key={id} {...props} variant={variant} className={cn({
             "bg-[#72E3AD]/65 backdrop-blur-sm border-[#36C182] text-black shadow-none": variant !== 'destructive',

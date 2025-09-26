@@ -65,6 +65,10 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
                     <div><p className="text-sm text-muted-foreground">Type of Crime</p><p className="font-semibold">{bounty.type_of_crime}</p></div>
                     <div><p className="text-sm text-muted-foreground">Submitted</p><p className="font-semibold">{format(new Date(bounty.created_at), 'PPP')}</p></div>
                     <div><p className="text-sm text-muted-foreground">Bounty Amount</p><p className="font-semibold text-primary flex items-center"><MoneyIcon />{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p></div>
+                    <div><p className="text-sm text-muted-foreground">Location</p><p className="font-semibold">{bounty.location}{bounty.state ? `, ${bounty.state}` : ''}</p></div>
+                    {bounty.full_address && (
+                        <div className="md:col-span-2"><p className="text-sm text-muted-foreground">Address</p><p className="font-semibold break-words">{bounty.full_address}</p></div>
+                    )}
                 </div>
                 <div className="border-t pt-6">
                     <h3 className="font-semibold text-xl mb-2">Description</h3>

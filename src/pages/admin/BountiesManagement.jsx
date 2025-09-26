@@ -67,11 +67,12 @@ const BountiesManagement = () => {
     }, [allItems, searchTerm, filters, currentPage]);
 
     const handleCardClick = (item) => {
-        // Route all bounty-related submissions to the bounty details page
-        if (item.item_type === 'bounty' || item.bounty_id) {
-            // If item already has numeric id and is a bounty, use it; otherwise use bounty_id
-            const targetId = item.item_type === 'bounty' ? item.id : item.bounty_id;
-            navigate(`/admin/bounties/${targetId}`);
+        // Route placed bounties to bounty details.
+        // Route bounty reports to the related bounty details page and pass reportId.
+        if (item.item_type === 'bounty') {
+            navigate(`/admin/bounties/${item.id}`);
+        } else if (item.item_type === 'report' && item.bounty_id) {
+            navigate(`/admin/bounties/${item.bounty_id}?reportId=${item.id}`);
         } else {
             navigate(`/admin/reports/${item.id}`);
         }
@@ -88,6 +89,8 @@ const BountiesManagement = () => {
         'Under Review': { progress: 20, color: 'bg-yellow-400', tag: 'bg-yellow-100 text-yellow-800' },
         'Assigned': { progress: 40, color: 'bg-blue-400', tag: 'bg-blue-100 text-blue-800' },
         'Under Investigation': { progress: 70, color: 'bg-purple-400', tag: 'bg-purple-100 text-purple-800' },
+        'Investigation': { progress: 70, color: 'bg-purple-400', tag: 'bg-purple-100 text-purple-800' },
+        'Closed': { progress: 100, color: 'bg-gray-500', tag: 'bg-gray-100 text-gray-800' },
     };
 
     return (
@@ -141,7 +144,7 @@ const BountiesManagement = () => {
                                                     <MessageSquare className="w-5 h-5 text-primary hover:text-primary/80" />
                                                 </div>
                                                 <CardTitle className="text-sm font-semibold uppercase text-muted-foreground pt-2">
-                                                    {isBounty ? `Bounty ID: ${item.bounty_id}` : item.bounty_id ? `Bounty ID: ${item.bounty_id}` : `Report ID: ${item.report_id}`}
+                                                    {isBounty ? `Bounty ID: ${item.bounty_id}` : `Report ID: ${item.report_id}`}
                                                 </CardTitle>
                                                 <div className="w-full bg-muted h-2.5 my-1 overflow-hidden">
                                                     <div className={cn('h-2.5', currentStatus.color)} style={{ width: `${currentStatus.progress}%` }}></div>

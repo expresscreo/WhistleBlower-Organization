@@ -65,7 +65,7 @@ const BountyPostPage = () => {
         }
 
         // If there's a published news item, use it
-        if (newsData && !newsError) {
+        if (newsData) {
             console.log('Found published news item for bounty:', newsData);
             
             // Fetch the original bounty data to get additional fields

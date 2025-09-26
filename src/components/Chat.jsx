@@ -26,7 +26,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
   useEffect(() => {
     if (!report || !report.id) return;
 
-    console.log('Setting up reporter real-time subscription for report:', report.id);
+    // Setting up reporter real-time subscription for report
 
     const channel = supabase
       .channel(`chat_${report.id}`)
@@ -39,7 +39,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
           filter: `report_id=eq.${report.id}`,
         },
         (payload) => {
-          console.log('Reporter received new message:', payload.new);
+          // Reporter received new message
           const newUpdate = payload.new;
           if (newUpdate.message && newUpdate.updated_by) {
             // This is a new admin message
@@ -62,7 +62,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
           filter: `report_id=eq.${report.id}`,
         },
         (payload) => {
-          console.log('Reporter received message update:', payload.new);
+          // Reporter received message update
           // Handle read status updates - refresh to get latest read status
           if (onRefreshUpdates) {
             onRefreshUpdates();
@@ -70,15 +70,15 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
         }
       )
       .subscribe((status) => {
-        console.log('Reporter subscription status:', status);
+        // Reporter subscription status updated
         setIsConnected(status === 'SUBSCRIBED');
       });
 
     return () => {
-      console.log('Cleaning up reporter subscription');
+      // Cleaning up reporter subscription
       supabase.removeChannel(channel);
     };
-  }, [report?.id, onNewMessage, onRefreshUpdates, toast]);
+  }, [report?.id]);
 
   // Simplified read status management
   useEffect(() => {

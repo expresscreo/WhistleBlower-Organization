@@ -60,6 +60,7 @@ const PlaceBountyPage = () => {
                     type_of_crime: bountyData.typeOfCrime,
                     state: bountyData.state,
                     location: bountyData.lga,
+                    full_address: bountyData.fullAddress || null,
                     bounty_amount: bountyData.bountyAmount || null,
                     password: `${passwordHash}:${salt}`, // Store hash:salt as a single field for now
                     status: 'pending_review',

@@ -10,15 +10,20 @@
 import fs from 'fs';
 import path from 'path';
 
-console.log('🚀 Chat Feature Database Migration');
+console.log('🚀 Database Migration Helper');
 console.log('==================================\n');
 
+// Determine migration file from CLI arg or default to chat features
+const migrationArg = process.argv[2];
+const defaultMigration = 'add_chat_features.sql';
+const migrationFile = migrationArg || defaultMigration;
+
 // Read the migration file
-const migrationPath = path.join(process.cwd(), 'database_migrations', 'add_chat_features.sql');
+const migrationPath = path.join(process.cwd(), 'database_migrations', migrationFile);
 
 if (!fs.existsSync(migrationPath)) {
   console.log('❌ Migration file not found: ' + migrationPath);
-  console.log('Please ensure the database_migrations folder exists with add_chat_features.sql');
+  console.log('Please ensure the database_migrations folder exists and the file name is correct.');
   process.exit(1);
 }
 
@@ -40,9 +45,9 @@ console.log('--- END SQL MIGRATION ---\n');
 
 console.log('5. Click "Run" to execute the migration');
 console.log('6. Verify the migration completed successfully');
-console.log('7. Run the verification script: node verify-chat-setup.js\n');
+console.log(`7. (Optional) Save this file in your repo: database_migrations/${migrationFile}\n`);
 
-console.log('✨ After running the migration, your chat features will be fully functional!');
-console.log('📚 See INTEGRATION_COMPLETE_GUIDE.md for testing instructions.');
+console.log('✨ After running the migration, retry your action in the app.');
+console.log('📚 For chat features, see INTEGRATION_COMPLETE_GUIDE.md for testing instructions.');
 
 process.exit(0);

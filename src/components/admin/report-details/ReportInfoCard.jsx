@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, List, MapPin, Clock } from 'lucide-react';
+import { Building, List, MapPin, Clock, BadgeDollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 const InfoItem = ({ icon: Icon, label, value }) => (
@@ -22,6 +22,13 @@ const ReportInfoCard = ({ report }) => {
                 <InfoItem icon={MapPin} label="Location" value={`${report.lga}, ${report.state}`} />
                 {report.incident_address && <InfoItem icon={MapPin} label="Address" value={report.incident_address} />}
                 <InfoItem icon={Clock} label="Incident Date" value={report.incident_date ? format(new Date(report.incident_date), 'PPP') : 'N/A'} />
+                {typeof report.bounty_amount !== 'undefined' && (
+                    <InfoItem icon={BadgeDollarSign} label="Bounty Amount" value={
+                        report.bounty_amount === null || report.bounty_amount === ''
+                            ? 'N/A'
+                            : new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(String(report.bounty_amount).replace(/,/g, '')))
+                    } />
+                )}
             </CardContent>
         </Card>
     );

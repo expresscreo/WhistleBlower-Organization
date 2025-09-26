@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Paperclip, Download, Loader2, File as FileIcon, Mic, Eye } from 'lucide-react';
 import { sanitizeFilename } from '@/lib/utils';
+import { getLocalFileUrl } from '@/lib/fileUtils';
 
 const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
   const { toast } = useToast();
@@ -20,9 +21,15 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
   const generateUrl = async () => {
     setLoading(true);
     try {
-      const { data, error: funcError } = await supabase.functions.invoke('create-signed-url', {
-        body: { path },
-      });
+      // If the path is a local WBMedia path or http(s) URL, don't use Supabase
+      if (typeof path === 'string' && (path.startsWith('/WBMedia/') || path.startsWith('WBMedia/') || path.startsWith('http'))) {
+        const localUrl = getLocalFileUrl(path);
+        setUrl(localUrl);
+        return localUrl;
+      }
+
+      // Otherwise assume it's a Supabase storage path and create a signed URL
+      const { data, error: funcError } = await supabase.functions.invoke('create-signed-url', { body: { path } });
       if (funcError) throw funcError;
       if (data.error) throw new Error(data.error);
       setUrl(data.signedUrl);
@@ -93,7 +100,7 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
 };
 
 
-const ReportAttachmentsCard = ({ evidencePath, isVoiceNote }) => {
+const ReportAttachmentsCard = ({ evidencePath, isVoiceNote, hideVoiceNote = false }) => {
     const paths = Array.isArray(evidencePath) ? evidencePath : (evidencePath ? [evidencePath] : []);
     
     const voiceNotePath = isVoiceNote ? paths.find(p => p.includes('voice-report.wav')) : null;
@@ -105,7 +112,7 @@ const ReportAttachmentsCard = ({ evidencePath, isVoiceNote }) => {
             <CardContent>
                 {paths.length > 0 ? (
                     <div className="space-y-2">
-                        {voiceNotePath && <AttachmentPreview key={voiceNotePath} path={voiceNotePath} isVoiceNotePrimary={true} />}
+                        {voiceNotePath && !hideVoiceNote && <AttachmentPreview key={voiceNotePath} path={voiceNotePath} isVoiceNotePrimary={true} />}
                         {otherPaths.map((path, index) => (
                             <AttachmentPreview key={index} path={path} isVoiceNotePrimary={false} />
                         ))}
