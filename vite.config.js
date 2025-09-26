@@ -112,6 +112,7 @@ export default defineConfig({
 	define: {
 		'global': 'globalThis',
 		'process.env.NODE_ENV': '"production"',
+		'globalThis': 'globalThis',
 	},
 	server: {
 		cors: true,
@@ -136,6 +137,8 @@ export default defineConfig({
 		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', ],
 		alias: {
 			'@': path.resolve(__dirname, './src'),
+			'../internals/define-globalThis-property': path.resolve(__dirname, './src/lib/globalThis-polyfill.js'),
+			'../internals/globalThis-this': path.resolve(__dirname, './src/lib/globalThis-this-polyfill.js'),
 		},
 	},
 	build: {
@@ -144,10 +147,11 @@ export default defineConfig({
 				'@babel/parser',
 				'@babel/traverse',
 				'@babel/generator',
-				'@babel/types',
-				'core-js',
-				'core-js/internals'
+				'@babel/types'
 			]
+		},
+		commonjsOptions: {
+			transformMixedEsModules: true
 		}
 	},
 	optimizeDeps: {
