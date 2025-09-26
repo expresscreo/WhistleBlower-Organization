@@ -143,5 +143,8 @@ export default defineConfig({
 				'@babel/types'
 			]
 		}
+	},
+	optimizeDeps: {
+		exclude: ['bcryptjs']
 	}
 });
