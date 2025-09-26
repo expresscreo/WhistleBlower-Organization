@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Info, MapPin, Calendar, Banknote, Coins } from 'lucide-react';
 import { format } from 'date-fns';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
+import SocialShare from '@/components/SocialShare';
 
 const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
@@ -298,6 +299,16 @@ const BountyPostPage = () => {
                                         <p className="font-semibold text-lg">{bounty.type_of_crime}</p>
                                     </div>
                                 </div>
+                            </div>
+                            
+                            {/* Social Share Section */}
+                            <div className="border-t pt-6">
+                                <SocialShare 
+                                    title={bounty.title}
+                                    url={`/bounties/${slugify(bounty.title)}`}
+                                    description={bounty.description?.replace(/<[^>]*>/g, '').substring(0, 150) + '...'}
+                                    hashtags={['WhistleBlower', 'Nigeria', 'Bounty', bounty.type_of_crime]}
+                                />
                             </div>
                         </CardContent>
                     </Card>

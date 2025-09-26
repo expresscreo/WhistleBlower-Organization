@@ -33,7 +33,7 @@ const NewsEditor = () => {
             toast({ 
                 variant: 'destructive', 
                 title: 'Error', 
-                description: 'Failed to fetch news items' 
+                description: 'Failed to fetch news posts' 
             });
         } finally {
             setLoading(false);
@@ -45,7 +45,7 @@ const NewsEditor = () => {
     }, [fetchNews]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this news item?')) {
+        if (!window.confirm('Are you sure you want to delete this news post?')) {
             return;
         }
 
@@ -57,14 +57,14 @@ const NewsEditor = () => {
 
             if (error) throw error;
 
-            toast({ title: 'Success', description: 'News item deleted successfully' });
+            toast({ title: 'Success', description: 'News post deleted successfully' });
             fetchNews();
         } catch (error) {
-            console.error('Error deleting news item:', error);
+            console.error('Error deleting news post:', error);
             toast({ 
                 variant: 'destructive', 
                 title: 'Error', 
-                description: 'Failed to delete news item' 
+                description: 'Failed to delete news post' 
             });
         }
     };
@@ -104,21 +104,20 @@ const NewsEditor = () => {
         <>
             <Helmet><title>News Editor - WhistleBlower.ng</title></Helmet>
             
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                <div className="container mx-auto px-4 py-8">
+            <div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-8">
                         <div>
                             <h1 className="text-3xl font-bold">News Editor</h1>
-                            <p className="text-muted-foreground">Manage news items and content</p>
+                            <p className="text-muted-foreground">Manage news posts and content</p>
                         </div>
                         <Button onClick={() => navigate('/admin/news-editor/create')}>
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Create News Item
+                            Create News Post
                         </Button>
                     </div>
 
-                    {/* News Items Grid */}
+                    {/* News Posts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {newsItems.map((item) => (
                             <Card key={item.id} className="hover:shadow-lg transition-shadow">
@@ -206,16 +205,15 @@ const NewsEditor = () => {
                         <div className="text-center py-12">
                             <div className="text-muted-foreground mb-4">
                                 <PlusCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <h3 className="text-lg font-medium">No news items yet</h3>
-                                <p>Create your first news item to get started</p>
+                                <h3 className="text-lg font-medium">No news posts yet</h3>
+                                <p>Create your first news post to get started</p>
                             </div>
                             <Button onClick={() => navigate('/admin/news-editor/create')}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Create News Item
+                                Create News Post
                             </Button>
                         </div>
                     )}
-                </div>
             </div>
         </>
     );

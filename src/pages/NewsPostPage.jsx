@@ -10,6 +10,7 @@ import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import SEOHead from '@/components/SEOHead';
 import { generateNewsPostSEO, generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { slugify } from '@/lib/utils';
+import SocialShare from '@/components/SocialShare';
 
 const NewsPostPage = () => {
     const { slug } = useParams();
@@ -305,6 +306,16 @@ const NewsPostPage = () => {
                                 className="prose dark:prose-invert max-w-none text-lg leading-relaxed"
                                 dangerouslySetInnerHTML={{ __html: post.content }}
                             />
+                            
+                            {/* Social Share Section */}
+                            <div className="border-t pt-6">
+                                <SocialShare 
+                                    title={post.title}
+                                    url={`/news/post/${slugify(post.title)}`}
+                                    description={post.content?.replace(/<[^>]*>/g, '').substring(0, 150) + '...'}
+                                    hashtags={['WhistleBlower', 'Nigeria', post.category]}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

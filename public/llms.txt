@@ -12,7 +12,7 @@
 - [Loading Settings - WhistleBlower.ng](/settings): No description available
 - [Login - WhistleBlower.ng](/login): No description available
 - [News Editor - WhistleBlower.ng](/newseditor): No description available
-- [News Item - WhistleBlower.ng](/newseditor): No description available
+- [News Post - WhistleBlower.ng](/newseditor): No description available
 - [Organizations Management - WhistleBlower.ng](/companiesmanagement): No description available
 - [Organizations Management - WhistleBlower.ng](/organizationsmanagement): No description available
 - [Payment Successful! - WhistleBlower.ng](/paymentsuccess): Your payment was successful. Your account has been activated. Proceed to login.

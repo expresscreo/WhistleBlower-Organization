@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow, CheckCircle, Undo, Redo } from 'lucide-react';
 import { slugify } from '@/lib/utils';
 import { Helmet } from 'react-helmet';
 import NavbarLoader from '@/components/admin/NavbarLoader';
@@ -37,6 +37,11 @@ const NewsEditorPage = () => {
     const [editorContent, setEditorContent] = useState('');
     const [bountyEvidence, setBountyEvidence] = useState([]);
     const [bountyAmountVerified, setBountyAmountVerified] = useState(false);
+    
+    // Undo/Redo state management
+    const [history, setHistory] = useState([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [isUndoRedo, setIsUndoRedo] = useState(false);
     
     const { toast } = useToast();
     const editorRef = useRef(null);
@@ -92,8 +97,8 @@ const NewsEditorPage = () => {
             
             contentInitializedRef.current = false;
         } catch (error) {
-            console.error('Error loading news item:', error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load news item' });
+            console.error('Error loading news post:', error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load news post' });
         } finally {
             setLoading(false);
         }
@@ -212,6 +217,55 @@ const NewsEditorPage = () => {
         const content = editor.innerHTML;
         setEditorContent(content);
         setCurrentItem(prev => ({ ...prev, content }));
+        
+        // Add to history if not an undo/redo operation
+        if (!isUndoRedo) {
+            addToHistory(content);
+        }
+    };
+
+    // Undo/Redo functionality
+    const addToHistory = (content) => {
+        setHistory(prev => {
+            const newHistory = prev.slice(0, historyIndex + 1);
+            newHistory.push(content);
+            // Limit history to 50 items to prevent memory issues
+            if (newHistory.length > 50) {
+                newHistory.shift();
+                setHistoryIndex(prev => prev - 1);
+            } else {
+                setHistoryIndex(newHistory.length - 1);
+            }
+            return newHistory;
+        });
+    };
+
+    const undo = () => {
+        if (historyIndex > 0) {
+            setIsUndoRedo(true);
+            const previousContent = history[historyIndex - 1];
+            if (editorRef.current) {
+                editorRef.current.innerHTML = previousContent;
+                setEditorContent(previousContent);
+                setCurrentItem(prev => ({ ...prev, content: previousContent }));
+            }
+            setHistoryIndex(prev => prev - 1);
+            setTimeout(() => setIsUndoRedo(false), 100);
+        }
+    };
+
+    const redo = () => {
+        if (historyIndex < history.length - 1) {
+            setIsUndoRedo(true);
+            const nextContent = history[historyIndex + 1];
+            if (editorRef.current) {
+                editorRef.current.innerHTML = nextContent;
+                setEditorContent(nextContent);
+                setCurrentItem(prev => ({ ...prev, content: nextContent }));
+            }
+            setHistoryIndex(prev => prev + 1);
+            setTimeout(() => setIsUndoRedo(false), 100);
+        }
     };
 
     const formatText = (command, value = null) => {
@@ -558,8 +612,26 @@ const NewsEditorPage = () => {
             editorRef.current.innerHTML = currentItem.content;
             setEditorContent(currentItem.content);
             contentInitializedRef.current = true;
+            // Initialize history with initial content
+            addToHistory(currentItem.content);
         }
     }, [currentItem.content]);
+
+    // Keyboard shortcuts for undo/redo
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                redo();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [historyIndex, history]);
 
     const handleSave = async () => {
         if (!currentItem.title.trim()) {
@@ -675,7 +747,7 @@ const NewsEditorPage = () => {
                     }
                 }
 
-                // 2) If the news item is being published, mark the bounty as published
+                // 2) If the news post is being published, mark the bounty as published
                 if (currentItem.status === 'published') {
                     try {
                         await supabase
@@ -688,12 +760,12 @@ const NewsEditorPage = () => {
                 }
             }
 
-            toast({ title: 'Success', description: `News item ${isEditing ? 'updated' : 'created'} successfully!` });
+            toast({ title: 'Success', description: `News post ${isEditing ? 'updated' : 'created'} successfully!` });
 
             navigate('/admin/news-editor');
         } catch (error) {
-            console.error('Error saving news item:', error);
-            toast({ variant: 'destructive', title: 'Error', description: `Failed to save news item: ${error.message || error}` });
+            console.error('Error saving news post:', error);
+            toast({ variant: 'destructive', title: 'Error', description: `Failed to save news post: ${error.message || error}` });
         } finally {
             setIsUploading(false);
         }
@@ -706,11 +778,10 @@ const NewsEditorPage = () => {
     return (
         <>
             <Helmet>
-                <title>{isEditing ? 'Edit' : 'Create'} News Item - WhistleBlower.ng</title>
+                <title>{isEditing ? 'Edit' : 'Create'} News Post - WhistleBlower.ng</title>
             </Helmet>
             
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                <div className="container mx-auto px-4 py-8">
+            <div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
                     {/* Header */}
                     <div className="flex items-center gap-4 mb-8">
                         <Button
@@ -722,11 +793,11 @@ const NewsEditorPage = () => {
                         </Button>
                         <div>
                             <h1 className="text-3xl font-bold">
-                                {isEditing ? 'Edit' : 'Create'} News Item
+                                {isEditing ? 'Edit' : 'Create'} News Post
                             </h1>
                             {isEditing && (
                                 <p className="text-muted-foreground">
-                                    Update the news item details
+                                    Update the news post details
                                 </p>
                             )}
                         </div>
@@ -759,9 +830,33 @@ const NewsEditorPage = () => {
                                         <Label>Content Editor</Label>
                                         
                                         {/* Toolbar */}
-                                        <div className="border border-gray-300 rounded-t-md bg-gray-50 dark:bg-gray-800">
-                                            {/* First Row - Basic Formatting */}
-                                            <div className="flex items-center gap-1 p-2 border-b border-gray-300">
+                                        <div className="border border-border rounded-t-md bg-muted/50">
+                                            {/* First Row - Undo/Redo and Basic Formatting */}
+                                            <div className="flex items-center gap-1 p-2 border-b border-border">
+                                                {/* Undo/Redo buttons */}
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={undo}
+                                                    disabled={historyIndex <= 0}
+                                                    title="Undo (Ctrl+Z)"
+                                                >
+                                                    <Undo className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={redo}
+                                                    disabled={historyIndex >= history.length - 1}
+                                                    title="Redo (Ctrl+Y)"
+                                                >
+                                                    <Redo className="h-4 w-4" />
+                                                </Button>
+                                                
+                                                <div className="h-4 w-px bg-border mx-2" />
+                                                
                                                 <Button
                                                     type="button"
                                                     variant="outline"
@@ -799,7 +894,7 @@ const NewsEditorPage = () => {
                                                     <Strikethrough className="h-4 w-4" />
                                                 </Button>
                                                 
-                                                <div className="h-4 w-px bg-gray-300 mx-2" />
+                                                <div className="h-4 w-px bg-border mx-2" />
                                                 
                                                 <Button
                                                     type="button"
@@ -874,7 +969,7 @@ const NewsEditorPage = () => {
                                                     <span className="ml-1 text-xs">P</span>
                                                 </Button>
                                                 
-                                                <div className="h-4 w-px bg-gray-300 mx-2" />
+                                                <div className="h-4 w-px bg-border mx-2" />
                                                 
                                                 {/* Lists */}
                                                 <Button
@@ -896,7 +991,7 @@ const NewsEditorPage = () => {
                                                     <ListOrdered className="h-4 w-4" />
                                                 </Button>
                                                 
-                                                <div className="h-4 w-px bg-gray-300 mx-2" />
+                                                <div className="h-4 w-px bg-border mx-2" />
                                                 
                                                 {/* Quote */}
                                                 <Button
@@ -909,7 +1004,7 @@ const NewsEditorPage = () => {
                                                     <Quote className="h-4 w-4" />
                                                 </Button>
                                                 
-                                                <div className="h-4 w-px bg-gray-300 mx-2" />
+                                                <div className="h-4 w-px bg-border mx-2" />
                                                 
                                                 {/* Inline Image Upload */}
                                                 <div className="relative">
@@ -938,7 +1033,7 @@ const NewsEditorPage = () => {
                                         <div
                                             ref={editorRef}
                                             contentEditable
-                                            className="min-h-[400px] p-4 border border-gray-300 rounded-b-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent prose dark:prose-invert max-w-none"
+                                            className="min-h-[400px] p-4 border border-border rounded-b-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent prose dark:prose-invert max-w-none bg-background"
                                             style={{ minHeight: '400px' }}
                                             onInput={handleEditorInput}
                                             onBlur={handleEditorBlur}
@@ -1039,7 +1134,7 @@ const NewsEditorPage = () => {
                                             id="featured-image"
                                         />
                                         <Label htmlFor="featured-image" className="cursor-pointer">
-                                            <div className="flex items-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
+                                            <div className="flex items-center gap-2 p-4 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground transition-colors">
                                                 <Upload className="h-5 w-5" />
                                                 <span>Choose Featured Image</span>
                                             </div>
@@ -1126,7 +1221,6 @@ const NewsEditorPage = () => {
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
         </>
     );

@@ -13,6 +13,7 @@ import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { slugify } from '@/lib/utils';
+import SocialShare from '@/components/SocialShare';
 
 const NewsCard = ({ item }) => {
     const bountyPostUrl = item.bounty_id ? `/bounties/${slugify(item.title)}` : null;
@@ -49,7 +50,7 @@ const NewsCard = ({ item }) => {
                     }}
                 />
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-3">
                 {item.category === 'bounty' && bountyPostUrl ? (
                     <Link to={bountyPostUrl} className="w-full">
                         <Button className="w-full">
@@ -73,6 +74,16 @@ const NewsCard = ({ item }) => {
                         </Button>
                     </Link>
                 )}
+                
+                {/* Social Share Section */}
+                <div className="border-t pt-3">
+                    <SocialShare 
+                        title={item.title}
+                        url={item.category === 'bounty' && item.bounty_id ? `/bounties/${slugify(item.title)}` : `/news/post/${slugify(item.title)}`}
+                        description={item.content?.replace(/<[^>]*>/g, '').substring(0, 100) + '...'}
+                        hashtags={['WhistleBlower', 'Nigeria', item.category]}
+                    />
+                </div>
             </CardFooter>
         </Card>
     );
