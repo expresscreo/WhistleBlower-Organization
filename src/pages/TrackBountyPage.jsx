@@ -137,17 +137,31 @@ const TrackBountyPage = ({ bountyId, password }) => {
         const isValidPassword = await verifyPassword(password, data.password, '');
 
         console.log('Password verification result:', isValidPassword);
+        console.log('Type of isValidPassword:', typeof isValidPassword);
+        console.log('Boolean value of isValidPassword:', Boolean(isValidPassword));
 
         if (!isValidPassword) {
+            console.log('Authentication failed - isValidPassword is falsy');
             toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
             setLoading(false);
             handleLogout();
             return;
         }
 
-        setBountyData(data);
-        setAuthenticated(true);
-        setLoading(false);
+        console.log('Authentication successful - proceeding to set bounty data');
+
+        try {
+            setBountyData(data);
+            console.log('Bounty data set successfully');
+            
+            setAuthenticated(true);
+            console.log('Authentication state set to true');
+            
+            setLoading(false);
+            console.log('Loading state set to false');
+        } catch (error) {
+            console.error('Error setting bounty data or authentication state:', error);
+        }
     }, [bountyId, password, navigate, toast]);
 
     useEffect(() => {
