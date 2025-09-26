@@ -238,8 +238,7 @@ const SubmitReportPage = () => {
                 incident_address_param: formData.incidentAddress,
                 incident_date_param: formData.incidentDate,
                 is_anonymous_param: formData.reporterType === 'anonymous',
-                anonymous_password_hash_param: passwordHash,
-                anonymous_password_salt_param: salt,
+                anonymous_password_hash_param: `${passwordHash}:${salt}`, // Store hash:salt as a single field
                 evidence_paths_param: evidencePaths.length > 0 ? evidencePaths : null,
                 report_type_param: submissionType,
                 is_voice_note_param: submissionType === 'voice',

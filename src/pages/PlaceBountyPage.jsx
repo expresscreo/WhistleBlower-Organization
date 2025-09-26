@@ -61,8 +61,7 @@ const PlaceBountyPage = () => {
                     state: bountyData.state,
                     location: bountyData.lga,
                     bounty_amount: bountyData.bountyAmount || null,
-                    password: passwordHash,
-                    password_salt: salt,
+                    password: `${passwordHash}:${salt}`, // Store hash:salt as a single field for now
                     status: 'pending_review',
                     evidence: evidencePaths,
                 })

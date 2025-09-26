@@ -90,7 +90,12 @@ const TrackReportPage = ({ reportId, password }) => {
     }
 
     // Verify password using Web Crypto API
-    const isValidPassword = await verifyPassword(password, data.anonymous_password_hash, data.anonymous_password_salt);
+    // Handle both old format (just hash) and new format (hash:salt)
+    const passwordData = data.anonymous_password_hash && data.anonymous_password_hash.includes(':') ? 
+        data.anonymous_password_hash.split(':') : [data.anonymous_password_hash, ''];
+    const [storedHash, storedSalt] = passwordData;
+    
+    const isValidPassword = await verifyPassword(password, storedHash, storedSalt);
 
     if (!isValidPassword) {
         toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
