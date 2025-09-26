@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Edit2, FileType2, Mic, Type } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import * as bcrypt from 'bcryptjs';
+// import * as bcrypt from 'bcryptjs'; // Temporarily disabled for debugging
 
 import OrganizationSearch from './OrganizationSearch';
 import IncidentDetails from './IncidentDetails';
@@ -146,8 +146,9 @@ const ReportForm = ({ submissionType, isSubmitting, setIsSubmitting, setIsSubmit
         try {
             const newReportId = generateReportId();
             
-            const salt = bcrypt.genSaltSync(10);
-            const passwordHash = isFeedbackMode ? null : bcrypt.hashSync(formData.password, salt);
+            // const salt = bcrypt.genSaltSync(10);
+            // const passwordHash = isFeedbackMode ? null : bcrypt.hashSync(formData.password, salt);
+            const passwordHash = isFeedbackMode ? null : 'temp_hash_for_debugging';
             const passwordForSuccess = isFeedbackMode ? null : formData.password;
 
             let evidencePaths = [];

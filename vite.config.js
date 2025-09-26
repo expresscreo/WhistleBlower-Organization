@@ -144,11 +144,13 @@ export default defineConfig({
 				'@babel/parser',
 				'@babel/traverse',
 				'@babel/generator',
-				'@babel/types'
+				'@babel/types',
+				'core-js',
+				'core-js/internals'
 			]
 		}
 	},
 	optimizeDeps: {
-		exclude: ['bcryptjs']
+		exclude: []
 	}
 });

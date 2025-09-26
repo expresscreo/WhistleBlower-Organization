@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import * as bcrypt from 'bcryptjs';
+// import * as bcrypt from 'bcryptjs'; // Temporarily disabled for debugging
 import { Award } from 'lucide-react';
 
 import BountyForm from './submit-report/BountyForm';
@@ -28,8 +28,9 @@ const PlaceBountyPage = () => {
 
         try {
             const bountyId = generateBountyId();
-            const salt = bcrypt.genSaltSync(10);
-            const passwordHash = bcrypt.hashSync(bountyData.password, salt);
+            // const salt = bcrypt.genSaltSync(10);
+            // const passwordHash = bcrypt.hashSync(bountyData.password, salt);
+            const passwordHash = 'temp_hash_for_debugging';
 
             let evidencePaths = [];
             if (bountyData.evidenceFiles.length > 0) {
