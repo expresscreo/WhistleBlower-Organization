@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, Banknote } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { verifyPassword } from '@/lib/cryptoUtils';
 import { useToast } from '@/components/ui/use-toast';
 import ChatWindow from '@/pages/track-report/ChatWindow';
 import UpdateReportDialog from '@/pages/track-report/UpdateReportDialog';
@@ -121,9 +122,10 @@ const TrackBountyPage = ({ bountyId, password }) => {
             return;
         }
 
-        const { data: verifyData, error: verifyError } = await supabase.rpc('verify_password', { password: password, hash: data.password });
+        // Verify password using Web Crypto API
+        const isValidPassword = await verifyPassword(password, data.password, data.password_salt);
 
-        if (verifyError || !verifyData) {
+        if (!isValidPassword) {
             toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
             setLoading(false);
             handleLogout();
