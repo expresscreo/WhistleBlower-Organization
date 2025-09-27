@@ -119,10 +119,29 @@ const AboutUsPageV2 = () => {
 
             <div className="text-foreground">
                 {/* Hero Section with Integrated Analytics */}
-                <section 
-                    className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed"
-                    style={{ backgroundImage: `url('/WBMedia/general/Bannerxx-WhistleBlower.webp')`}}
-                >
+                <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
+                    {/* Mobile Background Image */}
+                    <div 
+                        className="absolute inset-0 md:hidden"
+                        style={{
+                            backgroundImage: 'url(/WBMedia/general/Mobile-Bannerxx-WhistleBlower.webp)',
+                            backgroundAttachment: 'fixed',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: 'cover'
+                        }}
+                    ></div>
+                    {/* Desktop Background Image */}
+                    <div 
+                        className="absolute inset-0 hidden md:block"
+                        style={{
+                            backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
+                            backgroundAttachment: 'fixed',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: 'cover'
+                        }}
+                    ></div>
                     <div className="relative z-10 w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center flex-grow flex flex-col justify-center">
                         <div className="grid md:grid-cols-2 gap-8 items-center mb-16">
                             <motion.div

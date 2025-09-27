@@ -226,17 +226,30 @@ const RewardsForInformationPage = () => {
       />
       
       {/* Hero Section */}
-      <section 
-        className="relative py-20 bg-gradient-to-br from-primary/10 via-background to-primary/5"
-        style={{
-          backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
-          backgroundAttachment: 'fixed',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 bg-gradient-to-br from-primary/10 via-background to-primary/5">
+        {/* Mobile Background Image */}
+        <div 
+          className="absolute inset-0 md:hidden"
+          style={{
+            backgroundImage: 'url(/WBMedia/general/Mobile-Bannerxx-WhistleBlower.webp)',
+            backgroundAttachment: 'fixed',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover'
+          }}
+        ></div>
+        {/* Desktop Background Image */}
+        <div 
+          className="absolute inset-0 hidden md:block"
+          style={{
+            backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
+            backgroundAttachment: 'fixed',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover'
+          }}
+        ></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -252,15 +265,15 @@ const RewardsForInformationPage = () => {
               Get rewarded for providing information that leads to arrests and prosecutions. 
               Our secure PayCode system ensures you receive cash rewards while maintaining complete anonymity.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/submit-report">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+              <Link to="/submit-report" className="flex-1">
+                <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                   Submit Information
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/news/bounty">
-                <Button size="lg" variant="outline">
+              <Link to="/news/bounty" className="flex-1">
+                <Button size="lg" variant="outline" className="w-full">
                   View Active Bounties
                 </Button>
               </Link>

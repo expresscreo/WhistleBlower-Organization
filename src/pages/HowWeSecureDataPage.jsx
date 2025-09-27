@@ -149,17 +149,30 @@ const HowWeSecureDataPage = () => {
                 })}
             />
             <div className="bg-background text-foreground">
-                <section 
-                    className="pt-20 pb-16 bg-muted/40 relative"
-                    style={{
-                        backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
-                        backgroundAttachment: 'fixed',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundSize: 'cover'
-                    }}
-                >
-                    <div className="container mx-auto px-4 text-center">
+                <section className="pt-20 pb-16 bg-muted/40 relative">
+                    {/* Mobile Background Image */}
+                    <div 
+                        className="absolute inset-0 md:hidden"
+                        style={{
+                            backgroundImage: 'url(/WBMedia/general/Mobile-Bannerxx-WhistleBlower.webp)',
+                            backgroundAttachment: 'fixed',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: 'cover'
+                        }}
+                    ></div>
+                    {/* Desktop Background Image */}
+                    <div 
+                        className="absolute inset-0 hidden md:block"
+                        style={{
+                            backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
+                            backgroundAttachment: 'fixed',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: 'cover'
+                        }}
+                    ></div>
+                    <div className="container mx-auto px-4 text-center relative z-10">
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}

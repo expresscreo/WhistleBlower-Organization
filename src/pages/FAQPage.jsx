@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronUp, HelpCircle, Shield, FileText, Gift, User, Server, Award } from 'lucide-react';
+import { ChevronDown, ChevronUp, HelpCircle, Shield, FileText, Gift, User, Server, Award, BookOpen } from 'lucide-react';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
@@ -97,7 +97,7 @@ const FAQPage = () => {
       <div className="min-h-screen py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-16">
-            <HelpCircle className="h-16 w-16 text-primary mx-auto mb-6" />
+            <BookOpen className="h-16 w-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-5xl font-bold mb-6">Frequently Asked <span className="gradient-text">Questions</span></h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">Find answers to common questions about WhistleBlower.ng, our reporting process, security measures, and reward system.</p>
           </motion.div>
