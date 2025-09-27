@@ -289,7 +289,7 @@ const NewsPostPage = () => {
                             {post.category === 'most_wanted' && (() => {
                                 const mostWantedInfo = getMostWantedInfo(post);
                                 return mostWantedInfo && (
-                                    <div className="text-center py-6 border-t border-b bg-red-50 dark:bg-red-950/20 rounded-lg">
+                                    <div className="text-center py-6 border-t border-b border-[#2e2e2e] bg-red-50 dark:bg-red-950/20 rounded-lg">
                                         <Link to={`/submit-report?bounty_title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}&most_wanted_type=${encodeURIComponent(mostWantedInfo.type)}`}>
                                             <Button size="lg" className="w-full md:w-auto bg-red-600 hover:bg-red-700">
                                                 <Info className="mr-2 h-5 w-5" />

@@ -251,7 +251,7 @@ const TrackBountyPage = ({ bountyId, password }) => {
             <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
                 <div className="max-w-2xl mx-auto">
                     <h1 className="text-2xl sm:text-3xl font-bold text-center mb-8">Bounty Tracking</h1>
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-[#2e2e2e] rounded-lg p-4">
                         <p className="text-red-800 dark:text-red-200 text-center">
                             Authentication failed or bounty not found. Please check your Bounty ID and password.
                         </p>

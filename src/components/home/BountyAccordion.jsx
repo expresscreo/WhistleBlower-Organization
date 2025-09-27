@@ -39,7 +39,7 @@ const accordionItems = [
 
 const AccordionItem = ({ item, isOpen, onToggle }) => {
   return (
-    <div className="border-b border-gray-200 dark:border-gray-700 py-6">
+    <div className="border-b border-gray-200 dark:border-[#2e2e2e] py-6">
       <button
         onClick={onToggle}
         className="w-full flex justify-between items-center text-left"

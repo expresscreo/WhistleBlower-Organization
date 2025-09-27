@@ -65,7 +65,7 @@ const Billing = () => {
                     description="View your billing history and manage payments."
                 />
                 {(organizationStatus === 'suspended' || organizationStatus === 'pending_payment') && (
-                     <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                     <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-[#2e2e2e]">
                         <CardHeader className="flex flex-row items-center gap-4">
                             <AlertCircle className="h-8 w-8 text-yellow-500"/>
                             <div>

@@ -32,7 +32,7 @@ const LoginPage = () => {
     }
   };
   
-  const logo = "/WBMedia/general/whistleblower-logo-dark.png";
+  const logo = "/WBMedia/general/Logoo - WhistleBlower.webp";
 
   return (
     <>
@@ -43,7 +43,7 @@ const LoginPage = () => {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Link to="/" className="flex justify-center mb-4">
-              <img src={logo} alt="WhistleBlower.ng Logo" className="h-10 w-10" />
+              <img src={logo} alt="WhistleBlower.ng Logo" className="h-16 w-auto" />
             </Link>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>Enter your credentials to access your dashboard.</CardDescription>

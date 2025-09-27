@@ -173,7 +173,7 @@ const HowWeSecureDataPage = () => {
                                 <img
                                     className="absolute inset-0 w-full h-full object-cover"
                                     alt="Our Security Framework - Multi-layered approach to data protection and anonymity."
-                                    src="/WBMedia/general/Our Security Framework.png" />
+                                    src="/WBMedia/general/Our Security Framework.webp" />
                             </div>
                             
                             <div className="md:order-2">
@@ -190,7 +190,7 @@ const HowWeSecureDataPage = () => {
                                     <img
                                         className="absolute inset-0 w-full h-full object-cover"
                                         alt="Our Security Framework - Multi-layered approach to data protection and anonymity."
-                                        src="/WBMedia/general/Our Security Framework.png" />
+                                        src="/WBMedia/general/Our Security Framework.webp" />
                                 </div>
                                 
                                 <div>

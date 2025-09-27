@@ -54,7 +54,7 @@ const RewardsForInformationPage = () => {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: index * 0.1 }}
         viewport={{ once: true }}
-        className="feature-card p-8 text-center rounded-lg"
+        className="feature-card p-8 text-center "
       >
         <div className="flex justify-center mb-6">
           <feature.icon 
@@ -69,9 +69,52 @@ const RewardsForInformationPage = () => {
     );
   };
 
+  const PayCodeCard = ({ children, className }) => {
+    return (
+      <div className={className}>
+        {children}
+      </div>
+    );
+  };
+
+  const FAQItem = ({ question, answer }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    return (
+      <div className="border-b border-white/20 py-4">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex justify-between items-center text-left"
+        >
+          <h3 className="text-lg font-semibold text-white pr-4">{question}</h3>
+          <div className="text-white flex-shrink-0">
+            {isOpen ? <Minus size={20} /> : <Plus size={20} />}
+          </div>
+        </button>
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              initial="collapsed"
+              animate="open"
+              exit="collapsed"
+              variants={{
+                open: { opacity: 1, height: 'auto', marginTop: '12px' },
+                collapsed: { opacity: 0, height: 0, marginTop: '0px' },
+              }}
+              transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+              className="overflow-hidden"
+            >
+              <p className="text-white/80">{answer}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   const AccordionItem = ({ item, isOpen, onToggle }) => {
     return (
-      <div className="border-b border-gray-200 dark:border-gray-700 py-6">
+      <div className="border-b border-gray-200 dark:border-[#2e2e2e] py-6">
         <button
           onClick={onToggle}
           className="w-full flex justify-between items-center text-left"
@@ -238,26 +281,84 @@ const RewardsForInformationPage = () => {
             ))}
           </div>
 
-          <Card className="mt-16 p-8 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold mb-4">PayCode Withdrawal Network</h3>
-              <p className="text-lg text-muted-foreground mb-6">
-                Your PayCode can be used at any ATM or POS agent with PayCode features across Nigeria. 
-                Withdraw your reward instantly and anonymously - no account details or personal information required.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="bg-background/50 p-4 rounded-lg">
-                  <strong>ATM Withdrawal:</strong> Use your PayCode at any ATM with PayCode features
+          <div className="mt-16 relative feature-card p-8 md:p-12">
+              <div className="text-center mb-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-6">
+                  <CreditCard className="h-8 w-8 text-primary" />
                 </div>
-                <div className="bg-background/50 p-4 rounded-lg">
-                  <strong>POS Agents:</strong> Visit any POS agent with PayCode withdrawal capability
-                </div>
-                <div className="bg-background/50 p-4 rounded-lg">
-                  <strong>Untraceable:</strong> No bank account or personal details required
-                </div>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">PayCode Withdrawal Network</h3>
+                <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                  Your PayCode works like a digital key that unlocks cash from thousands of locations across Nigeria. 
+                  <span className="text-primary font-semibold"> No bank account needed, no personal details required.</span>
+                </p>
               </div>
-            </div>
-          </Card>
+
+              {/* Feature Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  viewport={{ once: true }}
+                  className="group relative"
+                >
+                  <PayCodeCard className="feature-card p-6 transition-all duration-300 group-hover:shadow-lg">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30  flex items-center justify-center mr-3">
+                        <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h4 className="font-semibold text-lg">ATM Withdrawal</h4>
+                    </div>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Walk into any ATM with PayCode features, enter your code, and withdraw instantly. 
+                      Available at major banks nationwide.
+                    </p>
+                  </PayCodeCard>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  viewport={{ once: true }}
+                  className="group relative"
+                >
+                  <PayCodeCard className="feature-card p-6 transition-all duration-300 group-hover:shadow-lg">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30  flex items-center justify-center mr-3">
+                        <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <h4 className="font-semibold text-lg">POS Agents</h4>
+                    </div>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Visit any POS agent with PayCode capability. They're everywhere - markets, shops, 
+                      and street corners across Nigeria.
+                    </p>
+                  </PayCodeCard>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  viewport={{ once: true }}
+                  className="group relative"
+                >
+                  <PayCodeCard className="feature-card p-6 transition-all duration-300 group-hover:shadow-lg">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30  flex items-center justify-center mr-3">
+                        <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <h4 className="font-semibold text-lg">100% Anonymous</h4>
+                    </div>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      No bank account, no ID, no personal details required. Your PayCode is completely untraceable 
+                      back to you. 
+                    </p>
+                  </PayCodeCard>
+                </motion.div>
+              </div>
+          </div>
         </div>
       </section>
 
@@ -278,8 +379,8 @@ const RewardsForInformationPage = () => {
               <div className="relative aspect-square bg-[#FF5100] overflow-hidden mb-8 md:hidden">
                 <img
                   className="absolute inset-0 w-full h-full object-cover"
-                  alt="A person using their phone to track a report and receive rewards through the PayCode system."
-                  src="/WBMedia/general/rewards-process-image.jpg" />
+                  alt="An African man or woman using their phone to track a report and receive rewards through the PayCode system."
+                  src="/WBMedia/general/an African man or woman.webp" />
               </div>
               
               <div>
@@ -293,24 +394,14 @@ const RewardsForInformationPage = () => {
                 ))}
               </div>
 
-              <Card className="mt-8 p-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-                <h3 className="text-lg font-bold mb-3 text-amber-800 dark:text-amber-200">
-                  Complete Anonymity Guaranteed
-                </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Your PayCode withdrawal is completely untraceable. No bank account details, personal information, 
-                  or contact details are required. Simply copy your PayCode and withdraw at any ATM or POS agent 
-                  with PayCode features - your identity remains completely protected.
-                </p>
-              </Card>
             </div>
             
             {/* Desktop image - shows on right side */}
-            <div className="relative aspect-square md:aspect-[3/4] bg-[#FF5100] overflow-hidden md:order-2 hidden md:block">
+            <div className="relative aspect-square md:h-auto bg-[#FF5100] overflow-hidden md:order-2 hidden md:block">
               <img
                 className="absolute inset-0 w-full h-full object-cover"
-                alt="A person using their phone to track a report and receive rewards through the PayCode system."
-                src="/WBMedia/general/rewards-process-image.jpg" />
+                alt="An African man or woman using their phone to track a report and receive rewards through the PayCode system."
+                src="/WBMedia/general/an African man or woman.webp" />
             </div>
           </div>
         </div>
@@ -385,93 +476,37 @@ const RewardsForInformationPage = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-20 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              <span className="text-muted-foreground">Frequently Asked </span>
-              <span className="text-primary">Questions</span>
+              <span className="text-white/80">Frequently Asked </span>
+              <span className="text-white">Questions</span>
             </h2>
           </div>
 
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-3">What if my report is still being investigated?</h3>
-              <p className="text-muted-foreground">
-                Continue monitoring your report status on the tracking page. The "Request Reward" button will only become active 
-                once your report shows as "resolved" - meaning the criminal has been caught and your information has been verified with solid evidence.
-              </p>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-3">How is the reward amount determined?</h3>
-              <p className="text-muted-foreground">
-                For bounty reports, you receive the exact predetermined amount that was set for that specific bounty. 
-                For other reports, the amount is determined on a case-by-case basis depending on the information you provide 
-                and the results achieved. Factors include the severity of the crime, quality of information, and successful 
-                prosecution outcomes. All rewards range from ₦50,000 to ₦500,000.
-              </p>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-3">What happens if my information is shared with partner organizations?</h3>
-              <p className="text-muted-foreground">
-                There may be times when information received is passed on to our trusted partner organizations. 
-                We only share this information to help keep communities and workplaces safe, and your anonymity is always maintained.
-              </p>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-3">How does the PayCode system work?</h3>
-              <p className="text-muted-foreground">
-                Once your report is resolved, you can request a reward which generates a unique PayCode. 
-                Click "Reveal PayCode" to see your code, then copy it and use it at any ATM or POS agent with PayCode features 
-                to withdraw your cash reward instantly and anonymously.
-              </p>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-3">Do I need to provide identification when withdrawing my reward?</h3>
-              <p className="text-muted-foreground">
-                No. Your PayCode withdrawal is completely untraceable. No bank account details, personal information, 
-                or identification is required. Simply copy your PayCode and use it at any ATM or POS agent with PayCode features 
-                to withdraw your cash reward anonymously.
-              </p>
-            </Card>
+          <div className="space-y-4">
+            <FAQItem 
+              question="What if my report is still being investigated?"
+              answer="Continue monitoring your report status on the tracking page. The 'Request Reward' button will only become active once your report shows as 'resolved' - meaning the criminal has been caught and your information has been verified with solid evidence."
+            />
+            <FAQItem 
+              question="How is the reward amount determined?"
+              answer="For bounty reports, you receive the exact predetermined amount that was set for that specific bounty. For other reports, the amount is determined on a case-by-case basis depending on the information you provide and the results achieved. Factors include the severity of the crime, quality of information, and successful prosecution outcomes. All rewards range from ₦50,000 to ₦500,000."
+            />
+            <FAQItem 
+              question="What happens if my information is shared with partner organizations?"
+              answer="There may be times when information received is passed on to our trusted partner organizations. We only share this information to help keep communities and workplaces safe, and your anonymity is always maintained."
+            />
+            <FAQItem 
+              question="How does the PayCode system work?"
+              answer="Once your report is resolved, you can request a reward which generates a unique PayCode. Click 'Reveal PayCode' to see your code, then copy it and use it at any ATM or POS agent with PayCode features to withdraw your cash reward instantly and anonymously."
+            />
+            <FAQItem 
+              question="Do I need to provide identification when withdrawing my reward?"
+              answer="No. Your PayCode withdrawal is completely untraceable. No bank account details, personal information, or identification is required. Simply copy your PayCode and use it at any ATM or POS agent with PayCode features to withdraw your cash reward anonymously."
+            />
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Ready to <span className="text-white/80">Make a Difference?</span>
-            </h2>
-            <p className="text-lg mb-8 max-w-3xl mx-auto opacity-90">
-              Help build a safer Nigeria by reporting crimes and misconduct. Your courage contributes to justice 
-              and you can be rewarded for valuable information.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/submit-report">
-                <Button size="lg" className="bg-white text-primary hover:bg-white/90">
-                  Submit Information Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/how-we-secure-your-data">
-                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                  Learn About Security
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
         </div>
       </section>
     </>
