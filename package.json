@@ -5,8 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "node tools/generate-llms.js || true && vite build && node tools/post-build-setup.js",
-    "preview": "vite preview"
+    "build": "node tools/verify-images.js && node tools/generate-llms.js || true && vite build && node tools/post-build-setup.js",
+    "preview": "vite preview",
+    "verify-images": "node tools/verify-images.js"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.2.1",

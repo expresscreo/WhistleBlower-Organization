@@ -74,7 +74,7 @@ const MobileMenuOverlay = ({ navItems }) => {
           {/* Logo header - left aligned like navbar */}
           <motion.div
             variants={contentVariants}
-            className="flex items-center h-[80px] px-4 sm:px-6 lg:px-8 border-b border-border/20"
+            className="flex items-center h-[80px] px-4 border-b border-border/20"
           >
             <Link to="/" onClick={handleLinkClick} className="flex-shrink-0">
               <img 
@@ -88,7 +88,7 @@ const MobileMenuOverlay = ({ navItems }) => {
           {/* Navigation Items - Scrollable with proper height */}
           <motion.div 
             variants={contentVariants}
-            className="px-6 pt-8 pb-6 overflow-y-auto"
+            className="px-4 pt-8 pb-6 overflow-y-auto"
             style={{ height: 'calc(100dvh - 80px - 80px)' }}
           >
             <nav className="space-y-4">
@@ -110,7 +110,7 @@ const MobileMenuOverlay = ({ navItems }) => {
                           {item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
                         </span>
                         <motion.div 
-                          className="w-12 h-12 bg-primary/10 rounded-md flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-200"
+                          className="w-10 h-10 bg-primary/10 rounded-md flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-200"
                           animate={{ 
                             rotate: expandedItems[item.name] ? 180 : 0 
                           }}
@@ -172,7 +172,7 @@ const MobileMenuOverlay = ({ navItems }) => {
           {/* Action Buttons - Fixed at absolute bottom */}
           <motion.div
             variants={contentVariants}
-            className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-safe bg-background shadow-2xl"
+            className="absolute bottom-0 left-0 right-0 z-30 px-4 pb-safe bg-background shadow-2xl"
             style={{ height: '80px' }}
           >
             <div className="flex items-center space-x-3 h-full">

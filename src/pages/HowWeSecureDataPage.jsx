@@ -149,7 +149,16 @@ const HowWeSecureDataPage = () => {
                 })}
             />
             <div className="bg-background text-foreground">
-                <section className="pt-20 pb-16 bg-muted/40">
+                <section 
+                    className="pt-20 pb-16 bg-muted/40 relative"
+                    style={{
+                        backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
+                        backgroundAttachment: 'fixed',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: 'cover'
+                    }}
+                >
                     <div className="container mx-auto px-4 text-center">
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
@@ -157,8 +166,8 @@ const HowWeSecureDataPage = () => {
                             transition={{ duration: 0.7 }}
                         >
                             <ShieldCheck className="h-16 w-16 text-primary mx-auto mb-4" />
-                            <h1 className="text-4xl font-bold tracking-tight" style={{ fontSize: '36px' }}>Your Security is Our Priority</h1>
-                            <p className="mt-4 text-lg text-muted-foreground max-w-3xl mx-auto">
+                            <h1 className="text-4xl font-bold tracking-tight text-black" style={{ fontSize: '36px' }}>Your Security is Our Priority</h1>
+                            <p className="mt-4 text-lg text-black max-w-3xl mx-auto">
                                 We've engineered our platform from the ground up with one goal in mind: to provide a fortress for your information. Your trust is our most valuable asset, and we are committed to protecting it with state-of-the-art security.
                             </p>
                         </motion.div>

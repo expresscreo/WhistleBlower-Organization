@@ -226,7 +226,16 @@ const RewardsForInformationPage = () => {
       />
       
       {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-br from-primary/10 via-background to-primary/5">
+      <section 
+        className="relative py-20 bg-gradient-to-br from-primary/10 via-background to-primary/5"
+        style={{
+          backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
+          backgroundAttachment: 'fixed',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover'
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -236,10 +245,10 @@ const RewardsForInformationPage = () => {
           >
             <Award className="h-16 w-16 text-primary mx-auto mb-6" />
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="text-muted-foreground">Rewards for </span>
+              <span className="text-black">Rewards for </span>
               <span className="text-primary">Information</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-4xl mx-auto mb-8">
+            <p className="text-xl text-black max-w-4xl mx-auto mb-8">
               Get rewarded for providing information that leads to arrests and prosecutions. 
               Our secure PayCode system ensures you receive cash rewards while maintaining complete anonymity.
             </p>
@@ -380,7 +389,17 @@ const RewardsForInformationPage = () => {
                 <img
                   className="absolute inset-0 w-full h-full object-cover"
                   alt="An African man or woman using their phone to track a report and receive rewards through the PayCode system."
-                  src="/WBMedia/general/an African man or woman.webp" />
+                  src="/WBMedia/general/an African man or woman.webp"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }} />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#FF5100] to-[#FF8A00] flex items-center justify-center text-white text-center p-4" style={{display: 'none'}}>
+                  <div>
+                    <div className="text-2xl mb-2">📱</div>
+                    <p className="text-sm">Image placeholder for PayCode system demonstration</p>
+                  </div>
+                </div>
               </div>
               
               <div>
@@ -401,7 +420,18 @@ const RewardsForInformationPage = () => {
               <img
                 className="absolute inset-0 w-full h-full object-cover"
                 alt="An African man or woman using their phone to track a report and receive rewards through the PayCode system."
-                src="/WBMedia/general/an African man or woman.webp" />
+                src="/WBMedia/general/an African man or woman.webp"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }} />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FF5100] to-[#FF8A00] flex items-center justify-center text-white text-center p-8" style={{display: 'none'}}>
+                <div>
+                  <div className="text-4xl mb-4">📱</div>
+                  <p className="text-lg font-semibold mb-2">PayCode System</p>
+                  <p className="text-sm opacity-90">Image placeholder for PayCode system demonstration</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -409,7 +439,7 @@ const RewardsForInformationPage = () => {
 
       {/* Eligibility Section */}
       <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -448,7 +478,7 @@ const RewardsForInformationPage = () => {
               viewport={{ once: true }}
               className="relative"
             >
-              <Card className="p-8 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+              <Card className="p-8 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 w-full max-w-[634px] mx-auto">
                 <div className="text-center">
                   <Award className="h-16 w-16 text-primary mx-auto mb-6" />
                   <h3 className="text-2xl font-bold mb-4">Ready to Report?</h3>

@@ -19,13 +19,13 @@ const StatCard = ({ icon, value, label, index }) => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="feature-card p-6 text-center rounded-lg"
+      className="bg-white/10 backdrop-blur-sm border border-white/20 p-6 text-center rounded-lg"
     >
       <div className="mb-4">
         {icon}
       </div>
       <p className="text-4xl font-bold text-primary">{value}</p>
-      <p className="text-sm text-muted-foreground uppercase tracking-wider mt-2">{label}</p>
+      <p className="text-sm text-black dark:text-black uppercase tracking-wider mt-2">{label}</p>
     </motion.div>
   );
 };
@@ -117,24 +117,27 @@ const AboutUsPageV2 = () => {
                 structuredData={structuredData}
             />
 
-            <div className="bg-background text-foreground">
-                {/* Hero Section */}
-                <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background pt-20 pb-10">
-                    <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="text-foreground">
+                {/* Hero Section with Integrated Analytics */}
+                <section 
+                    className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed"
+                    style={{ backgroundImage: `url('/WBMedia/general/Bannerxx-WhistleBlower.webp')`}}
+                >
+                    <div className="relative z-10 w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center flex-grow flex flex-col justify-center">
+                        <div className="grid md:grid-cols-2 gap-8 items-center mb-16">
                             <motion.div
                                 initial={{ opacity: 0, x: -50 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.8 }}
                                 className="text-center md:text-left"
                             >
-                                <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+                                <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-black dark:text-black">
                                     The Courage to <span className="text-primary">Speak.</span>
                                     <br />
                                     The Power to <span className="text-primary">Change.</span>
                                 </h1>
-                                <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto md:mx-0">
-                                    WhistleBlower.ng is Nigeria’s premier platform for secure crime reporting and public bounties. We give citizens a safe and confidential way to report crimes, corruption, and illegal activities, or to place bounties for specific information—all while ensuring their voice is heard without fear of retaliation.
+                                <p className="mt-6 text-lg text-black dark:text-black max-w-xl mx-auto md:mx-0">
+                                    WhistleBlower.ng is Nigeria's premier platform for secure crime reporting and public bounties. We give citizens a safe and confidential way to report crimes, corruption, and illegal activities, or to place bounties for specific information—all while ensuring their voice is heard without fear of retaliation.
                                 </p>
                                 <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                                     <Link to="/submit-report" className="w-full sm:w-auto">
@@ -162,12 +165,8 @@ const AboutUsPageV2 = () => {
                                     src="/WBMedia/general/about-us-team.jpg" />
                             </motion.div>
                         </div>
-                    </div>
-                </section>
-
-                {/* Stats Section */}
-                <section className="py-20 bg-muted/30">
-                    <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+                        
+                        {/* Integrated Analytics Section */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                             {stats.map((stat, index) => (
                                 <StatCard key={index} {...stat} index={index} />
@@ -177,7 +176,7 @@ const AboutUsPageV2 = () => {
                 </section>
 
                 {/* Mission and Vision Section */}
-                <section className="py-20">
+                <section className="py-20 bg-background">
                     <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center">
                         <motion.div
                             initial={{ opacity: 0, y: 50 }}
@@ -248,7 +247,7 @@ const AboutUsPageV2 = () => {
                 </section>
 
                 {/* Core Principles */}
-                <section className="py-20">
+                <section className="py-20 bg-background">
                     <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl md:text-4xl font-bold">Our Core Principles</h2>
