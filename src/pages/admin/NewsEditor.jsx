@@ -111,7 +111,7 @@ const NewsEditor = () => {
                             <h1 className="text-3xl font-bold">News Editor</h1>
                             <p className="text-muted-foreground">Manage news posts and content</p>
                         </div>
-                        <Button onClick={() => navigate('/admin/news-editor/create')}>
+                        <Button onClick={() => navigate('/admin/news-editor/create')} className="uppercase">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Create News Post
                         </Button>
@@ -208,7 +208,7 @@ const NewsEditor = () => {
                                 <h3 className="text-lg font-medium">No news posts yet</h3>
                                 <p>Create your first news post to get started</p>
                             </div>
-                            <Button onClick={() => navigate('/admin/news-editor/create')}>
+                            <Button onClick={() => navigate('/admin/news-editor/create')} className="uppercase">
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Create News Post
                             </Button>

@@ -174,9 +174,9 @@ const AboutPage = () => {
               Together, we can make Nigeria safer, cleaner, and fairer. Start by reporting what you see today.
             </p>
             <Link to="/submit-report">
-              <Button size="lg" className="uppercase tracking-[1px] px-8 py-4 text-sm">
-                Submit a Report
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button size="lg" className="uppercase tracking-[1px] px-8 py-4 text-sm group">
+                SUBMIT A REPORT
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
             </Link>
           </motion.section>

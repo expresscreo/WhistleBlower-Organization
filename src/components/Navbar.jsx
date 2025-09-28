@@ -287,9 +287,9 @@ const Navbar = () => {
               </Link>
             )}
             <Link to="/submit-report">
-              <Button className="uppercase tracking-[1px] px-6 bg-primary hover:bg-[#e96601]">
-                Report Now
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button className="uppercase tracking-[1px] px-6 bg-primary hover:bg-[#e96601] group">
+                REPORT NOW
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
             </Link>
           </div>

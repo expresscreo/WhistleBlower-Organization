@@ -24,7 +24,7 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
     return (
         <div className="bg-card p-6 md:p-8 border">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold">Report Summary</h2>
+                <h2 className="text-lg sm:text-xl font-bold">REPORT ID — {report.report_id}</h2>
                 <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
                     <Button variant="outline" onClick={onUpdateReport} className="flex-1 sm:flex-initial">
                         <Edit className="mr-2 h-4 w-4" />
@@ -41,6 +41,7 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
                 </div>
             </div>
             
+            {/* Report Status Bar */}
             <div className="mb-6">
                 <div className="flex justify-between items-center mb-1">
                     <p className="font-semibold">{report.status}</p>
@@ -48,23 +49,27 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
                 </div>
                 <Progress value={currentStatus.progress} indicatorClassName={currentStatus.color} />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
-                <div><p className="text-sm text-muted-foreground">ID</p><p className="font-semibold">{report.report_id}</p></div>
+            
+            {/* Report Title */}
+            <div className="border-t pt-6 border-b pb-6">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4">{report.title}</h3>
+                <p className="text-muted-foreground whitespace-pre-wrap">{report.description}</p>
+            </div>
+            
+            {/* Report Info */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                 <div><p className="text-sm text-muted-foreground">Category</p><p className="font-semibold">{report.category}</p></div>
                 <div>
                   <p className="text-sm text-muted-foreground flex items-center"><Clock className="h-3 w-3 mr-1.5"/>Submitted</p>
                   <p className="font-semibold">{format(new Date(report.created_at), 'PPP')}</p>
                 </div>
-                <div><p className="text-sm text-muted-foreground">Urgency</p><p className="font-semibold">{report.urgency || 'Not specified'}</p></div>
-
-            </div>
-
-            <div className="border-t pt-6">
-                <h3 className="font-semibold text-xl mb-2">{report.title}</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{report.description}</p>
+                <div><p className="text-sm text-muted-foreground">Location</p><p className="font-semibold">{report.location || 'Not specified'}</p></div>
+                {report.address && (
+                    <div className="md:col-span-2"><p className="text-sm text-muted-foreground">Address</p><p className="font-semibold break-words">{report.address}</p></div>
+                )}
             </div>
             
+            {/* Attachments */}
             <div className="mt-6 border-t pt-6">
                 <h3 className="font-semibold text-xl mb-4 flex items-center"><Paperclip className="mr-2 h-5 w-5"/>Attachments</h3>
                 {evidencePaths && evidencePaths.length > 0 ? (

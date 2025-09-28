@@ -117,9 +117,9 @@ const Billing = () => {
                                             <TableCell className="text-muted-foreground">{item.paystack_ref}</TableCell>
                                             <TableCell>
                                                 {item.status.toLowerCase() === 'pending' ? (
-                                                    <Button size="sm" onClick={() => toast({ title: 'Feature coming soon!'})}>Pay Now</Button>
+                                                    <Button size="sm" onClick={() => toast({ title: 'Feature coming soon!'})} className="uppercase">Pay Now</Button>
                                                 ) : (
-                                                    <Button size="sm" variant="outline" onClick={() => toast({ title: 'Feature coming soon!'})}>View Receipt</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => toast({ title: 'Feature coming soon!'})} className="uppercase">View Receipt</Button>
                                                 )}
                                             </TableCell>
                                         </TableRow>

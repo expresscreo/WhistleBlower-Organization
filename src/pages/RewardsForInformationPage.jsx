@@ -265,15 +265,15 @@ const RewardsForInformationPage = () => {
               Get rewarded for providing information that leads to arrests and prosecutions. 
               Our secure PayCode system ensures you receive cash rewards while maintaining complete anonymity.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md md:max-w-lg mx-auto">
               <Link to="/submit-report" className="flex-1">
-                <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group uppercase">
                   Submit Information
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </Button>
               </Link>
               <Link to="/news/bounty" className="flex-1">
-                <Button size="lg" variant="outline" className="w-full">
+                <Button size="lg" variant="outline" className="w-full uppercase">
                   View Active Bounties
                 </Button>
               </Link>
@@ -308,7 +308,10 @@ const RewardsForInformationPage = () => {
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-6">
                   <CreditCard className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold mb-4">PayCode Withdrawal Network</h3>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">
+                    <span className="text-[#707070] dark:text-muted-foreground">PayCode Withdrawal </span>
+                    <span className="text-[#171717] dark:text-white">Network</span>
+                </h3>
                 <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
                   Your PayCode works like a digital key that unlocks cash from thousands of locations across Nigeria. 
                   <span className="text-primary font-semibold"> No bank account needed, no personal details required.</span>
@@ -390,7 +393,8 @@ const RewardsForInformationPage = () => {
           <div className="grid md:grid-cols-2 gap-12 items-start">
             <div className="md:order-1">
               <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-900 dark:text-white">
-                How Do I Claim a Reward?
+                <span className="text-[#707070] dark:text-muted-foreground">How Do I Claim a </span>
+                <span className="text-[#171717] dark:text-white">Reward?</span>
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
                 Once your report is verified and the criminal is caught, you can claim your reward instantly. 
@@ -500,13 +504,13 @@ const RewardsForInformationPage = () => {
                   </p>
                   <div className="space-y-4">
                     <Link to="/submit-report" className="block">
-                      <Button size="lg" className="w-full bg-primary hover:bg-primary/90">
+                      <Button size="lg" className="w-full bg-primary hover:bg-primary/90 group uppercase">
                         Submit Information Now
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                       </Button>
                     </Link>
                     <Link to="/news/bounty" className="block">
-                      <Button size="lg" variant="outline" className="w-full">
+                      <Button size="lg" variant="outline" className="w-full uppercase">
                         View Active Bounties
                       </Button>
                     </Link>

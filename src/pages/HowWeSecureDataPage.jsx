@@ -200,7 +200,8 @@ const HowWeSecureDataPage = () => {
                             
                             <div className="md:order-2">
                                 <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-900 dark:text-white">
-                                    Our Security Framework
+                                    <span className="text-[#707070] dark:text-muted-foreground">Our Security </span>
+                                    <span className="text-[#171717] dark:text-white">Framework</span>
                                 </h2>
                                 <p className="text-lg text-muted-foreground mb-8">
                                     Here's a look at the multi-layered approach we take to safeguard your data and guarantee your anonymity. 
@@ -233,7 +234,10 @@ const HowWeSecureDataPage = () => {
                 <section className="py-20 bg-muted/40">
                     <div className="container mx-auto px-4">
                         <div className="text-center mb-16">
-                            <h2 className="text-3xl font-bold">Compliance and Standards</h2>
+                            <h2 className="text-3xl font-bold">
+                                <span className="text-[#707070] dark:text-muted-foreground">Compliance and </span>
+                                <span className="text-[#171717] dark:text-white">Standards</span>
+                            </h2>
                             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">We adhere to global standards to ensure your data is handled with the utmost care and in compliance with the strictest regulations.</p>
                         </div>
                         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
@@ -253,7 +257,10 @@ const HowWeSecureDataPage = () => {
                 <section className="py-20">
                     <div className="container mx-auto px-4">
                         <div className="text-center mb-16">
-                            <h2 className="text-3xl font-bold">Frequently Asked Questions</h2>
+                            <h2 className="text-3xl font-bold">
+                                <span className="text-[#707070] dark:text-muted-foreground">Frequently Asked </span>
+                                <span className="text-[#171717] dark:text-white">Questions</span>
+                            </h2>
                             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">Answers to common questions about how we protect organizational data.</p>
                         </div>
                         <div className="max-w-3xl mx-auto space-y-4">

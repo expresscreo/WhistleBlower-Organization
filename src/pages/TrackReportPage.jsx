@@ -246,7 +246,7 @@ const TrackReportPage = ({ reportId, password }) => {
             {authenticated && reportData && (
               <motion.div key="reportDetails" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-2xl sm:text-3xl font-bold break-words">{reportData.title}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold break-words">Report Summary</h1>
                 </div>
                 <div className="space-y-8">
                     <ReportSummary report={reportData} onUpdateReport={() => setUpdateModalOpen(true)} onLogout={handleLogout} />

@@ -354,3 +354,22 @@ body {
 .feature-card:hover {
   transform: translateY(-2px);
 }
+
+/* Pulsing animation for timeline dots - square shaped like message notifications */
+.timeline-dot-pulse {
+  position: relative;
+  border-radius: 0; /* Square shape like message notifications */
+}
+
+.timeline-dot-pulse::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: hsl(var(--primary));
+  border-radius: 0; /* Square shape like message notifications */
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.75;
+}

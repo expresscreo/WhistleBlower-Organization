@@ -71,15 +71,15 @@ const PricingCard = ({ plan, isAnnual, onGetStarted }) => {
       </ul>
 
       <Button
-        className={`w-full mt-auto ${
+        className={`w-full mt-auto group ${
           plan.popular 
             ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
             : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground'
         }`}
         onClick={() => onGetStarted(plan.planId)}
       >
-        {plan.planId === 'enterprise-plus' ? 'Contact Sales' : 'Get Started'}
-        <ArrowRight className="ml-2 h-4 w-4" />
+        {plan.planId === 'enterprise-plus' ? 'CONTACT SALES' : 'GET STARTED'}
+        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
       </Button>
     </motion.div>
   );
@@ -152,7 +152,7 @@ const PricingPage = () => {
             <div className="mt-12">
               <p className="text-muted-foreground mb-4">Need help choosing the right plan?</p>
               <Link to="/contact">
-                  <Button variant="outline" size="lg">Contact Our Sales Team</Button>
+                  <Button variant="outline" size="lg" className="uppercase">Contact Our Sales Team</Button>
               </Link>
             </div>
           </motion.div>

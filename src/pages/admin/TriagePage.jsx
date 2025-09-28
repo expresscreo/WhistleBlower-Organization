@@ -173,11 +173,11 @@ const TriagePage = () => {
                         </PopoverContent>
                     </Popover>
                    </div>
-                   <Button onClick={handleAssign} disabled={!selectedOrg}><Check className="mr-2 h-4 w-4" />Assign Report</Button>
+                   <Button onClick={handleAssign} disabled={!selectedOrg} className="uppercase"><Check className="mr-2 h-4 w-4" />Assign Report</Button>
                  </div>
                  <div className="flex justify-between items-center pt-4 border-t">
-                   <Button variant="destructive" onClick={handleDismiss}><X className="mr-2 h-4 w-4" />Dismiss Report</Button>
-                   <Button variant="outline" onClick={handleNext}>Skip for now<ArrowRight className="ml-2 h-4 w-4" /></Button>
+                   <Button variant="destructive" onClick={handleDismiss} className="uppercase"><X className="mr-2 h-4 w-4" />Dismiss Report</Button>
+                   <Button variant="outline" onClick={handleNext} className="group uppercase">Skip for now<ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" /></Button>
                  </div>
                </div>
              )

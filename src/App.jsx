@@ -135,38 +135,43 @@ function App() {
   );
 }
 
-const PublicApp = () => (
-  <MobileMenuProvider>
-    <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-      <main id="main-content">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about-us" element={<AboutUsPageV2 />} />
-          <Route path="/how-we-secure-your-data" element={<HowWeSecureDataPage />} />
-          <Route path="/track" element={<TrackPage />} />
-          <Route path="/bounties/:slug" element={<BountyPostPage />} />
-          <Route path="/news" element={<NewsPage />} />
-          <Route path="/news/:category" element={<NewsPage />} />
-          <Route path="/news/post/:slug" element={<NewsPostPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/partner-program" element={<PartnerPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-          <Route path="/disclaimer" element={<DisclaimerPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/submit-report" element={<SubmitReportPage />} />
-          <Route path="/place-bounty" element={<PlaceBountyPage />} />
-          <Route path="/sitemap.xml" element={<SitemapPage />} />
-          <Route path="/sticky-scroll-sample" element={<StickyScrollSamplePage />} />
-          <Route path="/rewards-for-information" element={<RewardsForInformationPage />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
-  </MobileMenuProvider>
-);
+const PublicApp = () => {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+
+  return (
+    <MobileMenuProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <Navbar />
+        <main id="main-content">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about-us" element={<AboutUsPageV2 />} />
+            <Route path="/how-we-secure-your-data" element={<HowWeSecureDataPage />} />
+            <Route path="/track" element={<TrackPage />} />
+            <Route path="/bounties/:slug" element={<BountyPostPage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/news/:category" element={<NewsPage />} />
+            <Route path="/news/post/:slug" element={<NewsPostPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/partner-program" element={<PartnerPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+            <Route path="/disclaimer" element={<DisclaimerPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/submit-report" element={<SubmitReportPage />} />
+            <Route path="/place-bounty" element={<PlaceBountyPage />} />
+            <Route path="/sitemap.xml" element={<SitemapPage />} />
+            <Route path="/sticky-scroll-sample" element={<StickyScrollSamplePage />} />
+            <Route path="/rewards-for-information" element={<RewardsForInformationPage />} />
+          </Routes>
+        </main>
+        {!isHomePage && <Footer />}
+      </div>
+    </MobileMenuProvider>
+  );
+};
 
 export default App;
 

@@ -263,7 +263,7 @@ const BountyPostPage = () => {
                         </CardHeader>
                         <CardContent className="space-y-8">
                             <Link to={giveInfoUrl}>
-                                <Button size="lg" className="w-full md:w-auto">
+                                <Button size="lg" className="w-full md:w-auto uppercase">
                                     <Info className="mr-2 h-5 w-5" />
                                     {bountyInfo.buttonText}
                                 </Button>

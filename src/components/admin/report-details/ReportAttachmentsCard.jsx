@@ -72,7 +72,7 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
             <FileIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4"/>
             <p>Preview is not available for this file type.</p>
             <p className="text-sm text-muted-foreground mb-4">{fileName}</p>
-            <Button onClick={onDownload}><Download className="mr-2 h-4 w-4"/>Download File</Button>
+            <Button onClick={onDownload} className="uppercase"><Download className="mr-2 h-4 w-4"/>Download File</Button>
         </div>
     );
   };
@@ -84,7 +84,7 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
             <p className="text-sm truncate flex-grow">{fileName}</p>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button size="sm" variant="outline" onClick={() => !url && generateUrl()}>
+                    <Button size="sm" variant="outline" onClick={() => !url && generateUrl()} className="uppercase">
                         <Eye className="h-4 w-4 mr-2" /> View
                     </Button>
                 </DialogTrigger>

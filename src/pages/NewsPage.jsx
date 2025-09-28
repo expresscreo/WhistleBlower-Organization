@@ -52,13 +52,13 @@ const NewsCard = ({ item }) => {
             <CardFooter>
                 {item.category === 'bounty' && bountyPostUrl ? (
                     <Link to={bountyPostUrl} className="w-full">
-                        <Button className="w-full">
+                        <Button className="w-full uppercase">
                             <Target className="mr-2 h-4 w-4" /> View Bounty
                         </Button>
                     </Link>
                 ) : (
                     <Link to={newsPostUrl} className="w-full">
-                        <Button variant={item.category === 'bounty' ? 'default' : 'outline'} className="w-full">
+                        <Button variant={item.category === 'bounty' ? 'default' : 'outline'} className="w-full uppercase">
                             {item.category === 'bounty' ? (
                                 <>
                                     <Target className="mr-2 h-4 w-4" /> View Bounty

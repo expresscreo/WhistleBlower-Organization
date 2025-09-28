@@ -79,7 +79,7 @@ const AboutUsPageV2 = () => {
             align: 'right'
         },
         {
-            year: 'Future',
+            year: 'FUTURE',
             title: 'A Transparent Nigeria',
             description: 'Our vision is to become the cornerstone of transparency in Nigeria, fostering a culture where accountability is the norm, not the exception.',
             align: 'left'
@@ -160,13 +160,13 @@ const AboutUsPageV2 = () => {
                                 </p>
                                 <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                                     <Link to="/submit-report" className="w-full sm:w-auto">
-                                        <Button size="lg" className="uppercase tracking-wider w-full sm:w-auto">
+                                        <Button size="lg" className="uppercase tracking-wider w-full sm:w-auto group">
                                             Join The Movement
-                                            <ArrowRight className="ml-2 h-4 w-4" />
+                                            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                                         </Button>
                                     </Link>
                                     <Link to="/faq" className="w-full sm:w-auto">
-                                        <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                                        <Button size="lg" variant="outline" className="w-full sm:w-auto uppercase">
                                             How It Works
                                         </Button>
                                     </Link>
@@ -238,7 +238,20 @@ const AboutUsPageV2 = () => {
                             <p className="mt-4 text-lg text-muted-foreground">From a simple idea to a nationwide movement.</p>
                         </div>
                         <div className="relative">
-                            <div className="absolute left-4 md:left-1/2 -translate-x-1/2 h-full w-0.5 bg-border" aria-hidden="true"></div>
+                            <div className="absolute left-4 md:left-1/2 -translate-x-1/2 h-full w-0.5 bg-border" aria-hidden="true">
+                                {timeline.map((item, index) => (
+                                    <div 
+                                        key={index}
+                                        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-primary border-2 border-background timeline-dot-pulse"
+                                        style={{ 
+                                            top: index === 0 ? `${(index * 25) + 2}%` : 
+                                                 index === 1 ? `${(index * 25) + 1.2}%` :
+                                                 index === 2 ? `${(index * 25) + 0.5}%` :
+                                                 `${(index * 25) + 2.5}%`
+                                        }}
+                                    ></div>
+                                ))}
+                            </div>
                             <div className="space-y-16">
                                 {timeline.map((item, index) => (
                                     <motion.div
@@ -247,7 +260,7 @@ const AboutUsPageV2 = () => {
                                         whileInView={{ opacity: 1 }}
                                         viewport={{ once: true }}
                                         transition={{ duration: 1 }}
-                                        className="relative flex items-start"
+                                        className="relative flex items-center"
                                     >
                                         <div className={cn(
                                             'w-full md:w-1/2',
@@ -257,7 +270,6 @@ const AboutUsPageV2 = () => {
                                             <h3 className="text-xl font-semibold mt-1">{item.title}</h3>
                                             <p className="text-muted-foreground mt-2">{item.description}</p>
                                         </div>
-                                        <div className="absolute left-4 md:left-1/2 -translate-x-1/2 w-4 h-4 bg-primary border-4 border-background"></div>
                                     </motion.div>
                                 ))}
                             </div>
@@ -269,7 +281,10 @@ const AboutUsPageV2 = () => {
                 <section className="py-20 bg-background">
                     <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-12">
-                            <h2 className="text-3xl md:text-4xl font-bold">Our Core Principles</h2>
+                            <h2 className="text-3xl md:text-4xl font-bold">
+                                <span className="text-[#707070] dark:text-muted-foreground">Our Core </span>
+                                <span className="text-[#171717] dark:text-white">Principles</span>
+                            </h2>
                             <p className="mt-4 text-lg text-muted-foreground">The values that guide every decision we make.</p>
                         </div>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -312,9 +327,9 @@ const AboutUsPageV2 = () => {
                                 Your report could be the one that sparks change. Join thousands of Nigerians in building a safer, more accountable nation.
                             </p>
                             <Link to="/submit-report" className="mt-8 inline-block">
-                                <Button size="lg" variant="secondary" className="uppercase tracking-wider px-8 py-6">
+                                <Button size="lg" variant="secondary" className="uppercase tracking-wider px-8 py-6 group">
                                     Submit a Report Securely
-                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                    <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                                 </Button>
                             </Link>
                         </motion.div>

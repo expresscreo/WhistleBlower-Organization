@@ -184,7 +184,7 @@ const RegisterPage = () => {
                     <p className="text-xs text-muted-foreground mt-1">Plan is determined by the selected organization.</p>
                 )}
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full uppercase" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Register
               </Button>

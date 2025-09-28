@@ -194,10 +194,10 @@ const MobileMenuOverlay = ({ navItems }) => {
                 >
                   <Button 
                     size="sm"
-                    className="w-full h-10 text-sm font-semibold uppercase tracking-[0.5px] bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
+                    className="w-full h-10 text-sm font-semibold uppercase tracking-[0.5px] bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all duration-200 group"
                   >
-                    Submit Report
-                    <ArrowRight className="ml-2 h-3 w-3" />
+                    SUBMIT REPORT
+                    <ArrowRight className="ml-2 h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
                   </Button>
                 </motion.div>
               </Link>

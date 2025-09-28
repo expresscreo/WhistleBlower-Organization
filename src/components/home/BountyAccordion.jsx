@@ -64,8 +64,8 @@ const AccordionItem = ({ item, isOpen, onToggle }) => {
           >
             <p className="text-muted-foreground mb-4">{item.description}</p>
             <Link to={item.link}>
-              <Button variant="link" className="p-0 h-auto text-primary font-bold">
-                {item.buttonText} <ArrowRight className="ml-2 h-4 w-4" />
+              <Button variant="link" className="p-0 h-auto text-primary font-bold group uppercase">
+                {item.buttonText} <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
             </Link>
           </motion.div>

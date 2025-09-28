@@ -274,7 +274,7 @@ const NewsPostPage = () => {
                                 return bountyInfo && (
                                     <div className="text-center py-6 border-t border-b bg-primary/5 rounded-lg">
                                         <Link to={`/submit-report?bounty_id=${post.bounty_id}&bounty_title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}`}>
-                                            <Button size="lg" className="w-full md:w-auto">
+                                            <Button size="lg" className="w-full md:w-auto uppercase">
                                                 <Info className="mr-2 h-5 w-5" />
                                                 {bountyInfo.buttonText}
                                             </Button>
@@ -291,7 +291,7 @@ const NewsPostPage = () => {
                                 return mostWantedInfo && (
                                     <div className="text-center py-6 border-t border-b border-[#2e2e2e] bg-red-50 dark:bg-red-950/20 rounded-lg">
                                         <Link to={`/submit-report?bounty_title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}&most_wanted_type=${encodeURIComponent(mostWantedInfo.type)}`}>
-                                            <Button size="lg" className="w-full md:w-auto bg-red-600 hover:bg-red-700">
+                                            <Button size="lg" className="w-full md:w-auto bg-red-600 hover:bg-red-700 uppercase">
                                                 <Info className="mr-2 h-5 w-5" />
                                                 {mostWantedInfo.buttonText}
                                             </Button>

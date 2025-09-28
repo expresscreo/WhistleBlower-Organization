@@ -215,15 +215,15 @@ const HomePage = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md sm:max-w-none sm:w-auto mx-auto">
               <Link to="/submit-report" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground uppercase tracking-[1px] px-8 py-4 text-sm whitespace-nowrap">
-                  Submit a Report
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground uppercase tracking-[1px] px-8 py-4 text-sm whitespace-nowrap group">
+                  SUBMIT A REPORT
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </Button>
               </Link>
               <Link to="/news/bounty" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="w-full uppercase tracking-[1px] px-8 py-4 text-sm whitespace-nowrap bg-transparent text-white border-[#ffffff1a] hover:backdrop-blur-sm hover:text-white sm:w-[220px]" style={{'--hover-bg': 'rgba(59, 59, 59, 0.45)'}} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(59, 59, 59, 0.45)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
                   <Search className="mr-2 h-4 w-4" />
-                  Search For Bounties
+                  SEARCH FOR BOUNTIES
                 </Button>
               </Link>
               {/* Test Sticky Scroll button removed as requested */}
@@ -275,31 +275,7 @@ const HomePage = () => {
       </section>
 
       {/* BountyAccordion moved to Sticky Scroll Sample page on request */}
-
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              <span className="text-white/80 dark:text-white/80">Partner </span>
-              <span className="text-white dark:text-white">with Us</span>
-            </h2>
-            <p className="text-lg mb-8 max-w-3xl mx-auto opacity-90">
-              Are you a public organization or government agency interested in receiving reports directly? Join our partner network and enhance transparency in your operations.
-            </p>
-            <Link to="/partner-program">
-              <Button size="lg" className="uppercase tracking-[1px] px-8 py-4 text-sm bg-[#171717] text-[#f6f6f6] hover:bg-[#f6f6f6] hover:text-[#171717] dark:bg-white dark:text-black dark:hover:bg-gray-200">
-                Learn More About Partnership
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+      {/* Partner with Us section moved to StickySections component */}
     </>
   );
 };

@@ -89,13 +89,13 @@ const TrustedByCarousel = () => {
                                                     <Link to="/about-us">
                                                         <Button
                                                             variant="ghost"
-                                                            className="p-0 h-auto justify-start text-primary hover:text-primary/80"
+                                                            className="p-0 h-auto justify-start text-primary hover:text-primary/80 group"
                                                         >
                                                             <div className="flex items-center">
                                                                 <div className="border border-primary p-2 mr-3 transition-colors hover:bg-primary/10">
-                                                                    <ArrowRight className="h-5 w-5" />
+                                                                    <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
                                                                 </div>
-                                                                <span className="font-semibold uppercase tracking-[1px]">Read More</span>
+                                                                <span className="font-semibold uppercase tracking-[1px]">READ MORE</span>
                                                             </div>
                                                         </Button>
                                                     </Link>

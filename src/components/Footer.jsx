@@ -111,7 +111,6 @@ const Footer = () => {
           
           {/* Theme Switcher */}
           <div className="flex items-center space-x-3 mt-4 md:mt-0">
-            <span className="text-sm text-[#b4b4b4]">Theme:</span>
             <div className="bg-[#2a2a2a] rounded-lg p-1 flex items-center space-x-1">
               <Button
                 variant="ghost"

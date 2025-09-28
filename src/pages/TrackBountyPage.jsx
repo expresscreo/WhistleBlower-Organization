@@ -36,15 +36,15 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
         <Card>
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <CardTitle className="text-xl sm:text-2xl">Bounty Summary</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">REPORT ID — {bounty.bounty_id}</CardTitle>
                     <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
-                        <Button variant="outline" onClick={onUpdateBounty} className="flex-1 sm:flex-initial">
+                        <Button variant="outline" onClick={onUpdateBounty} className="flex-1 sm:flex-initial uppercase">
                             <span className="hidden xs:inline">Update Bounty</span>
                             <span className="xs:hidden">Update</span>
                         </Button>
                         <Button 
                             onClick={onLogout}
-                            className="bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 flex-1 sm:flex-initial"
+                            className="bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 flex-1 sm:flex-initial uppercase"
                         >
                             <LogOut className="mr-2 h-4 w-4" />
                             Logout
@@ -53,6 +53,7 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
+                {/* Report Status Bar */}
                 <div className="mb-6">
                     <div className="flex justify-between items-center mb-1">
                         <p className="font-semibold">{currentStatus.label}</p>
@@ -60,20 +61,25 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
                     </div>
                     <Progress value={currentStatus.progress} indicatorClassName={currentStatus.color} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
-                    <div><p className="text-sm text-muted-foreground">Bounty ID</p><p className="font-semibold">{bounty.bounty_id}</p></div>
+                
+                {/* Report Title */}
+                <div className="border-t pt-6 border-b pb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-4">{bounty.title}</h2>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{bounty.description}</p>
+                </div>
+                
+                {/* Report Info */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                     <div><p className="text-sm text-muted-foreground">Type of Crime</p><p className="font-semibold">{bounty.type_of_crime}</p></div>
                     <div><p className="text-sm text-muted-foreground">Submitted</p><p className="font-semibold">{format(new Date(bounty.created_at), 'PPP')}</p></div>
-                    <div><p className="text-sm text-muted-foreground">Bounty Amount</p><p className="font-semibold text-primary flex items-center"><MoneyIcon />{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p></div>
+                    <div><p className="text-sm text-muted-foreground">Bounty Amount</p><p className="font-bold text-primary text-lg">{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p></div>
                     <div><p className="text-sm text-muted-foreground">Location</p><p className="font-semibold">{bounty.location}{bounty.state ? `, ${bounty.state}` : ''}</p></div>
                     {bounty.full_address && (
                         <div className="md:col-span-2"><p className="text-sm text-muted-foreground">Address</p><p className="font-semibold break-words">{bounty.full_address}</p></div>
                     )}
                 </div>
-                <div className="border-t pt-6">
-                    <h3 className="font-semibold text-xl mb-2">Description</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{bounty.description}</p>
-                </div>
+                
+                {/* Attachments */}
                 <div className="mt-6 border-t pt-6">
                     <h3 className="font-semibold text-xl mb-4">Attachments</h3>
                     {evidencePaths.length > 0 ? (
@@ -305,7 +311,7 @@ const TrackBountyPage = ({ bountyId, password }) => {
                         {authenticated && bountyData && (
                             <motion.div key="details" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
                                 <div className="flex justify-between items-center">
-                                    <h1 className="text-2xl sm:text-3xl font-bold break-words">{bountyData.title}</h1>
+                                    <h1 className="text-2xl sm:text-3xl font-bold break-words">Report Summary</h1>
                                 </div>
                                 <div className="space-y-8">
                                     <BountySummary bounty={bountyData} onUpdateBounty={() => setIsUpdateDialogOpen(true)} onLogout={handleLogout} />

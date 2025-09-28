@@ -311,10 +311,10 @@ const BountyDetails = () => {
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button onClick={handleSendToEditor} disabled={bounty.status !== 'approved'} className="bg-green-600 hover:bg-green-700 text-white">
+                        <Button onClick={handleSendToEditor} disabled={bounty.status !== 'approved'} className="bg-green-600 hover:bg-green-700 text-white uppercase">
                             <Upload className="mr-2 h-4 w-4" />Send to News Editor
                         </Button>
-                        <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                        <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} className="uppercase">
                             <Trash2 className="mr-2 h-4 w-4" />Delete
                         </Button>
                     </div>
