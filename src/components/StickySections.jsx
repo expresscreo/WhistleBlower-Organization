@@ -33,7 +33,7 @@ const StickySections = () => {
   return (
     <div ref={containerRef} className="relative">
       {/* First Section */}
-      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-20 px-4 sm:px-8 pt-8 sm:pt-12 lg:pt-4 relative">
+      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-20 px-8 pt-4 lg:pt-4 relative">
         {/* Fade overlay for first section as second approaches */}
         <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay1 }} />
         {/* Global headline inside first sticky section */}
@@ -46,7 +46,7 @@ const StickySections = () => {
             </h3>
           </div>
         </motion.div>
-        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
+        <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12 -mt-8 lg:-mt-12">
           {/* Mobile inline headline above content */}
           <motion.div className="w-full text-center mb-0 sm:hidden" style={{ opacity: headingOpacity }}>
             <h3 className="text-2xl font-bold leading-tight">
@@ -62,11 +62,11 @@ const StickySections = () => {
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#ff5100' }}>Anonymous Reporting</span>
             </div>
           </div>
-          <div className="w-[348px] lg:w-1/2 text-center lg:text-left">
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#ff5100' }}>Anonymous Reporting</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Report Crimes Securely And Anonymously</h2>
+            <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Report Crimes Securely And Anonymously</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Submit reports anonymously using our encrypted platform. Your identity is protected while your voice is heard by the right authorities.</p>
             <div className="w-full">
               <Link to="/submit-report" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
@@ -95,7 +95,7 @@ const StickySections = () => {
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#00C853' }}>Real-time Tracking</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Track Your Report Progress Instantly</h2>
+            <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Track Your Report Progress Instantly</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Monitor your report status in real-time with our secure tracking system. Get updates on investigation progress and see your impact.</p>
             <div className="w-full">
               <Link to="/track" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
@@ -124,7 +124,7 @@ const StickySections = () => {
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FF0000' }}>Rewards & Payments</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Earn Money For Information</h2>
+            <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Earn Money For Information</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Earn money for valuable information through our secure PayCode system. Your contribution to justice doesn't go unnoticed.</p>
             <div className="w-full">
               <Link to="/rewards-for-information" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
@@ -153,7 +153,7 @@ const StickySections = () => {
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FFA000' }}>Bounty System</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Place Bounties For Information</h2>
+            <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Place Bounties For Information</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Need specific information? Put a price on it. Create public bounties to crowdsource intelligence for investigations and asset recovery.</p>
             <div className="w-full">
               <Link to="/place-bounty" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
@@ -182,7 +182,7 @@ const StickySections = () => {
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#4285F4' }}>News & Updates</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Stay Informed With Latest News</h2>
+            <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Stay Informed With Latest News</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Get the latest updates on investigations, successful reports, and important announcements from our platform and authorities.</p>
             <div className="w-full">
               <Link to="/news" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">

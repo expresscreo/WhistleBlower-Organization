@@ -119,10 +119,10 @@ const AboutUsPageV2 = () => {
 
             <div className="text-foreground">
                 {/* Hero Section with Integrated Analytics */}
-                <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
+                <section className="relative min-h-screen flex flex-col justify-center overflow-hidden pb-8 md:pb-0">
                     {/* Mobile Background Image */}
                     <div 
-                        className="absolute inset-0 md:hidden"
+                        className="absolute inset-0 lg:hidden"
                         style={{
                             backgroundImage: 'url(/WBMedia/general/Mobile-Bannerxx-WhistleBlower.webp)',
                             backgroundAttachment: 'fixed',
@@ -133,7 +133,7 @@ const AboutUsPageV2 = () => {
                     ></div>
                     {/* Desktop Background Image */}
                     <div 
-                        className="absolute inset-0 hidden md:block"
+                        className="absolute inset-0 hidden lg:block"
                         style={{
                             backgroundImage: 'url(/WBMedia/general/Bannerxx-WhistleBlower.webp)',
                             backgroundAttachment: 'fixed',
@@ -148,7 +148,7 @@ const AboutUsPageV2 = () => {
                                 initial={{ opacity: 0, x: -50 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.8 }}
-                                className="text-center md:text-left"
+                                className="text-center md:text-left mt-32 md:mt-0"
                             >
                                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-black dark:text-black">
                                     The Courage to <span className="text-primary">Speak.</span>

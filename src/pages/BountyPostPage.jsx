@@ -7,7 +7,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Info, MapPin, Calendar, Banknote, Coins } from 'lucide-react';
+import { Loader2, ArrowLeft, Info, MapPin, Calendar, Banknote, Coins, Bookmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import SocialShare from '@/components/SocialShare';
@@ -193,7 +193,8 @@ const BountyPostPage = () => {
         if (personKeywords.some(keyword => combinedText.includes(keyword))) {
             return {
                 type: 'person',
-                buttonText: 'Give Information About This Person'
+                buttonText: 'Give Information About This Person',
+                description: 'Have information about this person? Submit it anonymously and earn the reward.'
             };
         }
         
@@ -201,7 +202,8 @@ const BountyPostPage = () => {
         if (organizationKeywords.some(keyword => combinedText.includes(keyword))) {
             return {
                 type: 'organization',
-                buttonText: 'Give Information About This Organization'
+                buttonText: 'Give Information About This Organization',
+                description: 'Have information about this organization? Submit it anonymously and earn the reward.'
             };
         }
         
@@ -209,7 +211,8 @@ const BountyPostPage = () => {
         if (locationKeywords.some(keyword => combinedText.includes(keyword))) {
             return {
                 type: 'location',
-                buttonText: 'Give Information About This Location'
+                buttonText: 'Give Information About This Location',
+                description: 'Have information about this location? Submit it anonymously and earn the reward.'
             };
         }
         
@@ -217,7 +220,8 @@ const BountyPostPage = () => {
         if (vehicleKeywords.some(keyword => combinedText.includes(keyword))) {
             return {
                 type: 'vehicle',
-                buttonText: 'Give Information About This Vehicle'
+                buttonText: 'Give Information About This Vehicle',
+                description: 'Have information about this vehicle? Submit it anonymously and earn the reward.'
             };
         }
         
@@ -225,14 +229,16 @@ const BountyPostPage = () => {
         if (itemKeywords.some(keyword => combinedText.includes(keyword))) {
             return {
                 type: 'item',
-                buttonText: 'Give Information About This Item'
+                buttonText: 'Give Information About This Item',
+                description: 'Have information about this item? Submit it anonymously and earn the reward.'
             };
         }
         
         // Default fallback
         return {
             type: 'general',
-            buttonText: 'Give Information About This Case'
+            buttonText: 'Give Information About This Case',
+            description: 'Have information about this case? Submit it anonymously and earn the reward.'
         };
     };
 
@@ -257,17 +263,23 @@ const BountyPostPage = () => {
                         )}
                         <CardHeader>
                             <CardTitle className="text-3xl md:text-4xl font-bold">{bounty.title}</CardTitle>
-                            <CardDescription className="text-lg pt-2">
-                                Published on {format(new Date(bounty.created_at), 'PPP')}
+                            <CardDescription className="flex items-center gap-4 pt-4 text-sm">
+                                <span className="flex items-center"><Calendar className="mr-1.5 h-4 w-4" /> {format(new Date(bounty.created_at), 'PPP')}</span>
+                                <span className="flex items-center capitalize"><Bookmark className="mr-1.5 h-4 w-4" /> bounty</span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-8">
-                            <Link to={giveInfoUrl}>
-                                <Button size="lg" className="w-full md:w-auto uppercase">
-                                    <Info className="mr-2 h-5 w-5" />
-                                    {bountyInfo.buttonText}
-                                </Button>
-                            </Link>
+                            <div className="text-center py-6 border-t border-b bg-primary/5 rounded-lg">
+                                <Link to={giveInfoUrl}>
+                                    <Button size="lg" className="w-full md:w-auto uppercase">
+                                        <Info className="mr-2 h-5 w-5" />
+                                        {bountyInfo.buttonText}
+                                    </Button>
+                                </Link>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    {bountyInfo.description}
+                                </p>
+                            </div>
 
                             <div className="border-t pt-6">
                                 <h3 className="font-semibold text-xl mb-4">Bounty Details</h3>
