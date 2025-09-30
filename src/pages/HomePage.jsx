@@ -191,9 +191,9 @@ const HomePage = () => {
       />
       <section 
         className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed"
-        style={{ backgroundImage: `url('/WBMedia/general/hero-section-background.jpg')`}}
+        style={{ backgroundImage: `url('/WBMedia/general/Main WB Slider.jpg')`}}
       >
-        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0" style={{ backgroundColor: '#00000069' }} />
         
         <div className="relative z-10 w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center flex-grow flex flex-col justify-center">
           <motion.div
