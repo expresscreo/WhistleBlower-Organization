@@ -185,13 +185,22 @@ const HomePage = () => {
 
   return (
     <>
+      <style>{`
+        .hero-bg {
+          background-image: url('/WBMedia/general/Main WB Slider.jpg');
+        }
+        @media (max-width: 768px) {
+          .hero-bg {
+            background-image: url('/WBMedia/general/Main WB Slider mobile.jpg') !important;
+          }
+        }
+      `}</style>
       <SEOHead
         {...seoMeta}
         structuredData={structuredData}
       />
       <section 
-        className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed"
-        style={{ backgroundImage: `url('/WBMedia/general/Main WB Slider.jpg')`}}
+        className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center bg-fixed hero-bg"
       >
         <div className="absolute inset-0" style={{ backgroundColor: '#00000069' }} />
         
