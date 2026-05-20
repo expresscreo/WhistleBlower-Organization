@@ -1,5 +1,9 @@
+'use client';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import NavLink from '@/components/NavLink';
+
 import React, { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -18,11 +22,11 @@ const DashboardLayout = ({ children }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { logout, profile, permissions, loading } = useAuth();
     const { theme, toggleTheme } = useTheme();
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login');
+        router.push('/login');
     };
 
     const navLinks = [
@@ -94,7 +98,7 @@ const DashboardLayout = ({ children }) => {
         <div className="min-h-screen w-full bg-background">
             <div className="hidden md:flex flex-col fixed left-0 top-0 h-full border-r bg-background z-40 transition-all duration-300" style={{ width: isSidebarOpen ? '280px' : '80px' }}>
                 <div className="flex h-16 items-center border-b px-4 lg:px-6 shrink-0">
-                    <Link to="/" className="flex items-center gap-2 font-semibold">
+                    <Link href="/" className="flex items-center gap-2 font-semibold">
                         <Shield className="h-6 w-6" />
                         {!isSidebarOpen && <span className="sr-only">Whistleblower</span>}
                         {isSidebarOpen && <span>Whistleblower</span>}
@@ -113,7 +117,7 @@ const DashboardLayout = ({ children }) => {
                         </SheetTrigger>
                         <SheetContent side="left" className="flex flex-col p-0">
                             <div className="flex h-16 items-center border-b px-6">
-                                <Link to="/" className="flex items-center gap-2 font-semibold">
+                                <Link href="/" className="flex items-center gap-2 font-semibold">
                                     <Shield className="h-6 w-6" />
                                     <span>Whistleblower</span>
                                 </Link>

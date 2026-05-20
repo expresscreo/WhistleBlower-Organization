@@ -1,5 +1,6 @@
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ArrowRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ const MobileMenuOverlay = ({ navItems }) => {
   const [expandedItems, setExpandedItems] = useState({});
   const { user } = useAuth();
   const { theme } = useTheme();
-  const location = useLocation();
+  const pathname = usePathname();
 
   const logoLight = "/WBMedia/general/whistleblower-logo-light.png";
   const logoDark = "/WBMedia/general/whistleblower-logo-dark.png";
@@ -76,7 +77,7 @@ const MobileMenuOverlay = ({ navItems }) => {
             variants={contentVariants}
             className="flex items-center h-[80px] px-4 border-b border-border/20"
           >
-            <Link to="/" onClick={handleLinkClick} className="flex-shrink-0">
+            <Link href="/" onClick={handleLinkClick} className="flex-shrink-0">
               <img 
                 src={theme === 'light' ? logoLight : logoDark}
                 alt="WhistleBlower.ng Logo" 
@@ -102,6 +103,7 @@ const MobileMenuOverlay = ({ navItems }) => {
                   {item.dropdown ? (
                     <div className="space-y-2">
                       <button
+                        type="button"
                         onClick={() => toggleExpanded(item.name)}
                         className="w-full flex items-center justify-between py-2 group"
                         aria-expanded={expandedItems[item.name]}
@@ -132,11 +134,11 @@ const MobileMenuOverlay = ({ navItems }) => {
                             {item.items.map((subItem) => (
                               <Link
                                 key={subItem.name}
-                                to={subItem.path}
+                                href={subItem.path}
                                 onClick={handleLinkClick}
                                 className={cn(
                                   "block py-1 text-lg font-medium transition-colors duration-200",
-                                  location.pathname === subItem.path 
+                                  pathname === subItem.path 
                                     ? "text-primary" 
                                     : "text-muted-foreground hover:text-foreground"
                                 )}
@@ -150,12 +152,11 @@ const MobileMenuOverlay = ({ navItems }) => {
                       </AnimatePresence>
                     </div>
                   ) : (
-                    <Link
-                      to={item.path}
+                    <Link href={item.path}
                       onClick={handleLinkClick}
                         className={cn(
                           "block py-2 text-[36px] leading-[40px] font-semibold transition-colors duration-200 capitalize",
-                          location.pathname === item.path 
+                          pathname === item.path 
                             ? "text-primary" 
                             : "text-foreground hover:text-primary"
                         )}
@@ -177,7 +178,7 @@ const MobileMenuOverlay = ({ navItems }) => {
           >
             <div className="flex items-center space-x-3 h-full">
               {user && (
-                <Link to="/admin/overview" onClick={handleLinkClick}>
+                <Link href="/admin/overview" onClick={handleLinkClick}>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -187,7 +188,7 @@ const MobileMenuOverlay = ({ navItems }) => {
                   </Button>
                 </Link>
               )}
-              <Link to="/submit-report" onClick={handleLinkClick} className="flex-1">
+              <Link href="/submit-report" onClick={handleLinkClick} className="flex-1">
                 <motion.div
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}

@@ -1,3 +1,5 @@
+@import 'react-datepicker/dist/react-datepicker.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -372,4 +374,76 @@ body {
   border-radius: 0; /* Square shape like message notifications */
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
   opacity: 0.75;
+}
+
+/* Submit report wizard layout */
+body.submit-report-flow {
+  --submit-report-gutter: 1rem;
+  --submit-report-footer-padding: 1rem;
+  --submit-report-card-width: 56rem;
+}
+
+body.submit-report-flow .submit-report-card,
+body.submit-report-flow .submit-report-hero {
+  max-width: var(--submit-report-card-width);
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+html:not(.dark) body.submit-report-flow .submit-report-card.glass-effect {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  backdrop-filter: none;
+}
+
+body.submit-report-flow .submit-report-footer-inner {
+  padding-left: var(--submit-report-gutter);
+  padding-right: var(--submit-report-gutter);
+}
+
+body.submit-report-flow .react-datepicker-wrapper {
+  width: 100%;
+}
+
+body.submit-report-flow .react-datepicker__input-container input {
+  width: 100%;
+}
+
+/* Organization async select — menu is portaled to body */
+body.submit-report-flow .submit-report-org-field {
+  position: relative;
+  z-index: 1;
+}
+
+#submit-report-form,
+body.submit-report-flow .submit-report-card,
+body.submit-report-flow .submit-report-step-body {
+  overflow: visible;
+}
+
+@media (max-width: 767px) {
+  body.submit-report-flow {
+    --submit-report-gutter: 0.625rem;
+    --submit-report-card-width: 100%;
+    --submit-report-footer-padding: 0.25rem;
+  }
+
+  body.submit-report-flow .submit-report-page {
+    min-height: 100dvh;
+    /* Breathing room below sticky navbar (80px) + safe area on notched devices */
+    padding-top: max(3rem, calc(env(safe-area-inset-top, 0px) + 1.25rem));
+  }
+
+  body.submit-report-flow .submit-report-hero {
+    margin-top: 0.25rem;
+  }
+
+  #submit-report-form {
+    transform: none !important;
+  }
+
+  body.submit-report-flow .submit-report-shell {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
 }

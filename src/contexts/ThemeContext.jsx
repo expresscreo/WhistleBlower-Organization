@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext();
@@ -19,19 +21,19 @@ const getTimeBasedTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') return 'light';
     const savedTheme = localStorage.getItem('theme');
     const savedMode = localStorage.getItem('themeMode');
-    
-    // If user has set manual mode, respect that
+
     if (savedMode === 'manual' && savedTheme) {
       return savedTheme;
     }
-    
-    // Otherwise use auto mode (time-based)
+
     return getTimeBasedTheme();
   });
 
   const [themeMode, setThemeMode] = useState(() => {
+    if (typeof window === 'undefined') return 'auto';
     return localStorage.getItem('themeMode') || 'auto';
   });
 

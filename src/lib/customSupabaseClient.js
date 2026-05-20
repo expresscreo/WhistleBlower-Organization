@@ -1,6 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
+import { publicEnv } from '@/lib/env';
 
-const supabaseUrl = 'https://dvdhllhdbbybixwhtgnm.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2ZGhsbGhkYmJ5Yml4d2h0Z25tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3OTYzNDUsImV4cCI6MjA2ODM3MjM0NX0.ERqUze9EpJz30V1M7vtnyd750KzWBJod7fSguvFA40c';
+const supabaseUrl = publicEnv.supabaseUrl;
+const supabaseAnonKey = publicEnv.supabaseAnonKey;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  );
+}
+
+try {
+  new URL(supabaseUrl);
+} catch {
+  throw new Error('Invalid NEXT_PUBLIC_SUPABASE_URL');
+}
+
+const isBrowser = typeof window !== 'undefined';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: isBrowser,
+    autoRefreshToken: isBrowser,
+    detectSessionInUrl: isBrowser,
+  },
+});

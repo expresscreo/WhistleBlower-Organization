@@ -1,5 +1,7 @@
+'use client';
+import { usePathname } from 'next/navigation';
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 
 const MobileMenuContext = createContext();
 
@@ -13,12 +15,12 @@ export const useMobileMenu = () => {
 
 export const MobileMenuProvider = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
+  const pathname = usePathname();
 
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   // Prevent body scrolling when menu is open
   useEffect(() => {

@@ -1,5 +1,7 @@
+'use client';
+import { usePathname, useRouter } from 'next/navigation';
+
 import React, { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { AdminDataProvider } from '@/contexts/AdminDataContext';
 import DashboardLayout from './DashboardLayout';
@@ -9,8 +11,9 @@ import DashboardLayout from './DashboardLayout';
  * This ensures sidebar and topnav appear instantly on page refresh
  */
 const AdminLayoutWrapper = ({ children }) => {
+  const router = useRouter();
   const { user, loading, profile, permissions } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
 
   // Map routes to page names for permission checking
   const routeToPageName = {
@@ -44,13 +47,13 @@ const AdminLayoutWrapper = ({ children }) => {
       // Check permissions only after authentication is complete
       if (profile) {
         const isSuperAdmin = profile?.user_type === 'super_admin';
-        let pageName = routeToPageName[location.pathname];
+        let pageName = routeToPageName[pathname];
         
         // Handle dynamic routes
         if (!pageName) {
-          if (location.pathname.startsWith('/admin/reports/')) {
+          if (pathname.startsWith('/admin/reports/')) {
             pageName = 'Report Details';
-          } else if (location.pathname.startsWith('/admin/bounties/')) {
+          } else if (pathname.startsWith('/admin/bounties/')) {
             pageName = 'Bounty Details';
           }
         }
@@ -68,11 +71,16 @@ const AdminLayoutWrapper = ({ children }) => {
         }
       }
     }
-  }, [loading, user, profile, permissions, location.pathname, routeToPageName]);
+  }, [loading, user, profile, permissions, pathname, routeToPageName]);
 
-  // If authentication completed and no user, redirect to login
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [loading, user, router]);
+
   if (!loading && !user) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
 
   // Always show the dashboard layout immediately

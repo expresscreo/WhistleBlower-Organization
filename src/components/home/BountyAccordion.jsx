@@ -1,6 +1,6 @@
+import Link from 'next/link';
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -63,7 +63,7 @@ const AccordionItem = ({ item, isOpen, onToggle }) => {
             className="overflow-hidden"
           >
             <p className="text-muted-foreground mb-4">{item.description}</p>
-            <Link to={item.link}>
+            <Link href={item.link}>
               <Button variant="link" className="p-0 h-auto text-primary font-bold group uppercase">
                 {item.buttonText} <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>

@@ -1,6 +1,6 @@
+import Link from 'next/link';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -86,7 +86,7 @@ const TrustedByCarousel = () => {
                                                 <div className="flex flex-col justify-center text-left w-full md:w-1/2">
                                                     <h3 className="text-3xl font-bold mb-4">{slide.industry}</h3>
                                                     <p className="text-lg text-[#828997] mb-6">{slide.description}</p>
-                                                    <Link to="/about-us">
+                                                    <Link href="/about-us">
                                                         <Button
                                                             variant="ghost"
                                                             className="p-0 h-auto justify-start text-primary hover:text-primary/80 group"

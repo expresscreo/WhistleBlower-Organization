@@ -1,6 +1,6 @@
+import Link from 'next/link';
 
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Moon, Sun, Monitor, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -74,8 +74,7 @@ const Footer = () => {
             <ul className="space-y-2">
               {quickLinks.map((link, index) => (
                 <li key={index}>
-                  <Link
-                    to={link.href}
+                  <Link href={link.href}
                     className="text-sm text-[#b4b4b4] hover:text-[#ff5100] transition-colors"
                   >
                     {link.name}
@@ -91,8 +90,7 @@ const Footer = () => {
             <ul className="space-y-2">
               {companyLinks.map((link, index) => (
                 <li key={index}>
-                  <Link
-                    to={link.href}
+                  <Link href={link.href}
                     className="text-sm text-[#b4b4b4] hover:text-[#ff5100] transition-colors"
                   >
                     {link.name}

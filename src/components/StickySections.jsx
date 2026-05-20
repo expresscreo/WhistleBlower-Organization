@@ -1,6 +1,6 @@
+import Link from 'next/link';
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
@@ -69,7 +69,7 @@ const StickySections = () => {
             <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Report Crimes Securely And Anonymously</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Submit reports anonymously using our encrypted platform. Your identity is protected while your voice is heard by the right authorities.</p>
             <div className="w-full">
-              <Link to="/submit-report" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
+              <Link href="/submit-report" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
                 <span className="text-lg">Submit A Report</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12h18m-8-7l8 7-8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </Link>
@@ -98,7 +98,7 @@ const StickySections = () => {
             <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Track Your Report Progress Instantly</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Monitor your report status in real-time with our secure tracking system. Get updates on investigation progress and see your impact.</p>
             <div className="w-full">
-              <Link to="/track" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
+              <Link href="/track" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
                 <span className="text-lg">Track Your Report</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12h18m-8-7l8 7-8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </Link>
@@ -127,7 +127,7 @@ const StickySections = () => {
             <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Earn Money For Information</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Earn money for valuable information through our secure PayCode system. Your contribution to justice doesn't go unnoticed.</p>
             <div className="w-full">
-              <Link to="/rewards-for-information" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
+              <Link href="/rewards-for-information" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
                 <span className="text-lg">Learn About Money</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12h18m-8-7l8 7-8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </Link>
@@ -156,7 +156,7 @@ const StickySections = () => {
             <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Place Bounties For Information</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Need specific information? Put a price on it. Create public bounties to crowdsource intelligence for investigations and asset recovery.</p>
             <div className="w-full">
-              <Link to="/place-bounty" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
+              <Link href="/place-bounty" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
                 <span className="text-lg">Place A Bounty</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12h18m-8-7l8 7-8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </Link>
@@ -185,7 +185,7 @@ const StickySections = () => {
             <h2 className="text-[28px] lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-6">Stay Informed With Latest News</h2>
             <p className="text-sm text-black dark:text-[#a0a0a0] leading-relaxed mb-12">Get the latest updates on investigations, successful reports, and important announcements from our platform and authorities.</p>
             <div className="w-full">
-              <Link to="/news" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
+              <Link href="/news" className="group flex items-center justify-between text-black dark:text-white font-medium hover:text-gray-700 dark:hover:text-white/80 transition-colors duration-300">
                 <span className="text-lg">Read Latest News</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12h18m-8-7l8 7-8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </Link>
@@ -206,7 +206,7 @@ const StickySections = () => {
             <p className="text-lg mb-8 max-w-3xl mx-auto opacity-90">
               Are you a public organization or government agency interested in receiving reports directly? Join our partner network and enhance transparency in your operations.
             </p>
-            <Link to="/partner-program">
+            <Link href="/partner-program">
               <Button size="lg" className="uppercase tracking-[1px] px-8 py-4 text-sm bg-[#171717] text-[#f6f6f6] hover:bg-[#f6f6f6] hover:text-[#171717] group">
                 LEARN MORE ABOUT PARTNERSHIP
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
