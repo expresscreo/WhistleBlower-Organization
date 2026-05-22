@@ -37,10 +37,12 @@ Point your reverse proxy (nginx/Apache) at `http://127.0.0.1:3000`.
 
 ## Environment variables
 
-Set on the host (not committed):
+Set on the host (not committed). **Do not copy placeholder values from `env.example`** (e.g. `your-project.supabase.co`) — login and API calls will fail with `ERR_NAME_NOT_RESOLVED`.
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+Use your real Supabase project URL and anon key from the Supabase dashboard → Project Settings → API.
+
+- `NEXT_PUBLIC_SUPABASE_URL` — e.g. `https://<project-ref>.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — full `eyJ...` anon key (not `eyJ...` truncated)
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` (pk_* only)
 - Server-only: `SUPABASE_SERVICE_ROLE_KEY`, `PAYSTACK_*_SECRET_KEY`, `RESEND_API_KEY`

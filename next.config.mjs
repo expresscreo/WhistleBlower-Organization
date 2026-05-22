@@ -1,5 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  resolveSupabaseAnonKey,
+  resolveSupabaseUrl,
+} from './src/lib/env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -8,11 +12,8 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   env: {
-    NEXT_PUBLIC_SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.VITE_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_URL: resolveSupabaseUrl(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: resolveSupabaseAnonKey(),
     NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY:
       process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
       process.env.VITE_PAYSTACK_PUBLIC_KEY,
