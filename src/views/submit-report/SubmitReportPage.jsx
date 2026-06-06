@@ -22,6 +22,7 @@ import { sanitizeFilename, slugify } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { uploadFileToLocal } from '@/lib/fileUtils';
+import { uploadStorageFile } from '@/lib/supabaseStorageService';
 import { generateReportId } from '@/lib/utils';
 import { hashPassword } from '@/lib/cryptoUtils';
 
@@ -249,13 +250,10 @@ const SubmitReportPage = () => {
             }
             
             if (evidenceFiles.length > 0) {
-                const uploadPromises = evidenceFiles.map(async (file, index) => {
-                    const sanitizedName = sanitizeFilename(file.name);
-                    const filePath = `reports/${reportUUIDForPath}/${Date.now()}-${sanitizedName}`;
-                    const { error: uploadError } = await supabase.storage.from('wb_evio').upload(filePath, file, { cacheControl: '3600', upsert: false });
-                    if (uploadError) throw uploadError;
-                    return filePath;
-                });
+                const reportFolder = `reports/${reportUUIDForPath}`;
+                const uploadPromises = evidenceFiles.map((file) =>
+                    uploadStorageFile(file, reportFolder, reportUUIDForPath)
+                );
                 const otherEvidence = await Promise.all(uploadPromises);
                 evidencePaths.push(...otherEvidence);
             }

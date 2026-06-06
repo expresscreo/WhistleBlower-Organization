@@ -12,7 +12,7 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
   const [loading, setLoading] = useState(false);
   const rawFileName = path.split('/').pop();
   const fileName = rawFileName ? sanitizeFilename(rawFileName.substring(rawFileName.indexOf('-') + 1)) : 'attachment';
-  const isImage = fileName?.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
+  const isImage = fileName?.match(/\.(avif|jpeg|jpg|gif|png|webp)$/i) != null;
   const isVideo = fileName?.match(/\.(mp4|webm|ogg)$/i) != null;
   const isAudio = fileName?.match(/\.(mp3|wav|ogg|m4a)$/i) != null;
 

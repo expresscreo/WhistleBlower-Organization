@@ -3,7 +3,7 @@ import { Edit, Eye, Trash2, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { getLocalFileUrl } from '@/lib/fileUtils';
+import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/components/media/MaximizableThumbnailOverlay';
 import {
   formatNewsCategoryLabel,
@@ -43,8 +43,8 @@ export default function NewsEditorPostCard({
       <CardContent>
         {item.featured_image && (
           <div className={`${maximizableThumbnailGroupClass} mb-4 rounded-lg`}>
-            <img
-              src={getLocalFileUrl(item.featured_image)}
+            <ResolvedStorageImage
+              path={item.featured_image}
               alt={item.title}
               className="h-32 w-full rounded-lg object-cover transition-transform duration-200 group-hover:scale-105"
             />

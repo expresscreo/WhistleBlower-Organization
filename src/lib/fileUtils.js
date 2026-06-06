@@ -4,15 +4,52 @@
 
 import { sanitizeFilename } from './utils';
 import { supabase } from '@/lib/customSupabaseClient';
+import { isAvifStorageEnabled, isImageFile, uploadCategoryFile } from './supabaseStorageService';
+import {
+  getBucketForStoragePath,
+  PRIVATE_EVIDENCE_BUCKET,
+  PUBLIC_MEDIA_BUCKET,
+  extractStoragePathFromPublicUrl,
+} from './storageBuckets';
 
-const getPublicStorageUrl = (filePath) => {
-    try {
-        const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
-        return data?.publicUrl || filePath;
-    } catch (_) {
-        return filePath;
-    }
+const normalizeStoragePath = (filePath) =>
+  String(filePath || '')
+    .replace(/^\//, '')
+    .replace(/^wb_evio\//, '');
+
+const getPublicStorageUrl = (filePath, bucket = getBucketForStoragePath(filePath)) => {
+  const cleanPath = normalizeStoragePath(filePath);
+  if (!cleanPath) return null;
+
+  try {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
+    return data?.publicUrl || null;
+  } catch (_) {
+    return null;
+  }
 };
+
+async function getSignedStorageUrl(filePath, buckets = []) {
+  const cleanPath = normalizeStoragePath(filePath);
+  if (!cleanPath) return null;
+
+  const bucketList = buckets.length
+    ? buckets
+    : [getBucketForStoragePath(cleanPath), PRIVATE_EVIDENCE_BUCKET, PUBLIC_MEDIA_BUCKET];
+
+  for (const bucket of [...new Set(bucketList)]) {
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(cleanPath, 3600);
+      if (!error && data?.signedUrl) return data.signedUrl;
+    } catch (_) {
+      // try next bucket
+    }
+  }
+
+  return null;
+}
 
 const normalizeWBMediaPath = (filePath) => {
     if (!filePath || typeof filePath !== 'string') return null;
@@ -30,11 +67,15 @@ const normalizeWBMediaPath = (filePath) => {
 // Upload to Supabase storage as a fallback when the local upload endpoint
 // is not available (e.g., on production static hosting).
 async function uploadFileToSupabaseFallback(file, category, subfolder, fileName) {
-    const bucket = 'wb_evio';
+    if (isImageFile(file) && isAvifStorageEnabled()) {
+        return uploadCategoryFile(file, category, subfolder);
+    }
+
     const pathParts = [category];
     if (subfolder) pathParts.push(subfolder);
     pathParts.push(fileName);
     const storagePath = pathParts.join('/');
+    const bucket = getBucketForStoragePath(storagePath);
 
     const { error: uploadError } = await supabase
         .storage
@@ -49,13 +90,7 @@ async function uploadFileToSupabaseFallback(file, category, subfolder, fileName)
         throw new Error(`Supabase upload failed: ${uploadError.message}`);
     }
 
-    const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-    const publicUrl = data?.publicUrl;
-    if (!publicUrl) {
-        // Fallback to path if for some reason public URL cannot be generated
-        return storagePath;
-    }
-    return publicUrl;
+    return storagePath;
 }
 
 /**
@@ -67,6 +102,10 @@ async function uploadFileToSupabaseFallback(file, category, subfolder, fileName)
  */
 export const uploadFileToLocal = async (file, category = 'general', subfolder = '') => {
     try {
+        if (isImageFile(file) && isAvifStorageEnabled()) {
+            return uploadCategoryFile(file, category, subfolder);
+        }
+
         // Create FormData for file upload
         const formData = new FormData();
         const sanitizedName = sanitizeFilename(file.name);
@@ -156,64 +195,33 @@ export const getLocalFileUrl = (filePath) => {
 
     const normalizedWBMediaPath = normalizeWBMediaPath(filePath);
     if (normalizedWBMediaPath) return normalizedWBMediaPath;
-    
-    // If it's a Supabase path, prefer fetching a public URL (works in localhost and prod)
-    if (filePath.includes('wb_evio')) {
-        return getPublicStorageUrl(filePath);
+
+    const storagePath = normalizeStoragePath(filePath);
+    const bucket = getBucketForStoragePath(storagePath);
+
+    if (bucket === PUBLIC_MEDIA_BUCKET) {
+        return getPublicStorageUrl(storagePath, bucket);
     }
 
-    if (filePath.startsWith('bounties/') || filePath.startsWith('news/')) {
-        return getPublicStorageUrl(filePath);
+    if (storagePath.startsWith('reports/')) {
+        return getSignedStorageUrl(storagePath, [PRIVATE_EVIDENCE_BUCKET]);
+    }
+
+    const publicUrl = getPublicStorageUrl(storagePath, bucket);
+    if (publicUrl) return publicUrl;
+
+    if (storagePath.startsWith('bounties/') || storagePath.startsWith('news/') || storagePath.startsWith('general/')) {
+        return getPublicStorageUrl(storagePath, PUBLIC_MEDIA_BUCKET);
     }
     
-    // Handle bounty report evidence paths - these come from uploadFileToLocal
-    // and should be in WBMedia/bounties/delito/ format
+    // Handle bounty report evidence paths from uploadFileToLocal (WBMedia/bounties/delito/)
     if (filePath.includes('bounties/delito') || filePath.includes('bounties/')) {
-        // If it doesn't start with WBMedia, assume it's a filename and prepend the bounty path
         if (!filePath.startsWith('/')) return `/WBMedia/bounties/delito/${filePath}`;
         return filePath;
     }
     
-    // Handle regular report evidence paths - these come from Supabase storage
-    if (filePath.includes('reports/')) {
-        // Try to create a signed URL since public URL is not working
-        // For now, return a promise that will be handled by the calling component
-        return new Promise(async (resolve) => {
-            try {
-                const { data, error } = await supabase.storage
-                    .from('wb_evio')
-                    .createSignedUrl(filePath, 3600); // 1 hour expiry
-                
-                if (error) {
-                    console.error('Error creating signed URL:', error);
-                    resolve(filePath);
-                    return;
-                }
-                
-                if (data?.signedUrl) {
-                    console.log('Generated signed URL:', data.signedUrl);
-                    resolve(data.signedUrl);
-                    return;
-                }
-            } catch (error) {
-                console.error('Error generating signed URL:', error);
-            }
-            
-            // Fallback: try public URL
-            try {
-                const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
-                resolve(data?.publicUrl || filePath);
-            } catch (error) {
-                console.error('Error generating public URL:', error);
-                resolve(filePath);
-            }
-        });
-    }
-    
-    // If it's a relative path without leading slash, add it
     if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
     
-    // Default: assume it's a filename and prepend WBMedia
     return `/WBMedia/${filePath}`;
 };
 
@@ -227,20 +235,31 @@ export const resolveImageUrl = (filePath) => {
     if (!filePath) return null;
     if (typeof filePath !== 'string') return null;
     if (filePath.startsWith('http')) return filePath;
+
     const normalizedWBMediaPath = normalizeWBMediaPath(filePath);
     if (normalizedWBMediaPath) return normalizedWBMediaPath;
-    if (filePath.includes('wb_evio')) {
-        return getPublicStorageUrl(filePath);
+
+    const storagePath = normalizeStoragePath(filePath);
+    if (storagePath.startsWith('reports/')) {
+        return getPublicStorageUrl(storagePath, PRIVATE_EVIDENCE_BUCKET);
     }
-    if (filePath.startsWith('bounties/') || filePath.startsWith('news/')) {
-        return getPublicStorageUrl(filePath);
+
+    if (
+        storagePath.startsWith('bounties/') ||
+        storagePath.startsWith('news/') ||
+        storagePath.startsWith('general/')
+    ) {
+        return getPublicStorageUrl(storagePath, PUBLIC_MEDIA_BUCKET);
     }
+
     if (filePath.includes('bounties/delito') || filePath.includes('bounties/')) {
         if (!filePath.startsWith('/')) return `/WBMedia/bounties/delito/${filePath}`;
         return filePath;
     }
     return `/WBMedia/${filePath}`;
 };
+
+export { getSignedStorageUrl, normalizeStoragePath, extractStoragePathFromPublicUrl };
 
 /**
  * Delete a local file (placeholder for future implementation)

@@ -1,5 +1,16 @@
 import { supabase } from '@/lib/customSupabaseClient';
-import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
+import {
+  getLocalFileUrl,
+  resolveImageUrl,
+  getSignedStorageUrl,
+  normalizeStoragePath,
+  extractStoragePathFromPublicUrl,
+} from '@/lib/fileUtils';
+import {
+  getBucketForStoragePath,
+  PRIVATE_EVIDENCE_BUCKET,
+  PUBLIC_MEDIA_BUCKET,
+} from '@/lib/storageBuckets';
 import {
   MAXIMIZE_ICON_SVG,
   maximizableThumbnailGroupClass,
@@ -46,11 +57,11 @@ export const areSameMediaPath = (a, b) => {
   return fileA && fileB && fileA === fileB;
 };
 
-const getSupabasePublicUrl = (storagePath) => {
-  if (!storagePath) return null;
+const getSupabasePublicUrl = (storagePath, bucket = getBucketForStoragePath(storagePath)) => {
+  const cleanPath = normalizeStoragePath(storagePath);
+  if (!cleanPath) return null;
   try {
-    const cleanPath = storagePath.replace(/^\//, '').replace(/^WBMedia\//, '');
-    const { data } = supabase.storage.from('wb_evio').getPublicUrl(cleanPath);
+    const { data } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
     return data?.publicUrl || null;
   } catch {
     return null;
@@ -76,17 +87,28 @@ export const getMediaUrlCandidates = (filePath) => {
   // Prefer Supabase/remote URLs before local WBMedia (local files are often missing in dev).
   if (path.startsWith('/WBMedia/') || path.startsWith('WBMedia/')) {
     const storagePath = path.replace(/^\/?WBMedia\//, '');
-    add(getSupabasePublicUrl(storagePath));
+    add(getSupabasePublicUrl(storagePath, PUBLIC_MEDIA_BUCKET));
   }
 
-  if (path.startsWith('bounties/') || path.startsWith('news/') || path.startsWith('reports/')) {
-    add(getSupabasePublicUrl(path));
+  const storagePath = normalizeStoragePath(path);
+  if (storagePath.startsWith('reports/')) {
+    add(getSupabasePublicUrl(storagePath, PRIVATE_EVIDENCE_BUCKET));
+  }
+
+  if (
+    storagePath.startsWith('bounties/') ||
+    storagePath.startsWith('news/') ||
+    storagePath.startsWith('general/')
+  ) {
+    add(getSupabasePublicUrl(storagePath, PUBLIC_MEDIA_BUCKET));
+    // Legacy AVIF uploads may still live in the private bucket.
+    add(getSupabasePublicUrl(storagePath, PRIVATE_EVIDENCE_BUCKET));
   }
 
   if (fileName && isImagePath(fileName)) {
-    add(getSupabasePublicUrl(`bounties/delito/${fileName}`));
-    add(getSupabasePublicUrl(`bounties/${fileName}`));
-    add(getSupabasePublicUrl(`news/${fileName}`));
+    add(getSupabasePublicUrl(`bounties/delito/${fileName}`, PUBLIC_MEDIA_BUCKET));
+    add(getSupabasePublicUrl(`bounties/${fileName}`, PUBLIC_MEDIA_BUCKET));
+    add(getSupabasePublicUrl(`news/${fileName}`, PUBLIC_MEDIA_BUCKET));
   }
 
   const syncLocal = getLocalFileUrl(path) || resolveImageUrl(path);
@@ -118,10 +140,20 @@ const canLoadUrl = (url) =>
   });
 
 const getSupabaseStoragePath = (filePath) => {
-  if (!filePath || filePath.startsWith('http')) return null;
+  if (!filePath || filePath.startsWith('http')) {
+    if (filePath?.startsWith('http')) {
+      return extractStoragePathFromPublicUrl(filePath);
+    }
+    return null;
+  }
 
-  const path = String(filePath).trim();
-  if (path.startsWith('bounties/') || path.startsWith('news/') || path.startsWith('reports/')) {
+  const path = normalizeStoragePath(String(filePath).trim());
+  if (
+    path.startsWith('bounties/') ||
+    path.startsWith('news/') ||
+    path.startsWith('reports/') ||
+    path.startsWith('general/')
+  ) {
     return path;
   }
 
@@ -137,20 +169,20 @@ const getSupabaseStoragePath = (filePath) => {
   return null;
 };
 
-const getSignedStorageUrl = async (filePath) => {
+const getSignedStorageUrlForPath = async (filePath) => {
   const storagePath = getSupabaseStoragePath(filePath);
   if (!storagePath) return null;
 
-  try {
-    const { data, error } = await supabase.storage
-      .from('wb_evio')
-      .createSignedUrl(storagePath, 3600);
-
-    if (error || !data?.signedUrl) return null;
-    return data.signedUrl;
-  } catch {
-    return null;
+  if (storagePath.startsWith('reports/')) {
+    return getSignedStorageUrl(storagePath, [PRIVATE_EVIDENCE_BUCKET]);
   }
+
+  const publicUrl = getSupabasePublicUrl(storagePath, PUBLIC_MEDIA_BUCKET);
+  if (publicUrl && typeof window !== 'undefined' && (await canLoadUrl(publicUrl))) {
+    return publicUrl;
+  }
+
+  return getSignedStorageUrl(storagePath, [PUBLIC_MEDIA_BUCKET, PRIVATE_EVIDENCE_BUCKET]);
 };
 
 /**
@@ -159,17 +191,26 @@ const getSignedStorageUrl = async (filePath) => {
 export const resolveMediaUrl = async (path, { preferredSrc } = {}) => {
   if (!path) return null;
 
+  let resolvedPath = path;
   if (path.startsWith('http')) {
-    if (typeof window === 'undefined') return path;
-    if (await canLoadUrl(path)) return path;
+    const extracted = extractStoragePathFromPublicUrl(path);
+    if (extracted && extracted !== path) {
+      resolvedPath = extracted;
+    } else if (typeof window === 'undefined') {
+      return path;
+    } else if (await canLoadUrl(path)) {
+      return path;
+    }
   }
 
   if (preferredSrc?.startsWith('http') && typeof window !== 'undefined') {
     if (await canLoadUrl(preferredSrc)) return preferredSrc;
   }
 
-  const candidates = getMediaUrlCandidates(path);
-  if (!candidates.length) return preferredSrc?.startsWith('http') ? preferredSrc : null;
+  const candidates = getMediaUrlCandidates(resolvedPath);
+  if (!candidates.length) {
+    return preferredSrc?.startsWith('http') ? preferredSrc : null;
+  }
 
   if (typeof window === 'undefined') {
     const remote = candidates.find((url) => url.includes('supabase.co'));
@@ -183,10 +224,14 @@ export const resolveMediaUrl = async (path, { preferredSrc } = {}) => {
 
   for (const url of candidates) {
     if (url === localCandidate) continue;
+    if (url.includes('supabase.co') && url.includes('/object/public/')) {
+      if (await canLoadUrl(url)) return url;
+      continue;
+    }
     if (await canLoadUrl(url)) return url;
   }
 
-  const signedUrl = await getSignedStorageUrl(path);
+  const signedUrl = await getSignedStorageUrlForPath(resolvedPath);
   if (signedUrl && (await canLoadUrl(signedUrl))) return signedUrl;
 
   const remote = candidates.find((url) => url.includes('supabase.co'));
@@ -305,6 +350,7 @@ export const needsMediaEnrichment = (html) => {
   if (/<img[^>]+src=["'](?!https?:\/\/)[^"']+["']/i.test(html)) return true;
   if (/<img[^>]+src=["']\/WBMedia\//i.test(html)) return true;
   if (/<img[^>]+src=["']blob:/i.test(html)) return true;
+  if (/<img[^>]+src=["']https?:\/\/[^"']+\/wb_evio\//i.test(html)) return true;
   return /<p[^>]*>\s*[a-zA-Z0-9._-]+\.(avif|gif|jpe?g|png|webp)\s*<\/p>/i.test(html);
 };
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { Newspaper } from 'lucide-react';
 import { slugify } from '@/lib/utils';
+import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 
 export function getNewsPostUrl(item) {
   if (item.category === 'bounty' && item.bounty_id) {
@@ -30,7 +31,13 @@ export default function CompactNewsListItem({ item }) {
         className="flex items-center gap-4 overflow-hidden border border-border/60 bg-card p-3 shadow-sm transition-shadow duration-300 hover:bg-muted/20 hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.16)] sm:p-4"
       >
         <div className="relative h-24 w-24 shrink-0 overflow-hidden bg-muted sm:h-28 sm:w-28">
-          {item.featured_image_url ? (
+          {item.featured_image ? (
+            <ResolvedStorageImage
+              path={item.featured_image}
+              alt={item.title}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : item.featured_image_url ? (
             <img
               src={item.featured_image_url}
               alt={item.title}

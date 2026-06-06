@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { ArrowRight, Calendar } from 'lucide-react';
 import { getNewsCategoryLabel, getNewsPostUrl } from '@/components/news/CompactNewsListItem';
+import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 
 export default function FeaturedNewsListItem({ item }) {
   const postUrl = getNewsPostUrl(item);
@@ -15,7 +16,13 @@ export default function FeaturedNewsListItem({ item }) {
         href={postUrl}
         className="relative flex h-full min-h-[280px] overflow-hidden border border-border/60 bg-card shadow-sm transition-shadow duration-500 hover:shadow-[0_24px_60px_-16px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_24px_60px_-16px_rgba(0,0,0,0.18)] sm:min-h-[320px]"
       >
-        {item.featured_image_url ? (
+        {item.featured_image ? (
+          <ResolvedStorageImage
+            path={item.featured_image}
+            alt={item.title}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : item.featured_image_url ? (
           <img
             src={item.featured_image_url}
             alt={item.title}

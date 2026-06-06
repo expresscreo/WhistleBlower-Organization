@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Calendar, Bookmark, Newspaper, Target, Hand, Megaphone, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
-import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
+import { resolveOgImageUrl } from '@/lib/ogImageUrl';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { cn, slugify, htmlToPlainText } from '@/lib/utils';
@@ -21,6 +21,7 @@ import {
     filterNewsByLocation,
 } from '@/lib/newsLocationFilter';
 import MaximizableImage from '@/components/media/MaximizableImage';
+import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 import CompactNewsListItem from '@/components/news/CompactNewsListItem';
 import FeaturedNewsListItem from '@/components/news/FeaturedNewsListItem';
 import {
@@ -39,14 +40,22 @@ const NewsCard = ({ item }) => {
 
     return (
         <Card className="flex flex-col h-full overflow-hidden">
-            {item.featured_image_url && (
+            {item.featured_image ? (
+                <div className="aspect-video w-full bg-muted overflow-hidden">
+                    <ResolvedStorageImage
+                        path={item.featured_image}
+                        alt={item.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                </div>
+            ) : item.featured_image_url ? (
                 <MaximizableImage
                     src={item.featured_image_url}
                     alt={item.title}
                     wrapperClassName="aspect-video w-full bg-muted"
                     imageClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-            )}
+            ) : null}
             <CardHeader>
                 {item.category === 'bounty' && item.bounty_id ? (
                     <Link href={`/bounties/${slugify(item.title)}`}>
@@ -190,7 +199,7 @@ const NewsPage = ({ initialNews = null }) => {
 
             const newsWithImageUrls = data.map(item => ({
                 ...item,
-                featured_image_url: resolveImageUrl(item.featured_image)
+                featured_image_url: resolveOgImageUrl(item.featured_image)
             }));
 
             const lookup = await fetchBountyLocationLookup(supabase, newsWithImageUrls);

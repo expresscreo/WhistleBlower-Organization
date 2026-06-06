@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { Edit, Eye, Trash2, CheckCircle, Newspaper } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getLocalFileUrl } from '@/lib/fileUtils';
+import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 import { htmlToPlainText } from '@/lib/utils';
 import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/components/media/MaximizableThumbnailOverlay';
 import {
@@ -27,8 +27,8 @@ export default function NewsEditorPostListRow({
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted sm:h-24 sm:w-24">
           {item.featured_image ? (
             <div className={`${maximizableThumbnailGroupClass} h-full w-full`}>
-              <img
-                src={getLocalFileUrl(item.featured_image)}
+              <ResolvedStorageImage
+                path={item.featured_image}
                 alt={item.title}
                 className="h-full w-full object-cover"
               />

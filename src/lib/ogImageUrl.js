@@ -1,5 +1,11 @@
 import { absoluteUrl } from '@/lib/siteUrl';
 import { publicEnv } from '@/lib/env';
+import {
+  buildPublicStorageUrl,
+  extractStoragePathFromPublicUrl,
+  getBucketForStoragePath,
+  PUBLIC_MEDIA_BUCKET,
+} from '@/lib/storageBuckets';
 
 /**
  * Resolve featured images to absolute HTTPS URLs for Open Graph / WhatsApp previews.
@@ -12,6 +18,12 @@ export function resolveOgImageUrl(image) {
   if (!img) return null;
 
   if (img.startsWith('http://') || img.startsWith('https://')) {
+    const extracted = extractStoragePathFromPublicUrl(img);
+    if (extracted && extracted !== img) {
+      const bucket = getBucketForStoragePath(extracted);
+      const publicUrl = buildPublicStorageUrl(extracted, bucket);
+      if (publicUrl) return publicUrl;
+    }
     return img;
   }
 
@@ -25,15 +37,14 @@ export function resolveOgImageUrl(image) {
   }
 
   const storagePath = img.replace(/^wb_evio\//, '').replace(/^\//, '');
-  const isStoragePath =
-    img.includes('wb_evio') ||
-    storagePath.startsWith('news/') ||
-    storagePath.startsWith('bounties/') ||
-    storagePath.startsWith('reports/');
+  const bucket = getBucketForStoragePath(storagePath);
+  const publicUrl = buildPublicStorageUrl(storagePath, bucket);
 
-  if (isStoragePath && publicEnv.supabaseUrl) {
+  if (publicUrl) return publicUrl;
+
+  if (publicEnv.supabaseUrl && bucket === PUBLIC_MEDIA_BUCKET) {
     const base = publicEnv.supabaseUrl.replace(/\/$/, '');
-    return `${base}/storage/v1/object/public/wb_evio/${storagePath}`;
+    return `${base}/storage/v1/object/public/${PUBLIC_MEDIA_BUCKET}/${storagePath}`;
   }
 
   return absoluteUrl(img.startsWith('/') ? img : `/${img}`);

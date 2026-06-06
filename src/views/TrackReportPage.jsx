@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { uploadStorageFile } from '@/lib/supabaseStorageService';
 import {
   authenticateTrackedReport,
   fetchTrackedReportUpdates,
@@ -110,14 +111,18 @@ const TrackReportPage = ({ reportId, password }) => {
       const reportUUID = reportData.id || crypto.randomUUID();
       for (let i = 0; i < newEvidenceFiles.length; i++) {
         const file = newEvidenceFiles[i];
-        const filePath = `reports/${reportUUID}/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage.from('wb_evio').upload(filePath, file, { cacheControl: '3600', upsert: false });
-        if (uploadError) {
+        try {
+          const filePath = await uploadStorageFile(
+            file,
+            `reports/${reportUUID}`,
+            reportUUID,
+          );
+          newPaths.push(filePath);
+        } catch {
           setUpdateFeedback({ error: `Could not upload ${file.name}.`, success: '' });
           setIsUpdating(false);
           return;
         }
-        newPaths.push(filePath);
       }
     }
     

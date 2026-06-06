@@ -958,8 +958,10 @@ const NewsEditorPage = () => {
                 for (const image of inlineImages) {
                     try {
                         const uploadedFilePath = await uploadFileToLocal(image.file, 'news', subfolder);
-                        const localImageUrl = getLocalFileUrl(uploadedFilePath);
+                        const localImageUrl = await resolveMediaUrl(uploadedFilePath);
                         
+                        if (!localImageUrl) continue;
+
                         finalContent = finalContent.replace(
                             new RegExp(image.previewUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
                             localImageUrl

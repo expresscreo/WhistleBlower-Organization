@@ -7,6 +7,7 @@ import { FieldError } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
 import { hashPassword } from '@/lib/cryptoUtils';
 import { sanitizeFilename } from '@/lib/utils';
+import { uploadStorageFile } from '@/lib/supabaseStorageService';
 import { validateAllSteps } from '@/lib/submitReportValidation';
 import { buildCreateReportRpcParams } from '@/lib/submitReportRpc';
 import { linkHunterReportToBounty } from '@/lib/bountyStatus';
@@ -287,16 +288,9 @@ export default function SubmitReportPage() {
       }
 
       if (files.length > 0) {
+        const reportFolder = `reports/${reportUUIDForPath}`;
         const uploads = await Promise.all(
-          files.map(async (file) => {
-            const sanitizedName = sanitizeFilename(file.name);
-            const filePath = `reports/${reportUUIDForPath}/${Date.now()}-${sanitizedName}`;
-            const { error } = await supabase.storage
-              .from('wb_evio')
-              .upload(filePath, file, { cacheControl: '3600', upsert: false });
-            if (error) throw error;
-            return filePath;
-          })
+          files.map((file) => uploadStorageFile(file, reportFolder, reportUUIDForPath))
         );
         evidencePaths = [...evidencePaths, ...uploads];
       }

@@ -24,10 +24,7 @@ export default function PublicLayout({ children }) {
           )}
         >
           <Navbar />
-          <main
-            id="main-content"
-            className={showFooter ? undefined : 'flex-1 flex flex-col min-h-0'}
-          >
+          <main id="main-content" className="flex-1 flex flex-col min-h-0">
             {children}
           </main>
           {showFooter && (

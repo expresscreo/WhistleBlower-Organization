@@ -70,9 +70,14 @@ export function resolveGoogleSiteVerification() {
   return readEnv('GOOGLE_SITE_VERIFICATION', 'NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION');
 }
 
+export function resolveUseAvifStorage() {
+  return process.env.NEXT_PUBLIC_USE_AVIF_STORAGE === 'true';
+}
+
 export const publicEnv = {
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
+  useAvifStorage: resolveUseAvifStorage(),
   paystackPublicKey: readEnv(
     'NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY',
     'VITE_PAYSTACK_PUBLIC_KEY',

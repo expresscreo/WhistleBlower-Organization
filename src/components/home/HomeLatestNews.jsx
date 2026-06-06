@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Newspaper } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { resolveImageUrl } from '@/lib/fileUtils';
+import { resolveOgImageUrl } from '@/lib/ogImageUrl';
 import { Button } from '@/components/ui/button';
 import CompactNewsListItem from '@/components/news/CompactNewsListItem';
 import FeaturedNewsListItem from '@/components/news/FeaturedNewsListItem';
@@ -67,7 +67,7 @@ export default function HomeLatestNews() {
       setNews(
         (data ?? []).map((item) => ({
           ...item,
-          featured_image_url: resolveImageUrl(item.featured_image),
+          featured_image_url: resolveOgImageUrl(item.featured_image),
         }))
       );
     } catch {
