@@ -13,6 +13,7 @@ import {
 } from '@/lib/mostWantedUtils';
 import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
 import PlainTextArticleContent from '@/components/media/PlainTextArticleContent';
+import { buildMostWantedSubmitReportHref } from '@/lib/submitReportHref';
 
 function FactList({ items }) {
   return (
@@ -43,7 +44,10 @@ export default function MostWantedPostLayout({ post, featuredImageUrl }) {
   const galleryPaths = getEvidencePathsForPublishedPost(post, []);
   const galleryExclude = post.featured_image || null;
 
-  const submitHref = `/submit-report?news_id=${encodeURIComponent(post.id)}&category=most_wanted&bounty_title=${encodeURIComponent(post.title)}`;
+  const submitHref = buildMostWantedSubmitReportHref({
+    newsId: post.id,
+    title: post.title,
+  });
 
   return (
     <div className="space-y-8">

@@ -1,7 +1,7 @@
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { findPublishedNewsByRouteSlug } from '@/lib/postSlug';
 import { slugify } from '@/lib/utils';
 import PageHead from '@/components/PageHead';
@@ -21,6 +21,8 @@ import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
 import { BOUNTY_STATUSES_WITH_PUBLIC_PAGE } from '@/lib/bountyPostUrl';
 import { getBountyInfo } from '@/lib/bountyCta';
 import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
+import { buildBountySubmitReportHref } from '@/lib/submitReportHref';
+import { useStickyReportHref } from '@/contexts/ReportCtaContext';
 
 const BountyPostPage = () => {
     const { slug } = useParams();
@@ -29,6 +31,16 @@ const BountyPostPage = () => {
     const [bounty, setBounty] = useState(null);
     const [loading, setLoading] = useState(true);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
+
+    const stickyReportHref = useMemo(() => {
+        if (!bounty) return null;
+        return buildBountySubmitReportHref({
+            bountyId: bounty.id,
+            title: bounty.title,
+        });
+    }, [bounty]);
+
+    useStickyReportHref(stickyReportHref);
 
     const fetchBounty = useCallback(async () => {
         setLoading(true);
@@ -222,7 +234,10 @@ const BountyPostPage = () => {
         title: bounty.title,
         content: bounty.description,
     });
-    const giveInfoUrl = `/submit-report?bounty_id=${bounty.id}&bounty_title=${encodeURIComponent(bounty.title)}`;
+    const giveInfoUrl = buildBountySubmitReportHref({
+        bountyId: bounty.id,
+        title: bounty.title,
+    });
     const publishedEvidencePaths = getEvidencePathsForPublishedPost(
         bounty.published_evidence !== undefined ? { published_evidence: bounty.published_evidence } : null,
         bounty.evidence

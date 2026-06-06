@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FieldError } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -58,6 +58,7 @@ export default function SubmitReportPage() {
     direction: 1,
     stepMeta: getSubmitReportSteps({ isBountyMode: false, isMostWantedMode: false })[0],
   }));
+  const submitIntentRef = useRef(false);
 
   const isFeedbackMode = searchParams.get('feedback') === 'true';
   const isBountyMode = searchParams.has('bounty_id');
@@ -230,6 +231,13 @@ export default function SubmitReportPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!submitIntentRef.current || wizardHeader.currentStep < wizardSteps.length) {
+      submitIntentRef.current = false;
+      return;
+    }
+    submitIntentRef.current = false;
+
     setSubmitError('');
     const validation = validateAllSteps(validationContext, wizardSteps);
     if (!validation.valid) {
@@ -401,6 +409,13 @@ export default function SubmitReportPage() {
           <motion.form
             id="submit-report-form"
             onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.defaultPrevented) return;
+              if (e.target instanceof HTMLTextAreaElement) return;
+              if (wizardHeader.currentStep < wizardSteps.length) {
+                e.preventDefault();
+              }
+            }}
             className="submit-report-card glass-effect border rounded-xl overflow-hidden w-full max-w-full min-w-0"
           >
             <FieldError message={submitError} className="mx-4 md:mx-8 mt-4" />
@@ -424,6 +439,10 @@ export default function SubmitReportPage() {
               isSubmitting={isSubmitting}
               voiceSubmitProgress={voiceSubmitProgress}
               onHeaderChange={setWizardHeader}
+              onStepChange={() => setSubmitError('')}
+              onSubmitIntent={() => {
+                submitIntentRef.current = true;
+              }}
               hasLgasForState={hasLgasForState}
             />
           </motion.form>

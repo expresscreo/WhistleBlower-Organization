@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FieldError, PageErrorBanner } from '@/components/ui/form-feedback';
-import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow, CheckCircle, Undo, Redo } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow, CheckCircle, Undo, Redo, Share2 } from 'lucide-react';
 import { slugify } from '@/lib/utils';
 import PageHead from '@/components/PageHead';
 import NavbarLoader from '@/components/admin/NavbarLoader';
@@ -28,6 +28,22 @@ import {
   suggestMostWantedTitle,
 } from '@/lib/mostWantedUtils';
 import { validateMostWantedForSave } from '@/lib/mostWantedValidation';
+import { buildNewsPreviewPayload, validateNewsPreviewPayload } from '@/lib/newsPreview';
+import {
+  getNewsPreviewPath,
+  openNewsPreviewWindow,
+  storeNewsPreviewPayload,
+} from '@/lib/newsPreviewState';
+import SocialEmbedInsertDialog from '@/components/admin/news-editor/SocialEmbedInsertDialog';
+import {
+  createSocialEmbedElement,
+  hydrateSocialEmbeds,
+  insertNodeAtSelection,
+  isSocialEmbedUrl,
+  isTrustedEmbedIframe,
+  parseSocialEmbedUrl,
+  resolveSocialEmbedUrl,
+} from '@/lib/socialEmbeds';
 
 const NewsEditorPage = () => {
     const router = useRouter();
@@ -63,6 +79,7 @@ const NewsEditorPage = () => {
     
     const [fetchError, setFetchError] = useState('');
     const [saveFeedback, setSaveFeedback] = useState({ error: '' });
+    const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
     const editorRef = useRef(null);
     const contentInitializedRef = useRef(false);
 
@@ -233,6 +250,52 @@ const NewsEditorPage = () => {
         [attachInlineImageRemoveButton]
     );
 
+    const removeEditorSocialEmbedBlock = useCallback((wrap) => {
+        if (!wrap) return;
+        wrap.remove();
+        updateEditorContentRef.current();
+    }, []);
+
+    const attachSocialEmbedRemoveButton = useCallback(
+        (wrap) => {
+            if (!wrap || wrap.querySelector('.social-embed-remove')) return;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'social-embed-remove';
+            button.setAttribute('aria-label', 'Remove embed');
+            button.textContent = '×';
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                removeEditorSocialEmbedBlock(wrap);
+            });
+
+            wrap.insertBefore(button, wrap.firstChild);
+        },
+        [removeEditorSocialEmbedBlock]
+    );
+
+    const wrapExistingEditorEmbeds = useCallback(
+        (editor) => {
+            if (!editor) return;
+
+            editor.querySelectorAll('.social-embed-wrap').forEach((wrap) => {
+                wrap.contentEditable = 'false';
+                const existingButton = wrap.querySelector('.social-embed-remove');
+                if (existingButton) existingButton.remove();
+                attachSocialEmbedRemoveButton(wrap);
+            });
+        },
+        [attachSocialEmbedRemoveButton]
+    );
+
+    const refreshEditorEmbeds = useCallback((editor) => {
+        if (!editor) return;
+        wrapExistingEditorEmbeds(editor);
+        hydrateSocialEmbeds(editor);
+    }, [wrapExistingEditorEmbeds]);
+
     const wrapExistingEditorImages = useCallback(
         (editor) => {
             if (!editor) return;
@@ -249,8 +312,10 @@ const NewsEditorPage = () => {
                 img.classList.add('inline-image');
                 wrapEditorImage(img);
             });
+
+            wrapExistingEditorEmbeds(editor);
         },
-        [attachInlineImageRemoveButton, wrapEditorImage]
+        [attachInlineImageRemoveButton, wrapEditorImage, wrapExistingEditorEmbeds]
     );
 
     const insertImageIntoEditor = (image) => {
@@ -290,6 +355,9 @@ const NewsEditorPage = () => {
         }
 
         updateEditorContent();
+        requestAnimationFrame(() => {
+            if (editorRef.current) refreshEditorEmbeds(editorRef.current);
+        });
     };
 
     const handleUseEvidenceAsFeatured = async (path, resolvedUrl) => {
@@ -347,6 +415,7 @@ const NewsEditorPage = () => {
             if (editorRef.current) {
                 editorRef.current.innerHTML = previousContent;
                 wrapExistingEditorImages(editorRef.current);
+                refreshEditorEmbeds(editorRef.current);
                 setEditorContent(previousContent);
                 setCurrentItem(prev => ({ ...prev, content: previousContent }));
             }
@@ -362,6 +431,7 @@ const NewsEditorPage = () => {
             if (editorRef.current) {
                 editorRef.current.innerHTML = nextContent;
                 wrapExistingEditorImages(editorRef.current);
+                refreshEditorEmbeds(editorRef.current);
                 setEditorContent(nextContent);
                 setCurrentItem(prev => ({ ...prev, content: nextContent }));
             }
@@ -622,6 +692,12 @@ const NewsEditorPage = () => {
         const clipboardData = e.clipboardData || window.clipboardData;
         const html = clipboardData.getData('text/html');
         const plain = clipboardData.getData('text/plain');
+        const trimmedPlain = plain?.trim();
+
+        if (trimmedPlain && isSocialEmbedUrl(trimmedPlain)) {
+            insertSocialEmbedIntoEditor(trimmedPlain);
+            return;
+        }
 
         const sanitizeHtml = (unsafeHtml) => {
             // Basic, lightweight sanitizer: removes script/style tags and event handlers
@@ -629,15 +705,22 @@ const NewsEditorPage = () => {
             const template = document.createElement('template');
             template.innerHTML = unsafeHtml || '';
 
-            const disallowedTags = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'META', 'LINK']);
+            const disallowedTags = new Set(['SCRIPT', 'STYLE', 'OBJECT', 'EMBED', 'META', 'LINK']);
 
             const walk = (node) => {
                 // Remove disallowed elements
                 if (node.nodeType === Node.ELEMENT_NODE) {
                     const el = node;
                     if (disallowedTags.has(el.tagName)) {
-                        el.remove();
-                        return;
+                        if (el.tagName === 'IFRAME' && isTrustedEmbedIframe(el.getAttribute('src'))) {
+                            // keep trusted social embed iframes
+                        } else if (el.tagName === 'IFRAME') {
+                            el.remove();
+                            return;
+                        } else {
+                            el.remove();
+                            return;
+                        }
                     }
                     // Strip event handlers and javascript: urls
                     [...el.attributes].forEach((attr) => {
@@ -707,7 +790,32 @@ const NewsEditorPage = () => {
 
         updateEditorContent();
         requestAnimationFrame(() => {
-            if (editorRef.current) wrapExistingEditorImages(editorRef.current);
+            if (editorRef.current) {
+                wrapExistingEditorImages(editorRef.current);
+                refreshEditorEmbeds(editorRef.current);
+            }
+        });
+    };
+
+    const insertSocialEmbedIntoEditor = async (input) => {
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        let parsed = typeof input === 'string' ? parseSocialEmbedUrl(input) : input;
+        if (!parsed) return;
+
+        if (parsed.platform === 'facebook' || typeof input === 'string') {
+            parsed = (await resolveSocialEmbedUrl(parsed)) || parsed;
+        }
+
+        const node = createSocialEmbedElement(parsed);
+        if (!node) return;
+
+        attachSocialEmbedRemoveButton(node);
+        insertNodeAtSelection(editor, node);
+        updateEditorContent();
+        requestAnimationFrame(() => {
+            if (editorRef.current) refreshEditorEmbeds(editorRef.current);
         });
     };
 
@@ -716,12 +824,13 @@ const NewsEditorPage = () => {
         if (editorRef.current && currentItem.content && !contentInitializedRef.current) {
             editorRef.current.innerHTML = currentItem.content;
             wrapExistingEditorImages(editorRef.current);
+            refreshEditorEmbeds(editorRef.current);
             setEditorContent(currentItem.content);
             contentInitializedRef.current = true;
             // Initialize history with initial content
             addToHistory(currentItem.content);
         }
-    }, [currentItem.content, wrapExistingEditorImages]);
+    }, [currentItem.content, wrapExistingEditorImages, refreshEditorEmbeds]);
 
     // Keyboard shortcuts for undo/redo
     useEffect(() => {
@@ -750,6 +859,57 @@ const NewsEditorPage = () => {
         }));
         if (value !== 'most_wanted') {
             setMostWantedPendingGalleryFiles([]);
+        }
+    };
+
+    const handlePreview = async () => {
+        setSaveFeedback({ error: '' });
+
+        try {
+            let bountyDetails = null;
+            if (currentItem.category === 'bounty' && currentItem.bounty_id) {
+                const { data } = await supabase
+                    .from('bounties')
+                    .select('bounty_amount, evidence, location, state, type_of_crime')
+                    .eq('id', currentItem.bounty_id)
+                    .maybeSingle();
+                bountyDetails = data;
+            }
+
+            const editorHtml =
+                currentItem.category === 'most_wanted'
+                    ? null
+                    : editorRef.current?.innerHTML ?? currentItem.content ?? editorContent;
+
+            const previewPayload = await buildNewsPreviewPayload({
+                currentItem,
+                editorHtml,
+                featuredImageUrl,
+                featuredImageFile,
+                pendingGalleryFiles: mostWantedPendingGalleryFiles,
+                publishedEvidencePaths,
+                bountyDetails,
+            });
+
+            const validationError = validateNewsPreviewPayload(previewPayload);
+            if (validationError) {
+                setSaveFeedback({ error: validationError });
+                return;
+            }
+
+            const previewId = storeNewsPreviewPayload(previewPayload);
+            const previewWindow = openNewsPreviewWindow(previewId, previewPayload);
+
+            if (!previewWindow) {
+                router.push(getNewsPreviewPath(previewId));
+            }
+        } catch (error) {
+            console.error('Preview failed:', error);
+            const message =
+                error?.name === 'QuotaExceededError'
+                    ? 'Preview content is too large to store locally. Remove some inline images and try again.'
+                    : error?.message || 'Could not open preview. Please try again.';
+            setSaveFeedback({ error: message });
         }
     };
 
@@ -1242,6 +1402,17 @@ const NewsEditorPage = () => {
                                                         <ImageIcon className="h-4 w-4" />
                                                     </Button>
                                                 </div>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setEmbedDialogOpen(true)}
+                                                    disabled={isUploading}
+                                                    title="Embed YouTube, X, Facebook, or TikTok video"
+                                                >
+                                                    <Share2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </div>
                                         
@@ -1258,8 +1429,14 @@ const NewsEditorPage = () => {
                                         />
                                         
                                         <p className="text-xs text-muted-foreground">
-                                            Tip: Use the × on an image to remove it from the content.
+                                            Tip: Use the × on an image or embed to remove it from the content. You can also paste a public YouTube, X, Facebook, or TikTok URL directly into the editor.
                                         </p>
+
+                                        <SocialEmbedInsertDialog
+                                            open={embedDialogOpen}
+                                            onOpenChange={setEmbedDialogOpen}
+                                            onInsert={insertSocialEmbedIntoEditor}
+                                        />
                                     </div>
                                     </>
                                     )}
@@ -1418,15 +1595,27 @@ const NewsEditorPage = () => {
 
                             {/* Actions — pinned to bottom of sticky sidebar */}
                             <div className="shrink-0 space-y-2 border-t border-border bg-background/95 pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                                <Button
-                                    variant="default"
-                                    onClick={handleSave}
-                                    loading={isUploading}
-                                    className="w-full"
-                                >
-                                    <Save className="mr-2 h-4 w-4" />
-                                    {currentItem.status === 'published' ? 'Publish' : 'Save draft'}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handlePreview}
+                                        disabled={isUploading}
+                                        className="flex-1"
+                                    >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Preview
+                                    </Button>
+                                    <Button
+                                        variant="default"
+                                        onClick={handleSave}
+                                        loading={isUploading}
+                                        className="flex-1"
+                                    >
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {currentItem.status === 'published' ? 'Publish' : 'Save draft'}
+                                    </Button>
+                                </div>
 
                                 <Button
                                     variant="outline"

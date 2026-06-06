@@ -37,6 +37,8 @@ export default function ReportFormWizard({
   mostWantedContext,
   isSubmitting,
   onHeaderChange,
+  onStepChange,
+  onSubmitIntent,
   hasLgasForState,
 }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -99,14 +101,18 @@ export default function ReportFormWizard({
   };
 
   const goToStep = (step, dir = step > currentStep ? 1 : -1) => {
+    setFieldError({ message: '', focusId: null });
     setDirection(dir);
     setCurrentStep(step);
     notifyHeader(step, dir);
+    onStepChange?.(step);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleContinue = () => {
-    if (!runValidation()) return;
+    const stepId = steps[currentStep - 1]?.id;
+    if (!stepId || stepId === 'finish') return;
+    if (!runValidation(stepId)) return;
     if (currentStep < totalSteps) goToStep(currentStep + 1, 1);
   };
 
@@ -302,7 +308,9 @@ export default function ReportFormWizard({
             onClick={(e) => {
               if (!runValidation('finish')) {
                 e.preventDefault();
+                return;
               }
+              onSubmitIntent?.();
             }}
           >
             {submitLabel}
@@ -319,6 +327,7 @@ export default function ReportFormWizard({
         submitLabel={submitLabel}
         showSkip={activeStepId === 'evidence'}
         onSkip={handleSkipEvidence}
+        onSubmitIntent={onSubmitIntent}
       />
     </>
   );

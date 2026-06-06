@@ -401,6 +401,20 @@ const PUBLISHED_INLINE_STYLE_PROPS_TO_STRIP = /^((?:background(?:-color)?)|color
 /**
  * Remove editor inline text colors so published article body uses prose defaults.
  */
+/**
+ * Remove news-editor-only social embed controls (× button).
+ */
+export const stripEditorSocialEmbedControls = (html) => {
+  if (!html || typeof window === 'undefined') return html || '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  doc.querySelectorAll('.social-embed-remove').forEach((button) => button.remove());
+
+  return doc.body.innerHTML;
+};
+
 export const stripPublishedInlineTextStyles = (html) => {
   if (!html || typeof window === 'undefined') return html || '';
 

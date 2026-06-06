@@ -45,6 +45,17 @@ export function formatDateForInput(date) {
   return d.toISOString().split('T')[0];
 }
 
+export function formatTimeSeenDisplay(value) {
+  if (!value?.trim()) return '';
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value;
+  const hours = Number(match[1]);
+  const minutes = match[2];
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${minutes} ${period}`;
+}
+
 export function parseDateInput(value) {
   if (!value) return null;
   const d = new Date(value);

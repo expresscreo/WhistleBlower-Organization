@@ -1,6 +1,6 @@
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { PageErrorBanner } from '@/components/ui/form-feedback';
 import { Loader2, Calendar, Info, Coins, MapPin } from 'lucide-react';
@@ -22,6 +22,63 @@ import MostWantedPostLayout from '@/components/news/MostWantedPostLayout';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import { getBountyInfo } from '@/lib/bountyCta';
 import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
+import {
+  buildBountySubmitReportHref,
+  buildMostWantedSubmitReportHref,
+  buildNewsPostSubmitReportHref,
+} from '@/lib/submitReportHref';
+import { useStickyReportHref } from '@/contexts/ReportCtaContext';
+
+function getMostWantedInfo(post) {
+    if (post.category !== 'most_wanted') return null;
+
+    const title = post.title.toLowerCase();
+    const content = post.content.toLowerCase();
+    const combinedText = `${title} ${content}`;
+
+    const personKeywords = ['person', 'individual', 'suspect', 'criminal', 'fugitive', 'wanted', 'man', 'woman', 'boy', 'girl', 'teenager', 'adult', 'elderly'];
+    const organizationKeywords = ['organization', 'gang', 'group', 'syndicate', 'cartel', 'network', 'ring', 'crew'];
+    const locationKeywords = ['location', 'place', 'building', 'house', 'property', 'area', 'site', 'venue', 'facility', 'premises'];
+    const vehicleKeywords = ['vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bike', 'van', 'suv', 'automobile', 'transport'];
+
+    if (personKeywords.some((keyword) => combinedText.includes(keyword))) {
+        return {
+            type: 'person',
+            buttonText: 'Report Information About This Person',
+            description: 'Have information about this wanted person? Submit it anonymously and help bring them to justice.',
+        };
+    }
+
+    if (organizationKeywords.some((keyword) => combinedText.includes(keyword))) {
+        return {
+            type: 'organization',
+            buttonText: 'Report Information About This Organization',
+            description: 'Have information about this wanted organization? Submit it anonymously and help authorities.',
+        };
+    }
+
+    if (locationKeywords.some((keyword) => combinedText.includes(keyword))) {
+        return {
+            type: 'location',
+            buttonText: 'Report Information About This Location',
+            description: 'Have information about this wanted location? Submit it anonymously and help authorities.',
+        };
+    }
+
+    if (vehicleKeywords.some((keyword) => combinedText.includes(keyword))) {
+        return {
+            type: 'vehicle',
+            buttonText: 'Report Information About This Vehicle',
+            description: 'Have information about this wanted vehicle? Submit it anonymously and help authorities.',
+        };
+    }
+
+    return {
+        type: 'general',
+        buttonText: 'Report Information About This Case',
+        description: 'Have information about this wanted case? Submit it anonymously and help bring justice.',
+    };
+}
 
 const NewsPostPage = () => {
     const { slug } = useParams();
@@ -32,62 +89,20 @@ const NewsPostPage = () => {
     const [loading, setLoading] = useState(true);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
 
-    const getMostWantedInfo = (post) => {
-        if (post.category !== 'most_wanted') return null;
-        
-        const title = post.title.toLowerCase();
-        const content = post.content.toLowerCase();
-        const combinedText = `${title} ${content}`;
-        
-        // Keywords for different most wanted types
-        const personKeywords = ['person', 'individual', 'suspect', 'criminal', 'fugitive', 'wanted', 'man', 'woman', 'boy', 'girl', 'teenager', 'adult', 'elderly'];
-        const organizationKeywords = ['organization', 'gang', 'group', 'syndicate', 'cartel', 'network', 'ring', 'crew'];
-        const locationKeywords = ['location', 'place', 'building', 'house', 'property', 'area', 'site', 'venue', 'facility', 'premises'];
-        const vehicleKeywords = ['vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bike', 'van', 'suv', 'automobile', 'transport'];
-        
-        // Check for person-related content
-        if (personKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'person',
-                buttonText: 'Report Information About This Person',
-                description: 'Have information about this wanted person? Submit it anonymously and help bring them to justice.'
-            };
+    const stickyReportHref = useMemo(() => {
+        if (!post) return null;
+        if (post.category === 'most_wanted') {
+            return buildNewsPostSubmitReportHref(post, {
+                mostWantedType: getMostWantedInfo(post)?.type,
+            });
         }
-        
-        // Check for organization-related content
-        if (organizationKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'organization',
-                buttonText: 'Report Information About This Organization',
-                description: 'Have information about this wanted organization? Submit it anonymously and help authorities.'
-            };
+        if (post.category === 'bounty' && post.bounty_id) {
+            return buildNewsPostSubmitReportHref(post);
         }
-        
-        // Check for location-related content
-        if (locationKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'location',
-                buttonText: 'Report Information About This Location',
-                description: 'Have information about this wanted location? Submit it anonymously and help authorities.'
-            };
-        }
-        
-        // Check for vehicle-related content
-        if (vehicleKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'vehicle',
-                buttonText: 'Report Information About This Vehicle',
-                description: 'Have information about this wanted vehicle? Submit it anonymously and help authorities.'
-            };
-        }
-        
-        // Default fallback
-        return {
-            type: 'general',
-            buttonText: 'Report Information About This Case',
-            description: 'Have information about this wanted case? Submit it anonymously and help bring justice.'
-        };
-    };
+        return null;
+    }, [post]);
+
+    useStickyReportHref(stickyReportHref);
 
     const fetchPost = useCallback(async () => {
         setLoading(true);
@@ -260,7 +275,11 @@ const NewsPostPage = () => {
                                 });
                                 return bountyInfo && (
                                     <div className="text-center py-6 border-t border-b bg-primary/5 rounded-lg">
-                                        <Link href={`/submit-report?bounty_id=${post.bounty_id}&bounty_title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}`}>
+                                        <Link href={buildBountySubmitReportHref({
+                                            bountyId: post.bounty_id,
+                                            title: post.title,
+                                            category: post.category,
+                                        })}>
                                             <Button size="lg" className="w-full md:w-auto uppercase">
                                                 <Info className="mr-2 h-5 w-5" />
                                                 {bountyInfo.buttonText}
@@ -277,7 +296,11 @@ const NewsPostPage = () => {
                                 const mostWantedInfo = getMostWantedInfo(post);
                                 return mostWantedInfo && (
                                     <div className="text-center py-6 border-t border-b border-[#2e2e2e] bg-red-50 dark:bg-red-950/20 rounded-lg">
-                                        <Link href={`/submit-report?news_id=${encodeURIComponent(post.id)}&bounty_title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}&most_wanted_type=${encodeURIComponent(mostWantedInfo.type)}`}>
+                                        <Link href={buildMostWantedSubmitReportHref({
+                                            newsId: post.id,
+                                            title: post.title,
+                                            mostWantedType: mostWantedInfo.type,
+                                        })}>
                                             <Button size="lg" className="w-full md:w-auto bg-red-600 hover:bg-red-700 uppercase">
                                                 <Info className="mr-2 h-5 w-5" />
                                                 {mostWantedInfo.buttonText}

@@ -15,6 +15,7 @@ export default function WizardMobileFooter({
   continueLabel = 'Continue',
   showSkip = false,
   onSkip,
+  onSubmitIntent,
 }) {
   const [mounted, setMounted] = useState(false);
   const isLastStep = currentStep === totalSteps;
@@ -49,6 +50,7 @@ export default function WizardMobileFooter({
             form={formId}
             loading={isSubmitting}
             className="flex-1"
+            onClick={() => onSubmitIntent?.()}
           >
             {submitLabel}
           </Button>

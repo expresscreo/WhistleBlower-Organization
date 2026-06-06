@@ -90,28 +90,39 @@ const TrackPage = () => {
                         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">Track Your Submission</h1>
                         <p className="text-base sm:text-lg text-muted-foreground mb-8 px-4">Enter your Report or Bounty ID and password to securely check its status.</p>
                         <Card className="max-w-xl mx-auto p-4 sm:p-6">
-                            <form onSubmit={handleSearch} className="space-y-4">
+                            <form onSubmit={handleSearch} className="space-y-4" autoComplete="off">
                                 <div className="text-left">
-                                    <Label htmlFor="trackId">Report / Bounty ID</Label>
+                                    <Label htmlFor="track-submission-id">Report / Bounty ID</Label>
                                     <Input
-                                        id="trackId"
-                                        name="track-submission-id"
+                                        id="track-submission-id"
+                                        name="tracking_reference_id"
                                         type="text"
                                         inputMode="text"
-                                        autoComplete="off"
+                                        autoComplete="one-time-code"
                                         autoCorrect="off"
                                         autoCapitalize="characters"
                                         spellCheck={false}
                                         data-1p-ignore="true"
                                         data-lpignore="true"
+                                        data-form-type="other"
+                                        readOnly
+                                        onFocus={(e) => e.target.removeAttribute('readonly')}
                                         placeholder="Enter your ID (e.g., WB123... or WBB123...)"
                                         value={idInput}
                                         onChange={(e) => setIdInput(e.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-2 relative text-left">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Input id="password" type={!showPassword ? "password" : "text"} value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} disabled={loading} />
+                                    <Label htmlFor="track-password">Password</Label>
+                                    <Input
+                                        id="track-password"
+                                        name="tracking_password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        autoComplete="current-password"
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        disabled={loading}
+                                    />
                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-7 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>

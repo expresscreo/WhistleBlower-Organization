@@ -1,19 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   enrichHtmlMediaContent,
   needsMediaEnrichment,
   stripEditorInlineImageControls,
+  stripEditorSocialEmbedControls,
   stripHtmlThumbnailHover,
   stripPublishedInlineTextStyles,
   wrapHtmlThumbnails,
 } from '@/lib/mediaUtils';
+import { hydrateSocialEmbeds } from '@/lib/socialEmbeds';
 import { cn } from '@/lib/utils';
 
 const RichTextMediaContent = ({ html, evidence = [], className = '', thumbnailHover = true }) => {
   const [content, setContent] = useState(null);
   const [ready, setReady] = useState(false);
+  const containerRef = useRef(null);
   const evidenceKey = JSON.stringify(evidence);
 
   useEffect(() => {
@@ -41,6 +44,7 @@ const RichTextMediaContent = ({ html, evidence = [], className = '', thumbnailHo
       } else if (!thumbnailHover) {
         output = stripHtmlThumbnailHover(output);
         output = stripEditorInlineImageControls(output);
+        output = stripEditorSocialEmbedControls(output);
         output = stripPublishedInlineTextStyles(output);
       }
 
@@ -57,6 +61,11 @@ const RichTextMediaContent = ({ html, evidence = [], className = '', thumbnailHo
     };
   }, [html, evidenceKey, thumbnailHover]);
 
+  useEffect(() => {
+    if (!ready || !containerRef.current) return;
+    hydrateSocialEmbeds(containerRef.current);
+  }, [ready, content]);
+
   if (!ready) {
     return <div className={`${className} min-h-[4rem] animate-pulse bg-muted/30 rounded-md`} aria-hidden />;
   }
@@ -65,7 +74,8 @@ const RichTextMediaContent = ({ html, evidence = [], className = '', thumbnailHo
 
   return (
     <div
-      className={cn(className, !thumbnailHover && 'rich-text-no-thumbnail-hover')}
+      ref={containerRef}
+      className={cn(className, !thumbnailHover && 'rich-text-no-thumbnail-hover', 'rich-text-social-embeds')}
       dangerouslySetInnerHTML={{ __html: content }}
     />
   );

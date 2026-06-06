@@ -3,29 +3,41 @@
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import StickyReportNowButton from '@/components/StickyReportNowButton';
 import { MobileMenuProvider } from '@/contexts/MobileMenuContext';
-
-const PAGES_WITHOUT_FOOTER = ['/track', '/submit-report', '/place-bounty'];
+import { ReportCtaProvider } from '@/contexts/ReportCtaContext';
+import { cn } from '@/lib/utils';
+import { isMarketingPublicPage, isPublicPageWithFooter } from '@/lib/publicPagePaths';
 
 export default function PublicLayout({ children }) {
   const pathname = usePathname();
-  const showFooter = !PAGES_WITHOUT_FOOTER.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
-  );
+  const showFooter = isPublicPageWithFooter(pathname);
+  const showStickyReportCta = isMarketingPublicPage(pathname);
 
   return (
     <MobileMenuProvider>
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Navbar />
-        <main id="main-content" className={showFooter ? undefined : 'flex-1 flex flex-col min-h-0'}>
-          {children}
-        </main>
-        {showFooter && (
-          <div className="relative z-10 shrink-0">
-            <Footer />
-          </div>
-        )}
-      </div>
+      <ReportCtaProvider>
+        <div
+          className={cn(
+            'min-h-screen flex flex-col bg-background text-foreground',
+            showStickyReportCta && 'max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))]'
+          )}
+        >
+          <Navbar />
+          <main
+            id="main-content"
+            className={showFooter ? undefined : 'flex-1 flex flex-col min-h-0'}
+          >
+            {children}
+          </main>
+          {showFooter && (
+            <div className="relative z-10 shrink-0">
+              <Footer />
+            </div>
+          )}
+          {showStickyReportCta && <StickyReportNowButton />}
+        </div>
+      </ReportCtaProvider>
     </MobileMenuProvider>
   );
 }

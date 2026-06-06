@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -10,8 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { dateInputFieldClasses, inputFieldClasses, selectTriggerFieldClasses } from '@/lib/fieldStyles';
-import { getCategories, formatDateForInput } from '../reportFormUtils';
+import {
+  formatDateForInput,
+  formatIncidentDate,
+  formatTimeSeenDisplay,
+  getCategories,
+} from '../reportFormUtils';
 import { useReportFormLocation } from '../useReportFormLocation';
 import { FieldError } from '@/components/ui/form-feedback';
 import { TipFieldGroup } from '../TipFieldLabel';
@@ -27,7 +33,6 @@ export default function ContextStep({
   mostWantedContext,
   fieldErrors = {},
 }) {
-  const timeInputRef = useRef(null);
   const { states, lgas, hasLgasForState, handleStateChange } = useReportFormLocation(
     formData,
     handleSelectChange
@@ -58,22 +63,6 @@ export default function ContextStep({
   const dateLabel = isMostWantedMode
     ? `Date you saw ${subjectPronoun}`
     : 'Date of incident';
-  const openTimePicker = () => {
-    const input = timeInputRef.current;
-    if (!input) return;
-    try {
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
-      } else {
-        input.focus();
-        input.click();
-      }
-    } catch {
-      input.focus();
-      input.click();
-    }
-  };
-
   return (
     <div className="w-full min-w-0 max-w-full space-y-4">
       {isMostWantedMode && (
@@ -223,21 +212,37 @@ export default function ContextStep({
             label={dateLabel}
             htmlFor="dateOfIncident"
           >
-            {/* Mobile: native date */}
-            <Input
-              id="dateOfIncident"
-              type="date"
-              max={maxDate}
-              aria-label={dateLabel}
-              className={`md:hidden ${dateInputFieldClasses}`}
-              value={formatDateForInput(formData.dateOfIncident)}
-              onChange={(e) =>
-                handleSelectChange(
-                  'dateOfIncident',
-                  e.target.value ? new Date(e.target.value) : null
-                )
-              }
-            />
+            {/* Mobile: button-styled native date picker */}
+            <div className="relative w-full md:hidden">
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden
+                className={cn(
+                  inputFieldClasses,
+                  'pointer-events-none w-full text-left',
+                  !formData.dateOfIncident && 'text-muted-foreground'
+                )}
+              >
+                {formData.dateOfIncident
+                  ? formatIncidentDate(formData.dateOfIncident)
+                  : 'Select date'}
+              </button>
+              <input
+                id="dateOfIncident"
+                type="date"
+                max={maxDate}
+                aria-label={dateLabel}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                value={formatDateForInput(formData.dateOfIncident)}
+                onChange={(e) =>
+                  handleSelectChange(
+                    'dateOfIncident',
+                    e.target.value ? new Date(`${e.target.value}T12:00:00`) : null
+                  )
+                }
+              />
+            </div>
             <FieldError message={fieldErrors.dateOfIncident} className="mt-2 md:hidden" />
 
             {/* Desktop: react-datepicker */}
@@ -260,21 +265,30 @@ export default function ContextStep({
           label="Time seen"
           htmlFor="timeSeen"
         >
-          <button
-            type="button"
-            onClick={openTimePicker}
-            className="w-full"
-          >
-            <Input
-              ref={timeInputRef}
+          <div className="relative w-full">
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden
+              className={cn(
+                inputFieldClasses,
+                'pointer-events-none w-full text-left',
+                !formData.timeSeen?.trim() && 'text-muted-foreground'
+              )}
+            >
+              {formData.timeSeen?.trim()
+                ? formatTimeSeenDisplay(formData.timeSeen)
+                : 'Select time'}
+            </button>
+            <input
               id="timeSeen"
               type="time"
               aria-label="Time seen"
-              className={`${inputFieldClasses} cursor-pointer`}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               value={formData.timeSeen || ''}
               onChange={(e) => handleSelectChange('timeSeen', e.target.value)}
             />
-          </button>
+          </div>
           <FieldError message={fieldErrors.timeSeen} className="mt-2" />
         </TipFieldGroup>
         </>
