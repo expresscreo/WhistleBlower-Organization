@@ -1,3 +1,8 @@
-'use client';
+import ContactPage from '@/views/ContactPage';
+import { buildStaticPageMetadata } from '@/lib/nextMetadata';
 
-export { default } from '@/views/ContactPage';
+export const metadata = buildStaticPageMetadata('contact', '/contact');
+
+export default function Page() {
+  return <ContactPage />;
+}

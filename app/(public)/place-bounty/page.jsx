@@ -1,3 +1,8 @@
-'use client';
+import PlaceBountyPage from '@/views/PlaceBountyPage';
+import { buildStaticPageMetadata } from '@/lib/nextMetadata';
 
-export { default } from '@/views/PlaceBountyPage';
+export const metadata = buildStaticPageMetadata('placeBounty', '/place-bounty');
+
+export default function Page() {
+  return <PlaceBountyPage />;
+}

@@ -1,3 +1,8 @@
-'use client';
+import HowWeSecureDataPage from '@/views/HowWeSecureDataPage';
+import { buildStaticPageMetadata } from '@/lib/nextMetadata';
 
-export { default } from '@/views/HowWeSecureDataPage';
+export const metadata = buildStaticPageMetadata('secureData', '/how-we-secure-your-data');
+
+export default function Page() {
+  return <HowWeSecureDataPage />;
+}

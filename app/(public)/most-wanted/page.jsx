@@ -2,7 +2,7 @@ import NewsPage from '@/views/NewsPage';
 import JsonLd from '@/components/JsonLd';
 import { getNewsCategoryMetadata } from '@/lib/pageMetadata';
 
-const { metadata: pageMetadata, structuredData } = getNewsCategoryMetadata('all');
+const { metadata: pageMetadata, structuredData } = getNewsCategoryMetadata('most_wanted');
 
 export const metadata = pageMetadata;
 

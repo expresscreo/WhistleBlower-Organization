@@ -66,6 +66,10 @@ export function resolveGaMeasurementId() {
   return readEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID') || defaultGaMeasurementId;
 }
 
+export function resolveGoogleSiteVerification() {
+  return readEnv('GOOGLE_SITE_VERIFICATION', 'NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION');
+}
+
 export const publicEnv = {
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
@@ -75,6 +79,7 @@ export const publicEnv = {
   ),
   appUrl: readEnv('NEXT_PUBLIC_APP_URL', 'VITE_APP_URL'),
   gaMeasurementId: resolveGaMeasurementId(),
+  googleSiteVerification: resolveGoogleSiteVerification(),
 };
 
 export function getPaystackPublicKey() {

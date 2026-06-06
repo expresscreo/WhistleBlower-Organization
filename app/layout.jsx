@@ -1,83 +1,70 @@
 import '@/index.css';
 import ScopedGoogleAnalytics from '@/components/ScopedGoogleAnalytics';
 import Providers from './providers';
-import { resolveGaMeasurementId } from '@/lib/env';
+import { resolveGaMeasurementId, resolveGoogleSiteVerification } from '@/lib/env';
+import { resolveSiteUrl } from '@/lib/siteUrl';
+import { SITE_CONFIG, STRUCTURED_DATA_TEMPLATES } from '@/lib/seoUtils';
+import JsonLd from '@/components/JsonLd';
 
 const gaMeasurementId = resolveGaMeasurementId();
 const enableAnalytics = process.env.NODE_ENV === 'production';
+const siteUrl = resolveSiteUrl();
+const googleVerification = resolveGoogleSiteVerification();
 
 export const metadata = {
-  title: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
-  description:
-    'Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.',
-  metadataBase: new URL('https://whistleblower.ng'),
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
+    template: '%s',
+  },
+  description: SITE_CONFIG.description,
   alternates: {
     canonical: '/',
+    types: {
+      'application/rss+xml': `${siteUrl}/feed.xml`,
+    },
   },
   openGraph: {
     title: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
-    description:
-      'Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.',
-    url: 'https://whistleblower.ng/',
-    siteName: 'WhistleBlower.ng',
-    images: [
-      {
-        url: 'https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg',
-      },
-    ],
+    description: SITE_CONFIG.description,
+    url: `${siteUrl}/`,
+    siteName: SITE_CONFIG.name,
+    images: [{ url: SITE_CONFIG.defaultImage }],
     locale: 'en_NG',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
+    site: SITE_CONFIG.twitterHandle,
     title: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
-    description:
-      'Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.',
-    images: ['https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg'],
+    description: SITE_CONFIG.description,
+    images: [SITE_CONFIG.defaultImage],
   },
   icons: {
     icon: '/WBMedia/general/FAVICON-WhistleBlower.png',
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  ...(googleVerification
+    ? {
+        verification: {
+          google: googleVerification,
+        },
+      }
+    : {}),
 };
 
 export const viewport = {
   themeColor: '#FF5100',
-};
-
-const organizationJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'WhistleBlower.ng',
-  url: 'https://whistleblower.ng',
-  logo: 'https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg',
-  contactPoint: {
-    '@type': 'ContactPoint',
-    email: 'support@whistleblower.ng',
-    contactType: 'Customer Support',
-  },
-};
-
-const faqJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'Is whistleblowing anonymous?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. You can report anonymously or provide contact details if you want to claim a reward.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'How do I get my reward?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Rewards are paid through Interswitch PayCode without exposing your personal bank details.',
-      },
-    },
-  ],
 };
 
 export default function RootLayout({ children }) {
@@ -94,16 +81,8 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap"
           rel="stylesheet"
         />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationJsonLd),
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
+        <link rel="alternate" type="application/rss+xml" title={`${SITE_CONFIG.name} News`} href={`${siteUrl}/feed.xml`} />
+        <JsonLd data={STRUCTURED_DATA_TEMPLATES.organization()} />
       </head>
       <body>
         <Providers>{children}</Providers>

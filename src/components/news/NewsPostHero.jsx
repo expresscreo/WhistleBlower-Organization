@@ -9,7 +9,7 @@ const CATEGORY_HERO_CONFIG = {
   most_wanted: {
     label: 'Most Wanted',
     backLabel: 'Back to Most Wanted',
-    backHref: '/news/most_wanted',
+    backHref: '/most-wanted',
     heroClass: 'bg-red-600',
     icon: AlertTriangle,
   },

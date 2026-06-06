@@ -11,6 +11,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  async redirects() {
+    return [
+      {
+        source: '/news/most_wanted',
+        destination: '/most-wanted',
+        permanent: true,
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_SUPABASE_URL: resolveSupabaseUrl(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: resolveSupabaseAnonKey(),

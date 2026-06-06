@@ -1,3 +1,5 @@
+'use client';
+
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -21,6 +23,10 @@ import {
 import MaximizableImage from '@/components/media/MaximizableImage';
 import CompactNewsListItem from '@/components/news/CompactNewsListItem';
 import FeaturedNewsListItem from '@/components/news/FeaturedNewsListItem';
+import {
+    getNewsCategoryFromPathname,
+    getNewsCategoryPath,
+} from '@/lib/newsCategoryPaths';
 
 const NewsCard = ({ item }) => {
     const bountyPostUrl = item.bounty_id ? `/bounties/${slugify(item.title)}` : null;
@@ -130,11 +136,10 @@ const NewsPage = () => {
     const [lgas, setLgas] = useState([]);
     const [visibleCount, setVisibleCount] = useState(NEWS_PER_PAGE);
 
-    const category = useMemo(() => {
-        const [, firstSegment, secondSegment] = pathname.split('/');
-        if (firstSegment !== 'news') return 'all';
-        return categoryDetails[secondSegment] ? secondSegment : 'all';
-    }, [pathname]);
+    const category = useMemo(
+        () => getNewsCategoryFromPathname(pathname),
+        [pathname]
+    );
     const currentCategory = categoryDetails[category] || categoryDetails.all;
     const filteredNews = useMemo(
         () => filterNewsByLocation(news, { state: selectedState, lga: selectedLga }, bountyLookup),
@@ -259,8 +264,7 @@ const NewsPage = () => {
         const activeCategory = category || 'all';
         if (nextCategory === activeCategory) return;
 
-        const href = nextCategory !== 'all' ? `/news/${nextCategory}` : '/news';
-        router.push(href);
+        router.push(getNewsCategoryPath(nextCategory));
     };
 
     const handleLgaChange = (event) => {
@@ -275,7 +279,7 @@ const NewsPage = () => {
     const seoMeta = generateSEOMeta({
         title: getPageTitle(category),
         description: getPageDescription(category),
-        url: category === 'all' ? '/news' : `/news/${category}`,
+        url: getNewsCategoryPath(category),
         keywords: category === 'bounty' ? ['bounty', 'reward', 'active bounties', 'information bounty', 'Nigeria bounty'] :
                  category === 'most_wanted' ? ['most wanted', 'fugitive', 'criminal', 'wanted person', 'law enforcement'] :
                  category === 'news' ? ['news', 'latest news', 'security updates', 'crime news', 'Nigeria news'] :

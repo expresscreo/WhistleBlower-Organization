@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp, HelpCircle, Shield, FileText, Gift, User, Server, Award, BookOpen } from 'lucide-react';

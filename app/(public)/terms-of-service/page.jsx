@@ -1,3 +1,8 @@
-'use client';
+import TermsOfServicePage from '@/views/TermsOfServicePage';
+import { buildStaticPageMetadata } from '@/lib/nextMetadata';
 
-export { default } from '@/views/TermsOfServicePage';
+export const metadata = buildStaticPageMetadata('terms', '/terms-of-service');
+
+export default function Page() {
+  return <TermsOfServicePage />;
+}

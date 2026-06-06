@@ -1,3 +1,8 @@
-'use client';
+import FAQPage from '@/views/FAQPage';
+import { buildStaticPageMetadata } from '@/lib/nextMetadata';
 
-export { default } from '@/views/FAQPage';
+export const metadata = buildStaticPageMetadata('faq', '/faq');
+
+export default function Page() {
+  return <FAQPage />;
+}
