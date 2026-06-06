@@ -35,6 +35,7 @@ import {
   fetchHunterReportsForBounty,
   isValidAdminBountyStatusTransition,
 } from '@/lib/bountyStatus';
+import { BOUNTY_CHAT_CONFIG } from '@/lib/chatEntityConfig';
 
 const formatSupabaseError = (error, fallback = 'Update failed.') => {
     if (!error) return fallback;
@@ -145,7 +146,7 @@ const BountyDetails = () => {
     const { id } = useParams();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { invalidateCache } = useAdminData();
     const [bounty, setBounty] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -160,6 +161,24 @@ const BountyDetails = () => {
     const [hunterReportCount, setHunterReportCount] = useState(0);
     const [hunterReports, setHunterReports] = useState([]);
     const [loadingHunterReports, setLoadingHunterReports] = useState(false);
+
+    const fetchBountyUpdates = useCallback(async (bountyUuid, forceRefresh = false) => {
+        if (!bountyUuid) return;
+        if (!forceRefresh && document.visibilityState !== 'visible') return;
+
+        const { data, error } = await supabase
+            .from('bounty_updates')
+            .select('*')
+            .eq('bounty_id', bountyUuid)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Failed to load bounty chat updates:', error);
+            return;
+        }
+
+        setUpdates(data || []);
+    }, []);
 
     const refreshHunterSubmissions = useCallback(async (bountyId) => {
         setLoadingHunterReports(true);
@@ -189,12 +208,67 @@ const BountyDetails = () => {
 
         setBounty(data);
         await refreshHunterSubmissions(data.id);
+        await fetchBountyUpdates(data.id);
+        await supabase.from('bounties').update({ admin_has_viewed: true }).eq('id', data.id);
         setLoading(false);
-    }, [id, router, refreshHunterSubmissions]);
+    }, [id, router, refreshHunterSubmissions, fetchBountyUpdates]);
+
+    const markBountyMessagesAsRead = useCallback(async (bountyUuid, readerId) => {
+        if (!bountyUuid || !readerId) return;
+        const { error } = await supabase.rpc('mark_bounty_messages_as_read', {
+            p_bounty_id: bountyUuid,
+            p_reader_id: readerId,
+        });
+        if (error) console.error('Error marking bounty messages as read:', error);
+    }, []);
 
     useEffect(() => {
         fetchBounty();
     }, [fetchBounty]);
+
+    useEffect(() => {
+        if (!bounty?.id || !user?.id) return;
+
+        const channel = supabase
+            .channel(`bounty_chat_admin_${bounty.id}`)
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'bounty_updates', filter: `bounty_id=eq.${bounty.id}` },
+                async (payload) => {
+                    const newUpdate = payload.new;
+                    if (!newUpdate.updated_by) {
+                        setUpdates((prev) => {
+                            const exists = prev.find((item) => item.id === newUpdate.id);
+                            if (exists) return prev;
+                            return [...prev, newUpdate];
+                        });
+                    }
+                    if (document.visibilityState === 'visible' && !newUpdate.updated_by) {
+                        setTimeout(() => markBountyMessagesAsRead(bounty.id, user.id), 500);
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'bounty_updates', filter: `bounty_id=eq.${bounty.id}` },
+                () => fetchBountyUpdates(bounty.id, true)
+            )
+            .subscribe();
+
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'visible') {
+                await markBountyMessagesAsRead(bounty.id, user.id);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        markBountyMessagesAsRead(bounty.id, user.id);
+
+        return () => {
+            supabase.removeChannel(channel);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [bounty?.id, user?.id, fetchBountyUpdates, markBountyMessagesAsRead]);
 
     useEffect(() => {
         if (!id) return;
@@ -343,8 +417,58 @@ const BountyDetails = () => {
         }
     };
 
-    const handleSendMessage = () => {
-        // Messaging not implemented yet
+    const handleSendMessage = async (messageText = newMessage, replyToMessageId = null) => {
+        const messageToSend = (messageText || '').trim();
+        if (!messageToSend || !user || !bounty) return;
+        setIsSending(true);
+
+        const tempId = `temp-${Date.now()}`;
+        const optimisticUpdate = {
+            id: tempId,
+            bounty_id: bounty.id,
+            message: messageToSend,
+            updated_by: user.id,
+            created_at: new Date().toISOString(),
+            users: { name: profile?.name || 'You' },
+        };
+
+        setUpdates((prev) => [...prev, optimisticUpdate]);
+
+        try {
+            await supabase
+                .from('bounties')
+                .update({ placer_has_viewed: false })
+                .eq('id', bounty.id);
+
+            const insertPayload = {
+                bounty_id: bounty.id,
+                message: messageToSend,
+                updated_by: user.id,
+                is_read_by_placer: false,
+                is_read_by_admin: false,
+            };
+            if (replyToMessageId) {
+                insertPayload.reply_to_message_id = replyToMessageId;
+            }
+
+            const { data, error } = await supabase
+                .from('bounty_updates')
+                .insert(insertPayload)
+                .select('*')
+                .single();
+
+            if (error) throw error;
+
+            setUpdates((prev) =>
+                prev.map((item) => (item.id === tempId ? data : item))
+            );
+        } catch (error) {
+            console.error('Failed to send bounty message:', error);
+            setUpdates((prev) => prev.filter((item) => item.id !== tempId));
+            setNewMessage(messageToSend);
+        } finally {
+            setIsSending(false);
+        }
     };
 
     const handleSelectHunterReport = (reportUuid) => {
@@ -455,7 +579,24 @@ const BountyDetails = () => {
                             loading={loadingHunterReports}
                         />
 
-                        <ReportChat updates={updates} user={user} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} />
+                        <ReportChat
+                            entity={bounty}
+                            chatConfig={BOUNTY_CHAT_CONFIG}
+                            updates={updates}
+                            user={user}
+                            newMessage={newMessage}
+                            setNewMessage={setNewMessage}
+                            onSendMessage={handleSendMessage}
+                            isSending={isSending}
+                            onNewMessage={(newUpdate) => {
+                                setUpdates((prev) => {
+                                    const exists = prev.find((item) => item.id === newUpdate.id);
+                                    if (exists) return prev;
+                                    return [...prev, newUpdate];
+                                });
+                            }}
+                            onRefreshUpdates={() => fetchBountyUpdates(bounty.id, true)}
+                        />
                     </div>
                     <div className="space-y-8">
                         <ReportInfoCard report={selectedReport || bountyAsReport} />

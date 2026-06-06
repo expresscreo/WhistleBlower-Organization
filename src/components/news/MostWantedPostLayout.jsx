@@ -12,6 +12,7 @@ import {
   normalizeMostWantedDetails,
 } from '@/lib/mostWantedUtils';
 import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
+import PlainTextArticleContent from '@/components/media/PlainTextArticleContent';
 
 function FactList({ items }) {
   return (
@@ -79,9 +80,7 @@ export default function MostWantedPostLayout({ post, featuredImageUrl }) {
 
       {details.full_details?.trim() && (
         <Section title="Full Details">
-          <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">
-            {details.full_details}
-          </p>
+          <PlainTextArticleContent text={details.full_details} />
         </Section>
       )}
 
@@ -93,9 +92,7 @@ export default function MostWantedPostLayout({ post, featuredImageUrl }) {
 
       {details.additional_information?.trim() && (
         <Section title="Additional Information">
-          <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">
-            {details.additional_information}
-          </p>
+          <PlainTextArticleContent text={details.additional_information} />
         </Section>
       )}
 

@@ -56,6 +56,24 @@ export function authenticateTrackedBounty(bountyId, password) {
   return postJson('/api/track/bounty', { bountyId, password });
 }
 
+export function fetchTrackedBountyUpdates(bountyId, password) {
+  return postJson('/api/track/bounty/updates', { bountyId, password });
+}
+
+export function sendTrackedBountyMessage({
+  bountyId,
+  password,
+  message,
+  replyToMessageId,
+}) {
+  return postJson('/api/track/bounty/message', {
+    bountyId,
+    password,
+    message,
+    replyToMessageId,
+  });
+}
+
 export function updateTrackedBounty({
   bountyId,
   password,

@@ -20,6 +20,8 @@ import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
 import { hasStructuredMostWantedDetails } from '@/lib/mostWantedUtils';
 import MostWantedPostLayout from '@/components/news/MostWantedPostLayout';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
+import { getBountyInfo } from '@/lib/bountyCta';
+import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
 
 const NewsPostPage = () => {
     const { slug } = useParams();
@@ -29,74 +31,6 @@ const NewsPostPage = () => {
     const [bountyDetails, setBountyDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
-
-    // Function to determine bounty type and appropriate button text
-    const getBountyInfo = (post) => {
-        if (post.category !== 'bounty') return null;
-        
-        const title = post.title.toLowerCase();
-        const content = post.content.toLowerCase();
-        const combinedText = `${title} ${content}`;
-        
-        // Keywords for different bounty types
-        const personKeywords = ['person', 'individual', 'suspect', 'criminal', 'fugitive', 'wanted', 'man', 'woman', 'boy', 'girl', 'teenager', 'adult', 'elderly'];
-        const organizationKeywords = ['company', 'organization', 'corporation', 'business', 'firm', 'agency', 'group', 'society', 'association', 'institution'];
-        const locationKeywords = ['location', 'place', 'building', 'house', 'property', 'area', 'site', 'venue', 'facility', 'premises'];
-        const vehicleKeywords = ['vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bike', 'van', 'suv', 'automobile', 'transport'];
-        const itemKeywords = ['item', 'object', 'document', 'file', 'package', 'parcel', 'goods', 'product', 'material', 'equipment'];
-        
-        // Check for person-related content
-        if (personKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'person',
-                buttonText: 'Give Information About This Person',
-                description: 'Have information about this person? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for organization-related content
-        if (organizationKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'organization',
-                buttonText: 'Give Information About This Organization',
-                description: 'Have information about this organization? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for location-related content
-        if (locationKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'location',
-                buttonText: 'Give Information About This Location',
-                description: 'Have information about this location? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for vehicle-related content
-        if (vehicleKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'vehicle',
-                buttonText: 'Give Information About This Vehicle',
-                description: 'Have information about this vehicle? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for item-related content
-        if (itemKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'item',
-                buttonText: 'Give Information About This Item',
-                description: 'Have information about this item? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Default fallback
-        return {
-            type: 'general',
-            buttonText: 'Give Information About This Case',
-            description: 'Have information about this case? Submit it anonymously and earn the reward.'
-        };
-    };
 
     const getMostWantedInfo = (post) => {
         if (post.category !== 'most_wanted') return null;
@@ -320,7 +254,10 @@ const NewsPostPage = () => {
                             )}
 
                             {post.category === 'bounty' && (() => {
-                                const bountyInfo = getBountyInfo(post);
+                                const bountyInfo = getBountyInfo({
+                                    title: post.title,
+                                    content: post.content,
+                                });
                                 return bountyInfo && (
                                     <div className="text-center py-6 border-t border-b bg-primary/5 rounded-lg">
                                         <Link href={`/submit-report?bounty_id=${post.bounty_id}&bounty_title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}`}>
@@ -357,7 +294,7 @@ const NewsPostPage = () => {
                                 html={post.content}
                                 evidence={bountyDetails?.evidence || []}
                                 thumbnailHover={false}
-                                className="prose dark:prose-invert max-w-none text-lg leading-relaxed"
+                                className={PUBLISHED_ARTICLE_PROSE_CLASS}
                             />
                             )}
 

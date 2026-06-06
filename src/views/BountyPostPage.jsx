@@ -17,6 +17,8 @@ import RichTextMediaContent from '@/components/media/RichTextMediaContent';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
 import { BOUNTY_STATUSES_WITH_PUBLIC_PAGE } from '@/lib/bountyPostUrl';
+import { getBountyInfo } from '@/lib/bountyCta';
+import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
 
 const BountyPostPage = () => {
     const { slug } = useParams();
@@ -184,73 +186,10 @@ const BountyPostPage = () => {
         );
     }
 
-    // Function to determine bounty type and appropriate button text
-    const getBountyInfo = (bounty) => {
-        const title = (bounty.title || '').toLowerCase();
-        const content = String(bounty.description || '').replace(/<[^>]*>/g, ' ').toLowerCase();
-        const combinedText = `${title} ${content}`;
-        
-        // Keywords for different bounty types
-        const personKeywords = ['person', 'individual', 'suspect', 'criminal', 'fugitive', 'wanted', 'man', 'woman', 'boy', 'girl', 'teenager', 'adult', 'elderly'];
-        const organizationKeywords = ['company', 'organization', 'corporation', 'business', 'firm', 'agency', 'group', 'society', 'association', 'institution'];
-        const locationKeywords = ['location', 'place', 'building', 'house', 'property', 'area', 'site', 'venue', 'facility', 'premises'];
-        const vehicleKeywords = ['vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bike', 'van', 'suv', 'automobile', 'transport'];
-        const itemKeywords = ['item', 'object', 'document', 'file', 'package', 'parcel', 'goods', 'product', 'material', 'equipment'];
-        
-        // Check for person-related content
-        if (personKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'person',
-                buttonText: 'Give Information About This Person',
-                description: 'Have information about this person? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for organization-related content
-        if (organizationKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'organization',
-                buttonText: 'Give Information About This Organization',
-                description: 'Have information about this organization? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for location-related content
-        if (locationKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'location',
-                buttonText: 'Give Information About This Location',
-                description: 'Have information about this location? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for vehicle-related content
-        if (vehicleKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'vehicle',
-                buttonText: 'Give Information About This Vehicle',
-                description: 'Have information about this vehicle? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Check for item-related content
-        if (itemKeywords.some(keyword => combinedText.includes(keyword))) {
-            return {
-                type: 'item',
-                buttonText: 'Give Information About This Item',
-                description: 'Have information about this item? Submit it anonymously and earn the reward.'
-            };
-        }
-        
-        // Default fallback
-        return {
-            type: 'general',
-            buttonText: 'Give Information About This Case',
-            description: 'Have information about this case? Submit it anonymously and earn the reward.'
-        };
-    };
-
-    const bountyInfo = getBountyInfo(bounty);
+    const bountyInfo = getBountyInfo({
+        title: bounty.title,
+        content: bounty.description,
+    });
     const giveInfoUrl = `/submit-report?bounty_id=${bounty.id}&bounty_title=${encodeURIComponent(bounty.title)}`;
     const publishedEvidencePaths = getEvidencePathsForPublishedPost(
         bounty.published_evidence !== undefined ? { published_evidence: bounty.published_evidence } : null,
@@ -305,7 +244,7 @@ const BountyPostPage = () => {
                                     html={bounty.description}
                                     evidence={bounty.evidence}
                                     thumbnailHover={false}
-                                    className="text-muted-foreground text-base leading-relaxed prose dark:prose-invert max-w-none"
+                                    className={PUBLISHED_ARTICLE_PROSE_CLASS}
                                 />
                             </div>
 

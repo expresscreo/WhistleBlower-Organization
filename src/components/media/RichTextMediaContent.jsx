@@ -6,6 +6,7 @@ import {
   needsMediaEnrichment,
   stripEditorInlineImageControls,
   stripHtmlThumbnailHover,
+  stripPublishedInlineTextStyles,
   wrapHtmlThumbnails,
 } from '@/lib/mediaUtils';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ const RichTextMediaContent = ({ html, evidence = [], className = '', thumbnailHo
       } else if (!thumbnailHover) {
         output = stripHtmlThumbnailHover(output);
         output = stripEditorInlineImageControls(output);
+        output = stripPublishedInlineTextStyles(output);
       }
 
       if (!cancelled) {

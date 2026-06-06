@@ -4,10 +4,20 @@ import { FieldError } from '@/components/ui/form-feedback';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, MessageCircle, Wifi, WifiOff, ArrowDown, Reply, X } from 'lucide-react';
+import { REPORT_CHAT_CONFIG } from '@/lib/chatEntityConfig';
 
-const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, isSending = false }) => {
+const Chat = ({
+  report,
+  entity,
+  chatConfig = REPORT_CHAT_CONFIG,
+  updates,
+  onNewMessage,
+  onSendMessage,
+  isSending = false,
+  isLive = false,
+}) => {
+  const chatEntity = entity || report;
   const [newMessage, setNewMessage] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -22,72 +32,18 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
     }
   }, [updates]);
 
-  // Real-time subscription for new messages
-  useEffect(() => {
-    if (!report || !report.id) return;
-
-    // Setting up reporter real-time subscription for report
-
-    const channel = supabase
-      .channel(`chat_${report.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'report_updates',
-          filter: `report_id=eq.${report.id}`,
-        },
-        (payload) => {
-          // Reporter received new message
-          const newUpdate = payload.new;
-          if (newUpdate.message && newUpdate.updated_by) {
-            // This is a new admin message
-            setNewMessageCount(prev => prev + 1);
-          }
-          if (onNewMessage) onNewMessage(newUpdate);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'report_updates',
-          filter: `report_id=eq.${report.id}`,
-        },
-        (payload) => {
-          // Reporter received message update
-          // Handle read status updates - refresh to get latest read status
-          if (onRefreshUpdates) {
-            onRefreshUpdates();
-          }
-        }
-      )
-      .subscribe((status) => {
-        // Reporter subscription status updated
-        setIsConnected(status === 'SUBSCRIBED');
-      });
-
-    return () => {
-      // Cleaning up reporter subscription
-      supabase.removeChannel(channel);
-    };
-  }, [report?.id]);
-
   // Simplified read status management
   useEffect(() => {
-    if (!report?.id) return;
+    if (!chatEntity?.id) return;
 
     const markAdminMessagesAsRead = async () => {
       try {
-        // Use existing function for simplicity
-        await supabase.rpc('mark_messages_as_read', {
-          p_report_id: report.id,
-          p_reader_id: null
-        });
+        await supabase.rpc(
+          chatConfig.markReadRpc,
+          chatConfig.buildMarkReadArgs(chatEntity.id, null)
+        );
       } catch (e) {
-        console.log('mark_messages_as_read function not available');
+        console.log(`${chatConfig.markReadRpc} function not available`);
       }
     };
 
@@ -108,7 +64,31 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [report?.id]);
+  }, [chatEntity?.id, chatConfig]);
+
+  const previousUpdateCountRef = useRef(null);
+
+  useEffect(() => {
+    const messageUpdates = updates.filter((update) => update.message);
+
+    if (previousUpdateCountRef.current === null) {
+      previousUpdateCountRef.current = messageUpdates.length;
+      return;
+    }
+
+    const previousCount = previousUpdateCountRef.current;
+    previousUpdateCountRef.current = messageUpdates.length;
+
+    if (messageUpdates.length <= previousCount) return;
+
+    const newAdminMessages = messageUpdates
+      .slice(previousCount)
+      .filter((update) => update.updated_by);
+
+    if (newAdminMessages.length > 0) {
+      setNewMessageCount((prev) => prev + newAdminMessages.length);
+    }
+  }, [updates]);
 
   // Reset new message count when user scrolls to bottom
   useEffect(() => {
@@ -143,13 +123,13 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !report) return;
+    if (!newMessage.trim() || !chatEntity) return;
     setMessageError('');
     
     // Prepare message with quote if replying
     let finalMessage = newMessage.trim();
     if (replyingTo) {
-      const replyPrefix = `> Replying to ${replyingTo.updated_by ? 'Admin' : 'You'}: "${replyingTo.message}"\n\n`;
+      const replyPrefix = `> Replying to ${replyingTo.updated_by ? chatConfig.adminLabel : chatConfig.placerLabel}: "${replyingTo.message}"\n\n`;
       finalMessage = replyPrefix + finalMessage;
     }
     
@@ -254,7 +234,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
           )}
           {/* Connection status indicator */}
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            {isConnected ? (
+            {isLive ? (
               <>
                 <Wifi className="h-3 w-3 text-green-500" />
                 <span>Live</span>
@@ -262,7 +242,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
             ) : (
               <>
                 <WifiOff className="h-3 w-3 text-red-500" />
-                <span>Offline</span>
+                <span>Paused</span>
               </>
             )}
           </div>
@@ -297,7 +277,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
                     {(replyMessage || parsedMessage.quote) && (
                       <div className={`mb-2 p-2 rounded ${upd.updated_by ? 'bg-muted' : 'bg-primary-foreground/30'} border-l-2 ${upd.updated_by ? 'border-primary' : 'border-white/60'}`}>
                         <p className={`text-xs ${upd.updated_by ? 'text-muted-foreground' : 'text-white/85'} mb-1`}>
-                          Replying to {parsedMessage.quote ? parsedMessage.quote.sender : (replyMessage?.updated_by ? 'Admin' : 'You')}:
+                          Replying to {parsedMessage.quote ? parsedMessage.quote.sender : (replyMessage?.updated_by ? chatConfig.adminLabel : chatConfig.placerLabel)}:
                         </p>
                         <p className={`text-xs ${upd.updated_by ? 'text-foreground/95' : 'text-white'} line-clamp-2`}>
                           {parsedMessage.quote ? parsedMessage.quote.message : replyMessage?.message}
@@ -308,10 +288,9 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <span>{upd.updated_by ? 'Admin' : 'You'} - {new Date(upd.timestamp || upd.created_at).toLocaleTimeString()}</span>
+                  <span>{upd.updated_by ? chatConfig.adminLabel : chatConfig.placerLabel} - {new Date(upd.timestamp || upd.created_at).toLocaleTimeString()}</span>
                   {!upd.updated_by && (
-                    // Check both new and old read status fields
-                    (upd.is_read_by_admin !== undefined ? upd.is_read_by_admin : upd.is_read) ? 
+                    (upd.is_read_by_admin !== undefined ? upd.is_read_by_admin : upd.is_read) ?
                       <Eye className="h-5 w-5 text-[#3ECF8E]" /> : 
                       <EyeOff className="h-5 w-5 text-gray-400" />
                   )}
@@ -339,7 +318,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, 
         <div className="bg-muted/80 p-3 mb-2 rounded-lg border-l-4 border-primary">
           <div className="flex items-center justify-between mb-2 gap-2">
             <p className="text-xs text-muted-foreground font-medium flex-shrink-0">
-              Replying to {replyingTo.updated_by ? 'Admin' : 'You'}:
+              Replying to {replyingTo.updated_by ? chatConfig.adminLabel : chatConfig.placerLabel}:
             </p>
             <button
               onClick={cancelReply}

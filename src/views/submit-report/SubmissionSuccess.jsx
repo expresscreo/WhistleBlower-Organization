@@ -71,16 +71,25 @@ const SubmissionSuccess = ({ id, password, type = 'report' }) => {
     const containerRef = useRef(null);
 
     useEffect(() => {
-        // Smoothly bring the success content into view on mount
         if (containerRef.current) {
-            containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            containerRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: isBounty ? 'center' : 'start',
+            });
         } else {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, []);
+    }, [isBounty]);
 
     return (
-        <div ref={containerRef} className="min-h-screen flex items-start justify-center pt-8 pb-16 px-4 sm:px-6 lg:px-8">
+        <div
+            ref={containerRef}
+            className={
+                isBounty
+                    ? 'flex min-h-[calc(100dvh-4rem)] flex-1 items-center justify-center bg-muted/30 px-4 py-8 sm:px-6 lg:px-8'
+                    : 'flex min-h-screen items-start justify-center px-4 pt-8 pb-16 sm:px-6 lg:px-8'
+            }
+        >
             <Card className="max-w-2xl w-full">
                 <CardHeader className="text-center">
                     <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4"/>

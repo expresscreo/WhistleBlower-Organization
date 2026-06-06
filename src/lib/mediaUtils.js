@@ -395,3 +395,31 @@ export const stripEditorInlineImageControls = (html) => {
 
   return doc.body.innerHTML;
 };
+
+const PUBLISHED_INLINE_STYLE_PROPS_TO_STRIP = /^((?:background(?:-color)?)|color)\s*:/i;
+
+/**
+ * Remove editor inline text colors so published article body uses prose defaults.
+ */
+export const stripPublishedInlineTextStyles = (html) => {
+  if (!html || typeof window === 'undefined') return html || '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  doc.querySelectorAll('[style]').forEach((el) => {
+    const style = el.getAttribute('style') || '';
+    const kept = style
+      .split(';')
+      .map((rule) => rule.trim())
+      .filter((rule) => rule && !PUBLISHED_INLINE_STYLE_PROPS_TO_STRIP.test(rule));
+
+    if (kept.length > 0) {
+      el.setAttribute('style', `${kept.join('; ')};`);
+    } else {
+      el.removeAttribute('style');
+    }
+  });
+
+  return doc.body.innerHTML;
+};

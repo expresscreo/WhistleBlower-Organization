@@ -2,8 +2,7 @@ import {
   authenticateBounty,
   jsonError,
   readJson,
-  sanitizeBounty,
-} from '../_utils';
+} from '../../_utils';
 
 export const runtime = 'nodejs';
 
@@ -16,26 +15,17 @@ export async function POST(request) {
     if (auth.error) return jsonError(auth.error, auth.status);
 
     const { bounty, supabase } = auth;
-
-    await supabase
-      .from('bounties')
-      .update({ placer_has_viewed: true })
-      .eq('id', bounty.id);
-
-    const { data: updates, error: updatesError } = await supabase
+    const { data, error } = await supabase
       .from('bounty_updates')
       .select('*')
       .eq('bounty_id', bounty.id)
       .order('created_at', { ascending: true });
 
-    if (updatesError) throw updatesError;
+    if (error) throw error;
 
-    return Response.json({
-      bounty: sanitizeBounty({ ...bounty, placer_has_viewed: true }),
-      updates: updates || [],
-    });
+    return Response.json({ updates: data || [] });
   } catch (error) {
-    console.error('Bounty tracking authentication failed:', error);
-    return jsonError('Could not access this bounty.', 500);
+    console.error('Bounty updates fetch failed:', error);
+    return jsonError('Could not load bounty updates.', 500);
   }
 }

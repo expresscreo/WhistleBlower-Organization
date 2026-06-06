@@ -7,9 +7,12 @@ import { Loader2, LogOut, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import {
     authenticateTrackedBounty,
+    fetchTrackedBountyUpdates,
+    sendTrackedBountyMessage,
     updateTrackedBounty,
 } from '@/lib/trackApi';
-import ChatWindow from '@/views/track-report/ChatWindow';
+import Chat from '@/components/Chat';
+import { BOUNTY_CHAT_CONFIG } from '@/lib/chatEntityConfig';
 import UpdateReportDialog from '@/views/track-report/UpdateReportDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -19,6 +22,8 @@ import { uploadFileToLocal } from '@/lib/fileUtils';
 import { fetchPublishedBountyPostPath } from '@/lib/bountyPostUrl';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta } from '@/lib/seoUtils';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
+import { useTrackedChatPolling } from '@/hooks/useTrackedChatPolling';
 
 const statusConfig = {
     'pending_review': { progress: 10, color: 'bg-yellow-400', label: 'Pending Review' },
@@ -39,17 +44,18 @@ const BountySummary = ({ bounty, publishedBountyUrl, onUpdateBounty, onLogout })
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                     <CardTitle className="text-lg sm:text-xl">REPORT ID — {bounty.bounty_id}</CardTitle>
-                    <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
-                        <Button variant="outline" onClick={onUpdateBounty} className="flex-1 sm:flex-initial uppercase">
+                    <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+                        <Button variant="outline" onClick={onUpdateBounty} className="flex-1 min-w-0 sm:flex-initial uppercase">
                             <span className="hidden xs:inline">Update Bounty</span>
                             <span className="xs:hidden">Update</span>
                         </Button>
-                        <Button 
+                        <Button
                             onClick={onLogout}
-                            className="bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 flex-1 sm:flex-initial uppercase"
+                            aria-label="Logout"
+                            className="shrink-0 h-9 w-9 p-0 bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 sm:h-10 sm:w-auto sm:px-4 uppercase"
                         >
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Logout
+                            <LogOut className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Logout</span>
                         </Button>
                     </div>
                 </div>
@@ -115,15 +121,13 @@ const BountySummary = ({ bounty, publishedBountyUrl, onUpdateBounty, onLogout })
 const TrackBountyPage = ({ bountyId, password }) => {
     const router = useRouter();
     const [updateFeedback, setUpdateFeedback] = useState({ error: '', success: '' });
-    const [chatError, setChatError] = useState('');
 
     const [loading, setLoading] = useState(true);
     const [bountyData, setBountyData] = useState(null);
     const [authenticated, setAuthenticated] = useState(false);
 
     const [updates, setUpdates] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isSending, setIsSending] = useState(false);
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [updateMessage, setUpdateMessage] = useState('');
     const [newEvidenceFiles, setNewEvidenceFiles] = useState([]);
@@ -141,19 +145,56 @@ const TrackBountyPage = ({ bountyId, password }) => {
         router.replace('/');
     };
 
+    const markMessagesAsRead = useCallback(async (entityId) => {
+        if (!entityId) return;
+        const { error } = await supabase.rpc('mark_bounty_messages_as_read', {
+            p_bounty_id: entityId,
+            p_reader_id: null,
+        });
+        if (error) console.error('Error marking bounty messages as read:', error);
+    }, []);
+
+    const fetchUpdates = useCallback(async (forceRefresh = false) => {
+        if (!bountyData?.id) return;
+        if (!forceRefresh && document.visibilityState !== 'visible') return;
+
+        try {
+            const { updates: nextUpdates } = await fetchTrackedBountyUpdates(bountyId, password);
+            setUpdates(nextUpdates || []);
+        } catch (error) {
+            console.error('Error fetching bounty updates:', error);
+        }
+    }, [bountyData?.id, bountyId, password]);
+
+    const isPageVisible = usePageVisibility();
+
+    const pollChatUpdates = useCallback(async () => {
+        await fetchUpdates(true);
+        if (bountyData?.id) {
+            await markMessagesAsRead(bountyData.id);
+        }
+    }, [fetchUpdates, bountyData?.id, markMessagesAsRead]);
+
+    useTrackedChatPolling(pollChatUpdates, {
+        enabled: authenticated && Boolean(bountyData?.id),
+    });
+
     const handleAuthentication = useCallback(async () => {
         setLoading(true);
         try {
-            const { bounty } = await authenticateTrackedBounty(bountyId, password);
+            const { bounty, updates: initialUpdates } = await authenticateTrackedBounty(bountyId, password);
+            setUpdates(initialUpdates || []);
             setBountyData(bounty);
             setAuthenticated(true);
-            setLoading(false);
+            await markMessagesAsRead(bounty.id);
         } catch (error) {
             sessionStorage.setItem('trackAuthError', error.message || 'Please check the Bounty ID and password.');
             setLoading(false);
             router.push('/track');
+            return;
         }
-    }, [bountyId, password, router]);
+        setLoading(false);
+    }, [bountyId, password, router, markMessagesAsRead]);
 
     useEffect(() => {
         handleAuthentication();
@@ -218,6 +259,7 @@ const TrackBountyPage = ({ bountyId, password }) => {
             });
 
             setBountyData(updatedBountyData);
+            await fetchUpdates(true);
             setUpdateFeedback({ error: '', success: 'Your bounty has been updated.' });
             setIsUpdateDialogOpen(false);
             setUpdateMessage('');
@@ -229,8 +271,19 @@ const TrackBountyPage = ({ bountyId, password }) => {
         setIsUpdating(false);
     };
 
-    const handleSendMessage = () => {
-        setChatError('Bounty chat is not available yet. Use “Update bounty” to add information.');
+    const handleSendMessage = async ({ message, replyToMessageId }) => {
+        setIsSendingMessage(true);
+        try {
+            const { update } = await sendTrackedBountyMessage({
+                bountyId,
+                password,
+                message,
+                replyToMessageId,
+            });
+            return update;
+        } finally {
+            setIsSendingMessage(false);
+        }
     };
 
     if (loading) {
@@ -305,7 +358,28 @@ const TrackBountyPage = ({ bountyId, password }) => {
                                         onUpdateBounty={() => setIsUpdateDialogOpen(true)}
                                         onLogout={handleLogout}
                                     />
-                                    <ChatWindow updates={updates} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} sendError={chatError} />
+                                    <Card>
+                                        <CardContent className="pt-6">
+                                            <Chat
+                                                entity={bountyData}
+                                                chatConfig={BOUNTY_CHAT_CONFIG}
+                                                updates={updates}
+                                                isLive={isPageVisible}
+                                                onSendMessage={handleSendMessage}
+                                                isSending={isSendingMessage}
+                                                onNewMessage={(newUpdate) => {
+                                                    setUpdates((prev) => {
+                                                        const exists = prev.find((item) => item.id === newUpdate.id);
+                                                        if (exists) return prev;
+                                                        return [...prev, newUpdate];
+                                                    });
+                                                    if (document.visibilityState === 'visible' && newUpdate.updated_by) {
+                                                        setTimeout(() => markMessagesAsRead(bountyData.id), 500);
+                                                    }
+                                                }}
+                                            />
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </motion.div>
                         )}

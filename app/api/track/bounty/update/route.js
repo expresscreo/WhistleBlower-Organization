@@ -39,9 +39,16 @@ export async function POST(request) {
         bounty_id: bounty.id,
         message: updateMessage,
         updated_by: null,
+        is_read_by_placer: true,
+        is_read_by_admin: false,
       });
 
     if (updateError) throw updateError;
+
+    await supabase
+      .from('bounties')
+      .update({ admin_has_viewed: false })
+      .eq('id', bounty.id);
 
     const updatedEvidence = [
       ...(Array.isArray(bounty.evidence) ? bounty.evidence : []),

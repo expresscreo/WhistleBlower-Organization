@@ -16,6 +16,8 @@ import RewardSection from '@/views/track-report/RewardSection';
 import UpdateReportDialog from '@/views/track-report/UpdateReportDialog';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
+import { useTrackedChatPolling } from '@/hooks/useTrackedChatPolling';
 
 const TrackReportPage = ({ reportId, password }) => {
   const [loading, setLoading] = useState(true);
@@ -37,40 +39,37 @@ const TrackReportPage = ({ reportId, password }) => {
     if (error) console.error("Error marking messages as read:", error);
   }, []);
 
-  const fetchUpdates = useCallback(async (currentReportData, forceRefresh = false) => {
-    if (!currentReportData) return;
-    
-    // Skip fetch if page is not visible and not forced
-    if (!forceRefresh && document.visibilityState !== 'visible') {
-      return;
-    }
-    
+  const fetchUpdates = useCallback(async (forceRefresh = false) => {
+    if (!reportData?.id) return;
+    if (!forceRefresh && document.visibilityState !== 'visible') return;
+
     try {
       const { updates: nextUpdates } = await fetchTrackedReportUpdates(reportId, password);
       setUpdates(nextUpdates || []);
     } catch (error) {
       console.error('Error fetching report updates:', error);
     }
-  }, [reportId, password]);
+  }, [reportData?.id, reportId, password]);
 
-  // Debounced version to prevent rapid successive calls
-  const debouncedFetchUpdates = useCallback(() => {
-    if (!reportData) return;
-    const timeoutId = setTimeout(() => {
-      if (document.visibilityState === 'visible') {
-        fetchUpdates(reportData, true);
-      }
-    }, 300); // 300ms debounce
-    
-    return () => clearTimeout(timeoutId);
-  }, [reportData, fetchUpdates]);
+  const isPageVisible = usePageVisibility();
+
+  const pollChatUpdates = useCallback(async () => {
+    await fetchUpdates(true);
+    if (reportData?.id) {
+      await markMessagesAsRead(reportData.id);
+    }
+  }, [fetchUpdates, reportData?.id, markMessagesAsRead]);
+
+  useTrackedChatPolling(pollChatUpdates, {
+    enabled: authenticated && Boolean(reportData?.id),
+  });
 
   const setAuthenticatedState = useCallback(async (report, shouldFetchUpdates = true) => {
     setReportData(report);
     setAuthenticated(true);
     await markMessagesAsRead(report.id);
     if (shouldFetchUpdates) {
-      await fetchUpdates(report, true);
+      await fetchUpdates(true);
     }
   }, [markMessagesAsRead, fetchUpdates]);
 
@@ -98,45 +97,6 @@ const TrackReportPage = ({ reportId, password }) => {
   useEffect(() => {
     handleAuthentication();
   }, [handleAuthentication]);
-
-  useEffect(() => {
-    if (reportData?.id) {
-        const channel = supabase
-            .channel(`report_updates_${reportData.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'report_updates', filter: `report_id=eq.${reportData.id}` }, async (payload) => {
-                fetchUpdates(reportData, true);
-                if (document.visibilityState === 'visible') {
-                    await markMessagesAsRead(reportData.id);
-                }
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reports', filter: `id=eq.${reportData.id}` }, async () => {
-                try {
-                  const { report, updates: nextUpdates } = await authenticateTrackedReport(reportId, password);
-                  setReportData(report);
-                  setUpdates(nextUpdates || []);
-                } catch (error) {
-                  console.error('Error refreshing report after realtime update:', error);
-                }
-            })
-            .subscribe();
-
-        const handleVisibilityChange = async () => {
-            if (document.visibilityState === 'visible') {
-                await markMessagesAsRead(reportData.id);
-                // Use debounced fetch to prevent rapid successive calls
-                debouncedFetchUpdates();
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            supabase.removeChannel(channel);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }
-  }, [reportData, fetchUpdates, markMessagesAsRead, debouncedFetchUpdates, reportId, password]);
-
 
   const handleUpdateReport = async () => {
     setUpdateFeedback({ error: '', success: '' });
@@ -246,29 +206,22 @@ const TrackReportPage = ({ reportId, password }) => {
                 <div className="space-y-8">
                     <ReportSummary report={reportData} onUpdateReport={() => setUpdateModalOpen(true)} onLogout={handleLogout} />
                     {!reportData.is_feedback && <RewardSection report={reportData} />}
-                    <Chat 
+                    <Chat
                       report={reportData}
                       updates={updates}
+                      isLive={isPageVisible}
                       onSendMessage={handleSendMessage}
                       isSending={isSendingMessage}
                       onNewMessage={(newUpdate) => {
-                        console.log('Reporter TrackReportPage received new message:', newUpdate);
-                        // Add the new message to updates immediately
-                        setUpdates(prev => {
-                          // Check if message already exists to avoid duplicates
-                          const exists = prev.find(u => u.id === newUpdate.id);
+                        setUpdates((prev) => {
+                          const exists = prev.find((item) => item.id === newUpdate.id);
                           if (exists) return prev;
                           return [...prev, newUpdate];
                         });
-                        
-                        // Mark admin messages as read when visible
+
                         if (document.visibilityState === 'visible' && newUpdate.updated_by) {
                           setTimeout(() => markMessagesAsRead(reportData.id), 500);
                         }
-                      }}
-                      onRefreshUpdates={() => {
-                        console.log('Reporter refreshing updates');
-                        fetchUpdates(reportData, true);
                       }}
                     />
                 </div>

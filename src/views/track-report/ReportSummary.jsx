@@ -25,19 +25,19 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
         <div className="bg-card p-6 md:p-8 border">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                 <h2 className="text-lg sm:text-xl font-bold">REPORT ID — {report.report_id}</h2>
-                <div className="flex gap-2 w-full sm:w-auto">
+                <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
                     <Button
                         variant="default"
                         onClick={onUpdateReport}
-                        className="flex h-10 flex-1 items-center justify-center gap-2 px-6 sm:flex-initial sm:border sm:border-input sm:bg-background sm:text-foreground sm:hover:bg-accent sm:hover:text-accent-foreground"
+                        className="flex h-10 flex-1 min-w-0 items-center justify-center gap-2 px-4 sm:px-6 sm:flex-initial sm:border sm:border-input sm:bg-background sm:text-foreground sm:hover:bg-accent sm:hover:text-accent-foreground"
                     >
-                        <Edit className="h-4 w-4" />
-                        Update Report
+                        <Edit className="h-4 w-4 shrink-0" />
+                        <span className="truncate">Update Report</span>
                     </Button>
                     <Button
                         onClick={onLogout}
                         aria-label="Logout"
-                        className="flex h-10 items-center justify-center gap-2 bg-red-500 px-6 text-white hover:bg-red-600 sm:flex-initial"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center p-0 bg-red-500 text-white hover:bg-red-600 sm:h-10 sm:w-auto sm:px-6"
                     >
                         <LogOut className="h-4 w-4" />
                         <span className="hidden sm:inline">Logout</span>

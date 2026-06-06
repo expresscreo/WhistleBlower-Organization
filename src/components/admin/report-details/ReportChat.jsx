@@ -6,18 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, MessageSquare, Wifi, WifiOff, ArrowDown, Reply, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { REPORT_CHAT_CONFIG } from '@/lib/chatEntityConfig';
 
-const ReportChat = ({ 
-  report, 
-  updates, 
-  user, 
-  newMessage, 
-  setNewMessage, 
-  onSendMessage, 
+const ReportChat = ({
+  report,
+  entity,
+  chatConfig = REPORT_CHAT_CONFIG,
+  updates,
+  user,
+  newMessage,
+  setNewMessage,
+  onSendMessage,
   isSending,
   onNewMessage,
-  onRefreshUpdates 
+  onRefreshUpdates,
 }) => {
+  const chatEntity = entity || report;
   const [isConnected, setIsConnected] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -34,19 +38,17 @@ const ReportChat = ({
 
   // Direct real-time subscription for immediate message delivery
   useEffect(() => {
-    if (!report || !report.id) return;
-
-    console.log('Setting up ReportChat direct real-time subscription for report:', report.id);
+    if (!chatEntity?.id) return;
 
     const channel = supabase
-      .channel(`report_chat_direct_${report.id}`)
+      .channel(`${chatConfig.updatesTable}_chat_direct_${chatEntity.id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'report_updates',
-          filter: `report_id=eq.${report.id}`,
+          table: chatConfig.updatesTable,
+          filter: `${chatConfig.entityIdColumn}=eq.${chatEntity.id}`,
         },
         (payload) => {
           console.log('ReportChat direct subscription received INSERT:', payload.new);
@@ -72,42 +74,36 @@ const ReportChat = ({
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'report_updates',
-          filter: `report_id=eq.${report.id}`,
+          table: chatConfig.updatesTable,
+          filter: `${chatConfig.entityIdColumn}=eq.${chatEntity.id}`,
         },
-        (payload) => {
-          console.log('ReportChat direct subscription received UPDATE:', payload.new);
-          // Handle read status updates
+        () => {
           if (onRefreshUpdates) {
-            console.log('ReportChat: Calling onRefreshUpdates');
             onRefreshUpdates();
           }
         }
       )
       .subscribe((status) => {
-        console.log('ReportChat direct subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
       });
 
     return () => {
-      console.log('Cleaning up ReportChat direct subscription');
       supabase.removeChannel(channel);
     };
-  }, [report?.id, user?.id, onNewMessage, onRefreshUpdates]);
+  }, [chatEntity?.id, user?.id, chatConfig, onNewMessage, onRefreshUpdates]);
 
   // Simplified read status management
   useEffect(() => {
-    if (!report?.id || !user?.id) return;
+    if (!chatEntity?.id || !user?.id) return;
 
     const markReporterMessagesAsRead = async () => {
       try {
-        // Use existing function for simplicity
-        await supabase.rpc('mark_messages_as_read', {
-          p_report_id: report.id,
-          p_reader_id: user.id
-        });
+        await supabase.rpc(
+          chatConfig.markReadRpc,
+          chatConfig.buildMarkReadArgs(chatEntity.id, user.id)
+        );
       } catch (e) {
-        console.log('mark_messages_as_read function not available');
+        console.log(`${chatConfig.markReadRpc} function not available`);
       }
     };
 
@@ -128,7 +124,7 @@ const ReportChat = ({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [report?.id, user?.id]);
+  }, [chatEntity?.id, user?.id, chatConfig]);
 
   // Handle scroll detection
   const handleScroll = () => {
@@ -152,41 +148,54 @@ const ReportChat = ({
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user || !report) return;
-    
-    // Prepare message with quote if replying
+    if (!newMessage.trim() || !user || !chatEntity) return;
+
     let finalMessage = newMessage.trim();
     if (replyingTo) {
-      const replyPrefix = `> Replying to ${replyingTo.updated_by ? 'Admin' : 'Reporter'}: "${replyingTo.message}"\n\n`;
+      const replyPrefix = `> Replying to ${replyingTo.updated_by ? chatConfig.adminLabel : chatConfig.placerDisplayName}: "${replyingTo.message}"\n\n`;
       finalMessage = replyPrefix + finalMessage;
     }
-    
-    // Simple message data - use old schema for speed
+
+    if (onSendMessage) {
+      await onSendMessage(finalMessage, replyingTo?.id);
+      setNewMessage('');
+      setReplyingTo(null);
+      return;
+    }
+
     const messageData = {
-      report_id: report.id,
+      [chatConfig.entityIdColumn]: chatEntity.id,
       updated_by: user.id,
       message: finalMessage,
-      is_read: false
+      is_read: false,
+      is_read_by_placer: false,
+      is_read_by_admin: false,
     };
-    
+
     const { data, error } = await supabase
-      .from('report_updates')
+      .from(chatConfig.updatesTable)
       .insert(messageData)
       .select('*, users(id, name, user_type)')
       .single();
-      
+
     if (error) {
       console.error('Failed to send message:', error);
     } else {
       if (onNewMessage) onNewMessage(data);
       setNewMessage('');
       setReplyingTo(null);
-      
-      // Update report to show reporter has new messages
-      await supabase.from('reports').update({ 
-        reporter_has_viewed: false,
-        last_updated_at: new Date().toISOString()
-      }).eq('id', report.id);
+
+      const parentUpdate = {
+        [chatConfig.placerHasViewedField]: false,
+      };
+      if (chatConfig.parentTable === 'reports') {
+        parentUpdate.last_updated_at = new Date().toISOString();
+      }
+
+      await supabase
+        .from(chatConfig.parentTable)
+        .update(parentUpdate)
+        .eq('id', chatEntity.id);
     }
   };
 
@@ -306,7 +315,9 @@ const ReportChat = ({
               const replyMessage = update.reply_to_message_id ? findReplyMessage(update.reply_to_message_id) : null;
               const parsedMessage = parseMessage(update.message);
               const isSender = update.updated_by === user.id;
-              const senderName = isSender ? update.users?.name || 'You' : 'Reporter';
+              const senderName = isSender
+                ? update.users?.name || 'You'
+                : chatConfig.placerDisplayName;
               
               return (
                 <div
@@ -352,7 +363,9 @@ const ReportChat = ({
                     <span>{senderName} - {format(new Date(update.timestamp || update.created_at), 'p')}</span>
                     {isSender && (
                       // Check both new and old read status fields for admin messages
-                      (update.is_read_by_reporter !== undefined ? update.is_read_by_reporter : update.is_read) ? 
+                      (update[chatConfig.readByPlacerField] !== undefined
+                        ? update[chatConfig.readByPlacerField]
+                        : update.is_read) ?
                         <Eye className="w-5 h-5 text-[#3ECF8E]" /> : 
                         <EyeOff className="w-5 h-5 text-gray-400" />
                     )}
@@ -379,7 +392,7 @@ const ReportChat = ({
           <div className="bg-muted/80 p-3 mb-2 rounded-lg border-l-4 border-primary">
             <div className="flex items-center justify-between mb-2 gap-2">
               <p className="text-xs text-muted-foreground font-medium flex-shrink-0">
-                Replying to {replyingTo.updated_by ? 'Admin' : 'Reporter'}:
+                Replying to {replyingTo.updated_by ? chatConfig.adminLabel : chatConfig.placerDisplayName}:
               </p>
               <button
                 onClick={cancelReply}

@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,31 +95,31 @@ const Overview = () => {
   const [statusBreakdown, setStatusBreakdown] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [highPriorityReports, setHighPriorityReports] = useState([]);
-  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const hasInitialData = useRef(false);
   const { profile, loading: profileLoading } = useAuth();
-  const { fetchReports, fetchBounties, loading } = useAdminData();
+  const { fetchReports, fetchBounties } = useAdminData();
+  const profileId = profile?.id;
+  const profileUserType = profile?.user_type;
+  const profileOrganizationId = profile?.organization_id;
 
   const fetchFeedback = useCallback(async () => {
-    if (!profile) return [];
-    setLoadingFeedback(true);
-    try {
-      let query = supabase
-        .from('reports')
-        .select('id, report_id, title, status, category, urgency, created_at, is_feedback')
-        .eq('is_trashed', false)
-        .eq('is_feedback', true);
+    if (!profileId) return [];
 
-      if (profile.user_type !== 'super_admin') {
-        query = query.eq('organization_id', profile.organization_id);
-      }
+    let query = supabase
+      .from('reports')
+      .select('id, report_id, title, status, category, urgency, created_at, is_feedback')
+      .eq('is_trashed', false)
+      .eq('is_feedback', true);
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    } finally {
-      setLoadingFeedback(false);
+    if (profileUserType !== 'super_admin') {
+      query = query.eq('organization_id', profileOrganizationId);
     }
-  }, [profile]);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }, [profileId, profileUserType, profileOrganizationId]);
 
   const processReportData = useCallback((reportData, bountyData, feedbackData) => {
     const normalizedReports = (reportData || []).map((item) => ({ ...item, sourceType: 'report' }));
@@ -229,8 +229,12 @@ const Overview = () => {
     );
   }, []);
 
-  const loadDashboardData = useCallback(async () => {
-    if (!profile || profileLoading) return;
+  const loadDashboardData = useCallback(async (forceRefresh = false) => {
+    if (!profileId || profileLoading) return;
+    if (hasInitialData.current && !forceRefresh) return;
+
+    const showLoading = !hasInitialData.current;
+    if (showLoading) setInitialLoading(true);
 
     try {
       const [reportData, bountyData, feedbackData] = await Promise.all([
@@ -239,19 +243,23 @@ const Overview = () => {
         fetchFeedback(),
       ]);
       processReportData(reportData, bountyData, feedbackData);
+      hasInitialData.current = true;
     } catch (error) {
-      // Error handling is done in the context
       console.error('Failed to load dashboard data:', error);
+    } finally {
+      if (showLoading) setInitialLoading(false);
     }
-  }, [profile, profileLoading, fetchReports, fetchBounties, fetchFeedback, processReportData]);
+  }, [profileId, profileLoading, fetchReports, fetchBounties, fetchFeedback, processReportData]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    if (!profileLoading && profileId && !hasInitialData.current) {
+      loadDashboardData(true);
+    }
+  }, [profileLoading, profileId, loadDashboardData]);
 
   const planName = profile?.plans?.name;
   const canSeeAdvancedFeatures = profile && (profile.user_type === 'super_admin' || ['Executive', 'ExpressCreo'].includes(planName));
-  const isLoading = loading.reports || loading.bounties || loadingFeedback;
+  const isLoading = initialLoading;
   const typeDistributionData = [
     { name: 'Reports', value: stats.reports },
     { name: 'Bounties', value: stats.bounties },

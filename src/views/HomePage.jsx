@@ -1,17 +1,19 @@
 import Link from 'next/link';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { motion, useInView, animate, AnimatePresence } from 'framer-motion';
+import { motion, useInView, animate } from 'framer-motion';
 import { Shield, Eye, Award, Users, ArrowRight, FileText, Search, Gift, CheckCircle, Trophy, Zap } from 'lucide-react';
 import StickySections from '@/components/StickySections';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import TrustedByCarousel from '@/components/home/TrustedByCarousel';
 import HomeLatestNews from '@/components/home/HomeLatestNews';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { useCursorProximity } from '@/hooks/useCursorProximity';
+import { FlipWords } from '@/components/ui/flip-words';
+
+const HERO_FLIP_WORDS = ['CashOut!', 'GetPaid!'];
 
 const Counter = ({ initialValue, hourlyIncrease = 0, prefix = '', suffix = '', isDecimal = false }) => {
     const ref = useRef(null);
@@ -47,41 +49,6 @@ const Counter = ({ initialValue, hourlyIncrease = 0, prefix = '', suffix = '', i
     return <span ref={ref}>{`${prefix}${initialValue.toLocaleString()}${suffix}`}</span>;
 };
 
-
-const AnimatedText = () => {
-    const words = ["CashOut!", "GetPaid!"];
-    const [index, setIndex] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setIndex((prevIndex) => (prevIndex + 1) % words.length);
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [words.length]);
-
-    const wordWidths = {
-        "GetPaid!": "170px",
-        "CashOut!": "180px",
-    };
-
-    return (
-        <span className="relative inline-block text-center transition-all duration-300 align-top" style={{ width: wordWidths[words[index]] }}>
-            <AnimatePresence mode="popLayout">
-                <motion.span
-                    key={words[index]}
-                    initial={{ opacity: 0, y: -20, rotateX: 90 }}
-                    animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                    exit={{ opacity: 0, y: 20, rotateX: -90 }}
-                    transition={{ duration: 0.5, type: 'spring', stiffness: 100 }}
-                    className="absolute inset-0"
-                    style={{ color: '#ff5100' }}
-                >
-                    {words[index]}
-                </motion.span>
-            </AnimatePresence>
-        </span>
-    );
-};
 
 const FeatureCard = ({ feature, index }) => {
   const cardRef = useCursorProximity(100); // 100px proximity radius
@@ -230,7 +197,17 @@ const HomePage = () => {
           >
             <div className="w-full max-w-6xl mx-auto md:-translate-x-12">
               <h1 className="text-[43px] md:text-6xl font-bold mb-6 text-white leading-tight text-center lg:whitespace-nowrap">
-                Report Crime Securely, And <AnimatedText />
+                Report Crime Securely, And{' '}
+                <span className="relative inline-block align-top text-left">
+                  <span aria-hidden className="invisible select-none">CashOut!</span>
+                  <span className="absolute left-0 top-0">
+                    <FlipWords
+                      words={HERO_FLIP_WORDS}
+                      duration={2000}
+                      className="text-[#ff5100]"
+                    />
+                  </span>
+                </span>
               </h1>
             </div>
             
