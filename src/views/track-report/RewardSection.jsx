@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Gift, Copy } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const RewardSection = ({ report }) => {
-    const { toast } = useToast();
     const { status, reward_paycode, reward_status } = report;
+    const [copyError, setCopyError] = useState('');
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(reward_paycode);
-        toast({ title: "Copied!", description: "Paycode copied to clipboard." });
+    const handleCopy = async () => {
+        setCopyError('');
+        try {
+            await navigator.clipboard.writeText(reward_paycode);
+        } catch {
+            setCopyError('Could not copy paycode to clipboard.');
+        }
     };
 
     if (status !== 'Resolved') {
@@ -37,10 +41,11 @@ const RewardSection = ({ report }) => {
                     <p className="text-sm text-muted-foreground">Your Paycode:</p>
                     <div className="flex items-center justify-center gap-2 bg-background p-3 border">
                         <p className="text-2xl font-bold tracking-widest">{reward_paycode}</p>
-                        <Button variant="ghost" size="icon" onClick={handleCopy}>
+                        <Button variant="ghost" size="icon" onClick={handleCopy} aria-label="Copy paycode">
                             <Copy className="h-5 w-5" />
                         </Button>
                     </div>
+                    <FieldError message={copyError} />
                     <p className="text-xs text-muted-foreground max-w-md mx-auto">You can use this code at any supported ATM or Point-of-Sale (POS) terminal to withdraw your reward. No bank account is required.</p>
                 </CardContent>
             </Card>

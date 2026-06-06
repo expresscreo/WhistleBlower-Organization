@@ -14,6 +14,7 @@ export const FEEDBACK_CATEGORIES = [
 
 export const REPORT_CATEGORIES = [
   'Bounty',
+  'Most Wanted',
   'Fraud & Financial Misconduct',
   'Harassment & Discrimination',
   'Safety Violations',

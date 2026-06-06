@@ -16,7 +16,7 @@ export default function FormStepIndicator({
   const percent = Math.round(progress);
 
   return (
-    <div className="submit-report-wizard-section px-4 md:px-8 pt-6 md:pt-8 pb-4 border-b border-border/60 space-y-4">
+    <div className="submit-report-wizard-section box-border w-full max-w-full min-w-0 px-4 md:px-8 pt-6 md:pt-8 pb-4 border-b border-border/60 space-y-4">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           Step {currentStep} of {totalSteps}

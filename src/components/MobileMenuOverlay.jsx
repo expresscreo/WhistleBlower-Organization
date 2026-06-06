@@ -75,13 +75,13 @@ const MobileMenuOverlay = ({ navItems }) => {
           {/* Logo header - left aligned like navbar */}
           <motion.div
             variants={contentVariants}
-            className="flex items-center h-[80px] px-4 border-b border-border/20"
+            className="flex items-center h-16 px-4 border-b border-border/20"
           >
-            <Link href="/" onClick={handleLinkClick} className="flex-shrink-0">
+            <Link href="/" onClick={handleLinkClick} className="flex-shrink min-w-0 max-w-[calc(100vw-5.5rem)]">
               <img 
                 src={theme === 'light' ? logoLight : logoDark}
                 alt="WhistleBlower.ng Logo" 
-                style={{ width: '220.38px', height: '32px' }}
+                className="max-h-7 w-auto max-w-full object-contain"
               />
             </Link>
           </motion.div>
@@ -90,7 +90,7 @@ const MobileMenuOverlay = ({ navItems }) => {
           <motion.div 
             variants={contentVariants}
             className="px-4 pt-8 pb-6 overflow-y-auto"
-            style={{ height: 'calc(100dvh - 80px - 80px)' }}
+            style={{ height: 'calc(100dvh - 64px - 80px)' }}
           >
             <nav className="space-y-4">
               {navItems.map((item, index) => (

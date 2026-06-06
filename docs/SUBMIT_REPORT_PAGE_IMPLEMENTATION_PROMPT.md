@@ -175,7 +175,7 @@ Hook `useReportFormLocation(formData, handleSelectChange)` fetches states/branch
 ### Step 4 — Evidence (optional)
 
 - `EvidenceUpload` dashed border drop zone
-- Max **200MB** per file; toast on oversize
+- Max **200MB** per file; `FieldError` in `EvidenceUpload.jsx` on oversize
 - Requires company selected before file picker opens
 - Footer shows **“Skip for now”** ghost button → advances to step 5 without files
 

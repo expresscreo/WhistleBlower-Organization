@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { publicEnv } from '@/lib/env';
 
 const SitemapPage = () => {
@@ -42,10 +42,7 @@ ${staticPages.map(page => `
 
     return (
         <>
-            <Helmet>
-                <title>Sitemap - WhistleBlower.ng</title>
-                <meta name="robots" content="noindex" />
-            </Helmet>
+            <PageHead title="Sitemap - WhistleBlower.ng" robots="noindex" />
             <div className="bg-background text-foreground min-h-screen p-4 md:p-8">
                 {renderSitemap()}
             </div>

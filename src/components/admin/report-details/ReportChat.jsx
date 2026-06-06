@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,6 @@ const ReportChat = ({
   const [replyingTo, setReplyingTo] = useState(null);
   const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
-  const { toast } = useToast();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -59,11 +57,6 @@ const ReportChat = ({
             if (!newUpdate.updated_by) {
               console.log('ReportChat: New reporter message detected');
               setNewMessageCount(prev => prev + 1);
-              toast({
-                title: 'New message from reporter',
-                description: 'You have a new message from the reporter',
-                duration: 3000,
-              });
               
               // Call onNewMessage to update parent state
               if (onNewMessage) {
@@ -100,7 +93,7 @@ const ReportChat = ({
       console.log('Cleaning up ReportChat direct subscription');
       supabase.removeChannel(channel);
     };
-  }, [report?.id, user?.id, onNewMessage, onRefreshUpdates, toast]);
+  }, [report?.id, user?.id, onNewMessage, onRefreshUpdates]);
 
   // Simplified read status management
   useEffect(() => {
@@ -183,7 +176,7 @@ const ReportChat = ({
       .single();
       
     if (error) {
-      toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+      console.error('Failed to send message:', error);
     } else {
       if (onNewMessage) onNewMessage(data);
       setNewMessage('');
@@ -411,7 +404,8 @@ const ReportChat = ({
           />
           <Button
             onClick={handleSendMessage}
-            disabled={isSending || !newMessage.trim()}
+            loading={isSending}
+            disabled={!newMessage.trim()}
             className="w-full uppercase tracking-wider"
           >
             {replyingTo ? 'SEND REPLY' : 'SEND'}

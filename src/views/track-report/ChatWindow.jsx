@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, MessageCircle, Wifi, WifiOff, ArrowDown, Reply, X } from 'lucide-react';
@@ -16,7 +16,8 @@ const ChatWindow = ({
   isSending, 
   onKeyDown,
   onNewMessage,
-  onRefreshUpdates 
+  onRefreshUpdates,
+  sendError = '',
 }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
@@ -25,7 +26,7 @@ const ChatWindow = ({
   const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
   const prevUpdatesLength = useRef(0);
-  const { toast } = useToast();
+  const [messageError, setMessageError] = useState('');
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -53,11 +54,6 @@ const ChatWindow = ({
           if (newUpdate.message && newUpdate.updated_by) {
             // This is a new admin message
             setNewMessageCount(prev => prev + 1);
-            toast({
-              title: 'New message received',
-              description: 'You have a new message from admin',
-              duration: 3000,
-            });
           }
           if (onNewMessage) onNewMessage(newUpdate);
         }
@@ -84,7 +80,7 @@ const ChatWindow = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [report, onNewMessage, onRefreshUpdates, toast]);
+  }, [report, onNewMessage, onRefreshUpdates]);
 
   // Reset new message count when user scrolls to bottom
   useEffect(() => {
@@ -119,7 +115,15 @@ const ChatWindow = ({
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !report) return;
+    if (!newMessage.trim()) return;
+    setMessageError('');
+
+    if (onSendMessage) {
+      onSendMessage();
+      return;
+    }
+
+    if (!report) return;
     
     const messageData = {
       report_id: report.id,
@@ -139,7 +143,7 @@ const ChatWindow = ({
       .single();
       
     if (error) {
-      toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+      setMessageError(error.message);
     } else {
       if (onNewMessage) onNewMessage(data);
       setNewMessage('');
@@ -298,9 +302,11 @@ const ChatWindow = ({
           rows={2} 
           className="flex-grow resize-none"
         />
-        <Button 
-          onClick={handleSendMessage} 
-          disabled={isSending || !newMessage.trim()}
+        <FieldError message={sendError || messageError} />
+        <Button
+          onClick={handleSendMessage}
+          loading={isSending}
+          disabled={!newMessage.trim()}
           className="w-full uppercase tracking-wider"
         >
           {replyingTo ? 'SEND REPLY' : 'SEND'}

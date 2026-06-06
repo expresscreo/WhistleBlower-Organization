@@ -138,7 +138,7 @@ node run-migration.js
 
 #### Notifications:
 - Send message from one side
-- Verify toast notification appears on the other side
+- Verify unread badge / scroll-to-bottom indicator appears on the other side
 - Check notification content is appropriate
 
 ## 🔧 Configuration Details

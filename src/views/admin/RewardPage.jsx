@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-    import { Helmet } from 'react-helmet';
+    import PageHead from '@/components/PageHead';
     import { useAuth } from '@/contexts/SupabaseAuthContext';
     import { supabase } from '@/lib/customSupabaseClient';
-    import { useToast } from '@/components/ui/use-toast';
+    import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
     import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
@@ -16,7 +16,8 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     
     const RewardPage = () => {
       const { profile } = useAuth();
-      const { toast } = useToast();
+      const [fetchError, setFetchError] = useState('');
+      const [actionFeedback, setActionFeedback] = useState({ error: '', success: '' });
       const [loading, setLoading] = useState(true);
       const [data, setData] = useState({
         wallet: null,
@@ -38,6 +39,8 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
         if (!profile?.id || hasLoadedData.current) return; // Don't fetch if no profile or already loaded
         
         setLoading(true);
+        setFetchError('');
+        setActionFeedback({ error: '', success: '' });
         hasLoadedData.current = true; // Set immediately to prevent duplicate calls
         try {
           if (profile.user_type === 'super_admin') {
@@ -86,12 +89,12 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
             setData(prev => ({ ...prev, walletTransactions: transactions, resolvedReports: resolved, pendingRewards: pending, paidRewards: paid, rejectedRewards: rejected }));
           }
         } catch (error) {
-          toast({ variant: 'destructive', title: 'Error fetching data', description: error.message });
+          setFetchError(error.message);
           hasLoadedData.current = false; // Reset on error to allow retry
         } finally {
           setLoading(false);
         }
-      }, [profile?.id, profile?.user_type, profile?.organization_id, toast]);
+      }, [profile?.id, profile?.user_type, profile?.organization_id]);
     
       useEffect(() => {
         if (profile?.id && !hasLoadedData.current) {
@@ -104,13 +107,14 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
       };
     
       const handleRequestReward = async (reportId) => {
+        setActionFeedback({ error: '', success: '' });
         const amount = rewardAmounts[reportId];
         if (!amount || amount <= 0) {
-          toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Please enter a valid reward amount.' });
+          setActionFeedback({ error: 'Please enter a valid reward amount.', success: '' });
           return;
         }
         if (data.wallet.balance < amount) {
-          toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Your wallet balance is too low. Please deposit funds.' });
+          setActionFeedback({ error: 'Your wallet balance is too low. Please deposit funds.', success: '' });
           return;
         }
     
@@ -121,16 +125,17 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
           
           console.log(`Email notification to Whistleblower Admin: New reward request for report ${reportId}`);
     
-          toast({ title: 'Success', description: 'Reward request submitted.' });
+          setActionFeedback({ error: '', success: 'Reward request submitted.' });
           fetchData();
         } catch (error) {
-          toast({ variant: 'destructive', title: 'Error', description: error.message });
+          setActionFeedback({ error: error.message, success: '' });
         } finally {
           setLoading(false);
         }
       };
     
       const handleGeneratePaycode = async (report) => {
+        setActionFeedback({ error: '', success: '' });
         setLoading(true);
         try {
             const { data: paycodeData, error: paycodeError } = await supabase.rpc('generate_paycode');
@@ -163,23 +168,23 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     
             console.log(`Email notification to Org: Paycode generated for report ${report.report_id}`);
     
-            toast({ title: 'Paycode Generated', description: `Paycode ${paycode} has been generated and assigned.` });
+            setActionFeedback({ error: '', success: `Paycode ${paycode} has been generated and assigned.` });
             fetchData();
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message });
+            setActionFeedback({ error: error.message, success: '' });
         } finally {
             setLoading(false);
         }
       };
       
       const handleExport = (format) => {
-         toast({ title: "🚧 Feature Not Implemented", description: "Export functionality is coming soon!" });
+         setActionFeedback({ error: '', success: 'Export functionality is coming soon.' });
       }
     
       if (loading && !data.wallet && !data.orgSummary.length) {
         return (
           <>
-            <Helmet><title>Loading Reward Management - WhistleBlower.ng</title></Helmet>
+            <PageHead title="Loading Reward Management - WhistleBlower.ng" />
             <NavbarLoader />
             <div className="space-y-6">
               <div>
@@ -383,9 +388,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     
       return (
         <>
-          <Helmet>
-            <title>Reward Management - WhistleBlower.ng</title>
-          </Helmet>
+          <PageHead title="Reward Management - WhistleBlower.ng" />
           <div className="space-y-8">
             <PageHeader 
               title="Reward Management"
@@ -393,6 +396,9 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
                 ? 'Oversee and manage reward requests from all organizations.'
                 : 'Manage your reward funds and process payments for resolved reports.'}
             />
+            <PageErrorBanner error={fetchError} title="Could not load reward data" />
+            <FieldError message={actionFeedback.error} />
+            <FieldSuccess message={actionFeedback.success} />
             {loading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

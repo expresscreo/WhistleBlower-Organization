@@ -1,9 +1,8 @@
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, ArrowLeft } from 'lucide-react';
@@ -15,12 +14,18 @@ import ReportAssignment from '@/components/admin/report-details/ReportAssignment
 import ReportInfoCard from '@/components/admin/report-details/ReportInfoCard';
 import ReportStatusCard from '@/components/admin/report-details/ReportStatusCard';
 import ReportAttachmentsCard from '@/components/admin/report-details/ReportAttachmentsCard';
+import { FieldError } from '@/components/ui/form-feedback';
+import FormattedReportDescription from '@/components/report/FormattedReportDescription';
 
+const formatSupabaseError = (error, fallback = 'Action failed.') => {
+  if (!error) return fallback;
+  const message = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+  return message || fallback;
+};
 
 const ReportDetails = () => {
   const { id } = useParams();
   const router = useRouter();
-  const { toast } = useToast();
   const { user, profile, loading: profileLoading } = useAuth();
   
   const [report, setReport] = useState(null);
@@ -30,6 +35,7 @@ const ReportDetails = () => {
   const [isSending, setIsSending] = useState(false);
   const [orgUsers, setOrgUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [actionFeedback, setActionFeedback] = useState({ error: '', success: '' });
   
   // Refs to prevent unnecessary re-fetching
   const hasInitialData = useRef(false);
@@ -77,9 +83,9 @@ const ReportDetails = () => {
         if (updatesError) throw updatesError;
         setUpdates(updatesData);
       } catch(error) {
-        toast({ title: 'Error fetching updates', description: error.message, variant: 'destructive' });
+        console.error('Error fetching report updates:', error);
       }
-  }, [id, toast]);
+  }, [id]);
 
   // Debounced version to prevent rapid successive calls
   const debouncedFetchUpdates = useCallback(() => {
@@ -123,7 +129,6 @@ const ReportDetails = () => {
       
       if (reportError || (reportData.is_trashed && profile.user_type !== 'super_admin')) {
         setReport(null);
-        toast({ title: 'Report not found', description: 'This report may have been deleted or you do not have permission to view it.', variant: 'destructive' });
         router.push('/admin/reports');
         return;
       }
@@ -148,12 +153,12 @@ const ReportDetails = () => {
       await supabase.from('reports').update({ admin_has_viewed: true }).eq('id', id);
       hasInitialData.current = true;
     } catch (error) {
-       toast({ title: 'Error fetching report details', description: error.message, variant: 'destructive' });
+       console.error('Error fetching report details:', error);
        setReport(null);
     } finally {
         setLoading(false);
     }
-  }, [id, toast, canAssign, profile, router, user, markMessagesAsRead, fetchUpdates]);
+  }, [id, canAssign, profile, router, user, markMessagesAsRead, fetchUpdates]);
 
   // Store the latest fetch functions in refs
   fetchReportDetailsRef.current = fetchReportDetails;
@@ -243,12 +248,11 @@ const ReportDetails = () => {
   const handleStatusUpdate = useCallback(async (newStatus) => {
     const { error } = await supabase.from('reports').update({ status: newStatus }).eq('id', id);
     if (error) {
-      toast({ title: 'Failed to update status', description: error.message, variant: 'destructive' });
+      console.error('Failed to update status:', error);
     } else {
-      toast({ title: 'Status updated successfully!' });
       setReport(prev => ({...prev, status: newStatus}));
     }
-  }, [id, toast]);
+  }, [id]);
 
   const handleAssignReport = useCallback(async (newSelectedUserIds) => {
     if (!canAssign) return;
@@ -261,14 +265,13 @@ const ReportDetails = () => {
             const { error } = await supabase.from('report_assignments').insert(assignments);
             if (error) throw error;
         }
-        toast({ title: 'Report assignments updated successfully' });
         const currentAssignedUsers = orgUsers.filter(u => newSelectedUserIds.includes(u.id));
         setSelectedUsers(currentAssignedUsers);
         if (newSelectedUserIds.length > 0 && report.status !== 'Assigned') handleStatusUpdate('Assigned');
     } catch (error) {
-        toast({ title: 'Failed to assign report', description: error.message, variant: 'destructive' });
+        console.error('Failed to assign report:', error);
     }
-  }, [id, user, canAssign, toast, report?.status, handleStatusUpdate, orgUsers]);
+  }, [id, user, canAssign, report?.status, handleStatusUpdate, orgUsers]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || !profile) return;
@@ -298,14 +301,14 @@ const ReportDetails = () => {
         });
         
         if(error) {
-            toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+            console.error('Failed to send message:', error);
             setUpdates(prev => prev.filter(u => u.id !== tempId));
         } else {
             // No need to fetch here, optimistic update is enough.
             // The realtime subscription will update if another user messages.
         }
     } catch(error) {
-        toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+        console.error('Failed to send message:', error);
         setUpdates(prev => prev.filter(u => u.id !== tempId));
     } finally {
         setIsSending(false);
@@ -332,9 +335,8 @@ const ReportDetails = () => {
     const trashed_at = is_trashed ? new Date() : null;
     const { error } = await supabase.from('reports').update({ is_trashed, trashed_at }).eq('id', id);
     if (error) {
-      toast({ title: `Failed to ${is_trashed ? 'move to trash' : 'restore'} report`, description: error.message, variant: 'destructive' });
+      console.error('Failed to update trash status:', error);
     } else {
-      toast({ title: `Report ${is_trashed ? 'moved to trash' : 'restored'} successfully!` });
       setReport(prev => ({ ...prev, is_trashed, trashed_at }));
       if (is_trashed) router.push('/admin/reports');
       else fetchReportDetails();
@@ -343,11 +345,13 @@ const ReportDetails = () => {
   
   const handlePermanentDelete = async () => {
     if (profile?.user_type !== 'super_admin' || !report.is_trashed) return;
-    const { error } = await supabase.from('reports').delete().eq('id', id);
+    setActionFeedback({ error: '', success: '' });
+    const { error } = await supabase.rpc('delete_report_and_dependencies', { p_report_id: id });
     if (error) {
-      toast({ title: 'Failed to permanently delete report', description: error.message, variant: 'destructive' });
+      const message = formatSupabaseError(error, 'Failed to permanently delete report.');
+      console.error('Failed to permanently delete report:', message, error);
+      setActionFeedback({ error: message, success: '' });
     } else {
-      toast({ title: 'Report permanently deleted' });
       router.push('/admin/trashed-reports');
     }
   };
@@ -355,7 +359,7 @@ const ReportDetails = () => {
   if (loading || profileLoading) {
     return (
       <>
-        <Helmet><title>Loading Report Details - WhistleBlower.ng</title></Helmet>
+        <PageHead title="Loading Report Details - WhistleBlower.ng" />
         <NavbarLoader />
         <div className="space-y-6">
           <div>
@@ -366,11 +370,13 @@ const ReportDetails = () => {
       </>
     );
   }
-  if (!report) return <div className="p-4 text-center">Report not found or access denied.</div>;
+  if (!report) {
+    return null;
+  }
 
   return (
     <>
-      <Helmet><title>Report Details - {report.report_id}</title></Helmet>
+      <PageHead title={`Report Details - ${report.report_id}`} />
       <div className="space-y-8">
         <Link href={report.is_trashed ? "/admin/trashed-reports" : "/admin/reports"} className="flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-2 h-4 w-4" />Back to Reports</Link>
         
@@ -381,12 +387,14 @@ const ReportDetails = () => {
           </div>
           <ReportActions report={report} userRole={profile?.user_type} onDownloadPDF={handleDownloadPDF} onTrashRestore={handleTrashRestore} onPermanentDelete={handlePermanentDelete}/>
         </div>
+
+        <FieldError message={actionFeedback.error} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Card>
               <CardHeader><CardTitle className="text-2xl">{report.title}</CardTitle></CardHeader>
-              <CardContent><p className="whitespace-pre-wrap">{report.description}</p></CardContent>
+              <CardContent><FormattedReportDescription text={report.description} /></CardContent>
             </Card>
             <ReportChat 
               report={report}

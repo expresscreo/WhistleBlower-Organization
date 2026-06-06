@@ -2,19 +2,20 @@
 
 import { Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getStepNumber } from './submitReportStepMeta';
 import { formatIncidentDate } from './reportFormUtils';
 
 function ReviewRow({ label, value, onEdit, step }) {
   if (!value) return null;
   return (
-    <div className="flex items-start justify-between gap-3 py-3 border-b last:border-0">
+    <div className="flex items-start justify-between gap-3 px-4 py-3 border-b last:border-0">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
           {label}
         </p>
         <p className="text-sm break-words">{value}</p>
       </div>
-      {onEdit && (
+      {onEdit && step != null && (
         <Button
           type="button"
           variant="ghost"
@@ -36,22 +37,31 @@ export default function FormReviewSummary({
   files,
   onGoToStep,
   isFeedbackMode,
+  isBountyMode,
+  isMostWantedMode,
+  steps,
+  bountyTitle,
 }) {
+  const step = (id) => getStepNumber(steps, id);
+
   const orgLabel = formData.organization?.label;
   const location = [formData.stateOfIncident, formData.lga, formData.incidentAddress]
     .filter(Boolean)
     .join(' · ');
-  const categoryDate = [
-    formData.category,
-    formatIncidentDate(formData.dateOfIncident),
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const categorySummary = isBountyMode || isMostWantedMode
+    ? formData.category
+    : [formData.category, formatIncidentDate(formData.dateOfIncident)]
+        .filter(Boolean)
+        .join(' · ');
 
   const storySummary =
     descriptionMode === 'voice'
       ? 'Voice note recorded'
-      : [formData.title, formData.description?.slice(0, 120) + (formData.description?.length > 120 ? '…' : '')]
+      : [
+          formData.title,
+          formData.description?.slice(0, 120) +
+            (formData.description?.length > 120 ? '…' : ''),
+        ]
           .filter(Boolean)
           .join(' — ');
 
@@ -60,18 +70,71 @@ export default function FormReviewSummary({
       ? 'No files attached'
       : `${files.length} file${files.length > 1 ? 's' : ''} attached`;
 
+  const matchedSummary = Array.isArray(formData.mostWantedIdentifiers)
+    ? formData.mostWantedIdentifiers.join(', ')
+    : '';
+
   const rewardLabel =
-    formData.reporterType === 'reward' ? 'Reward eligible' : 'Anonymous (no reward)';
+    formData.reporterType === 'reward'
+      ? 'I want to be eligible for reward'
+      : "I DON'T want to be eligible for reward";
 
   return (
     <div className="rounded-lg border bg-muted/20 divide-y">
-      <ReviewRow label="Organization" value={orgLabel} onEdit={onGoToStep} step={1} />
-      <ReviewRow label="Location" value={location || '—'} onEdit={onGoToStep} step={2} />
-      <ReviewRow label="Category & date" value={categoryDate} onEdit={onGoToStep} step={2} />
-      <ReviewRow label="Story" value={storySummary} onEdit={onGoToStep} step={3} />
-      <ReviewRow label="Evidence" value={evidenceSummary} onEdit={onGoToStep} step={4} />
+      {isBountyMode || isMostWantedMode ? (
+        <ReviewRow
+          label={isMostWantedMode ? 'Most Wanted alert' : 'Bounty'}
+          value={bountyTitle || formData.title}
+          onEdit={onGoToStep}
+          step={step('context')}
+        />
+      ) : (
+        <ReviewRow
+          label="Organization"
+          value={orgLabel}
+          onEdit={onGoToStep}
+          step={step('organization')}
+        />
+      )}
+      <ReviewRow
+        label="Location"
+        value={location || '—'}
+        onEdit={onGoToStep}
+        step={step('context')}
+      />
+      <ReviewRow
+        label={isMostWantedMode ? 'Category & time seen' : isBountyMode ? 'Category' : 'Category & date'}
+        value={isMostWantedMode ? [categorySummary, formData.timeSeen].filter(Boolean).join(' · ') : categorySummary}
+        onEdit={onGoToStep}
+        step={step('context')}
+      />
+      {isMostWantedMode && (
+        <ReviewRow
+          label="What matched"
+          value={matchedSummary || '—'}
+          onEdit={onGoToStep}
+          step={step('match')}
+        />
+      )}
+      <ReviewRow
+        label={isMostWantedMode ? 'Your intel' : isBountyMode ? 'Your tip' : 'Story'}
+        value={storySummary}
+        onEdit={onGoToStep}
+        step={step('story')}
+      />
+      <ReviewRow
+        label="Evidence"
+        value={evidenceSummary}
+        onEdit={onGoToStep}
+        step={step('evidence')}
+      />
       {!isFeedbackMode && (
-        <ReviewRow label="Access preference" value={rewardLabel} onEdit={onGoToStep} step={5} />
+        <ReviewRow
+          label="Access preference"
+          value={rewardLabel}
+          onEdit={onGoToStep}
+          step={step('finish')}
+        />
       )}
     </div>
   );

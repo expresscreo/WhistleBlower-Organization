@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { 
     Facebook, 
     Twitter, 
@@ -19,8 +19,8 @@ const SocialShare = ({
     hashtags = [],
     className = '' 
 }) => {
-    const { toast } = useToast();
     const [copied, setCopied] = useState(false);
+    const [copyError, setCopyError] = useState('');
 
     // Ensure we have a full URL
     const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
@@ -44,54 +44,52 @@ const SocialShare = ({
     };
 
     const handleCopyLink = async () => {
+        setCopyError('');
         try {
             await navigator.clipboard.writeText(fullUrl);
             setCopied(true);
-            toast({
-                title: "Link copied!",
-                description: "The link has been copied to your clipboard.",
-            });
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
-            toast({
-                variant: "destructive",
-                title: "Failed to copy",
-                description: "Could not copy the link to clipboard.",
-            });
+            setCopyError('Could not copy the link to clipboard.');
         }
     };
 
     const shareButtons = [
         {
-            name: 'Facebook',
-            icon: Facebook,
-            color: 'bg-blue-600 hover:bg-blue-700',
-            onClick: () => handleShare('facebook')
-        },
-        {
-            name: 'Twitter',
-            icon: Twitter,
-            color: 'bg-sky-500 hover:bg-sky-600',
-            onClick: () => handleShare('twitter')
-        },
-        {
-            name: 'LinkedIn',
-            icon: Linkedin,
-            color: 'bg-blue-700 hover:bg-blue-800',
-            onClick: () => handleShare('linkedin')
-        },
-        {
+            id: 'whatsapp',
             name: 'WhatsApp',
             icon: MessageCircle,
             color: 'bg-green-600 hover:bg-green-700',
             onClick: () => handleShare('whatsapp')
         },
         {
-            name: 'Copy Link',
+            id: 'copy-link',
+            name: copied ? 'Copied' : 'Copy Link',
             icon: copied ? Check : Copy,
             color: 'bg-gray-600 hover:bg-gray-700',
             onClick: handleCopyLink
-        }
+        },
+        {
+            id: 'facebook',
+            name: 'Facebook',
+            icon: Facebook,
+            color: 'bg-blue-600 hover:bg-blue-700',
+            onClick: () => handleShare('facebook')
+        },
+        {
+            id: 'twitter',
+            name: 'Twitter',
+            icon: Twitter,
+            color: 'bg-sky-500 hover:bg-sky-600',
+            onClick: () => handleShare('twitter')
+        },
+        {
+            id: 'linkedin',
+            name: 'LinkedIn',
+            icon: Linkedin,
+            color: 'bg-blue-700 hover:bg-blue-800',
+            onClick: () => handleShare('linkedin')
+        },
     ];
 
     return (
@@ -105,7 +103,7 @@ const SocialShare = ({
                     const Icon = button.icon;
                     return (
                         <Button
-                            key={button.name}
+                            key={button.id}
                             variant="outline"
                             size="sm"
                             onClick={button.onClick}
@@ -118,6 +116,7 @@ const SocialShare = ({
                     );
                 })}
             </div>
+            <FieldError message={copyError} />
         </div>
     );
 };

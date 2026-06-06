@@ -20,22 +20,21 @@ const getTimeBasedTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'light';
+  // Stable defaults for SSR; persisted preference applied after mount in useEffect.
+  const [theme, setTheme] = useState('light');
+  const [themeMode, setThemeMode] = useState('auto');
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('themeMode') || 'auto';
     const savedTheme = localStorage.getItem('theme');
-    const savedMode = localStorage.getItem('themeMode');
+    setThemeMode(savedMode);
 
     if (savedMode === 'manual' && savedTheme) {
-      return savedTheme;
+      setTheme(savedTheme);
+    } else {
+      setTheme(getTimeBasedTheme());
     }
-
-    return getTimeBasedTheme();
-  });
-
-  const [themeMode, setThemeMode] = useState(() => {
-    if (typeof window === 'undefined') return 'auto';
-    return localStorage.getItem('themeMode') || 'auto';
-  });
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;

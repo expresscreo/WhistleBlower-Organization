@@ -1,8 +1,8 @@
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, PageErrorBanner } from '@/components/ui/form-feedback';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,15 +11,18 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
 import { slugify } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getLocalFileUrl } from '@/lib/fileUtils';
+import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/components/media/MaximizableThumbnailOverlay';
 
 const NewsEditor = () => {
     const router = useRouter();
     const [newsItems, setNewsItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { toast } = useToast();
+    const [fetchError, setFetchError] = useState('');
+    const [deleteFeedback, setDeleteFeedback] = useState({ error: '' });
 
     const fetchNews = useCallback(async () => {
         setLoading(true);
+        setFetchError('');
         try {
             const { data, error } = await supabase
                 .from('news')
@@ -30,21 +33,18 @@ const NewsEditor = () => {
             setNewsItems(data);
         } catch (error) {
             console.error('Error fetching news:', error);
-            toast({ 
-                variant: 'destructive', 
-                title: 'Error', 
-                description: 'Failed to fetch news posts' 
-            });
+            setFetchError('Failed to fetch news posts');
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, []);
 
     useEffect(() => {
         fetchNews();
     }, [fetchNews]);
 
     const handleDelete = async (id) => {
+        setDeleteFeedback({ error: '' });
         if (!window.confirm('Are you sure you want to delete this news post?')) {
             return;
         }
@@ -57,15 +57,10 @@ const NewsEditor = () => {
 
             if (error) throw error;
 
-            toast({ title: 'Success', description: 'News post deleted successfully' });
             fetchNews();
         } catch (error) {
             console.error('Error deleting news post:', error);
-            toast({ 
-                variant: 'destructive', 
-                title: 'Error', 
-                description: 'Failed to delete news post' 
-            });
+            setDeleteFeedback({ error: 'Failed to delete news post' });
         }
     };
 
@@ -102,7 +97,7 @@ const NewsEditor = () => {
 
     return (
         <>
-            <Helmet><title>News Editor - WhistleBlower.ng</title></Helmet>
+            <PageHead title="News Editor - WhistleBlower.ng" />
             
             <div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
                     {/* Header */}
@@ -116,6 +111,9 @@ const NewsEditor = () => {
                             Create News Post
                         </Button>
                     </div>
+
+                    <PageErrorBanner error={fetchError} title="Could not load news posts" />
+                    <FieldError message={deleteFeedback.error} />
 
                     {/* News Posts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -149,12 +147,13 @@ const NewsEditor = () => {
                                 <CardContent>
                                     {/* Featured Image */}
                                     {item.featured_image && (
-                                        <div className="mb-4">
+                                        <div className={`${maximizableThumbnailGroupClass} mb-4 rounded-lg`}>
                                             <img
                                                 src={getLocalFileUrl(item.featured_image)}
                                                 alt={item.title}
-                                                className="w-full h-32 object-cover rounded-lg"
+                                                className="w-full h-32 object-cover rounded-lg transition-transform duration-200 group-hover:scale-105"
                                             />
+                                            <MaximizableThumbnailOverlay />
                                         </div>
                                     )}
                                     

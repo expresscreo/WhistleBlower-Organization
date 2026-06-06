@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import TrustedByCarousel from '@/components/home/TrustedByCarousel';
-import BountyAccordion from '@/components/home/BountyAccordion';
+import HomeLatestNews from '@/components/home/HomeLatestNews';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { useCursorProximity } from '@/hooks/useCursorProximity';
@@ -132,9 +132,10 @@ const StatCard = ({ stat, index }) => {
 };
 
 
+const HERO_VIDEO_SRC = '/WBMedia/general/Animated Globe.mp4';
+const SHOW_HERO_ANALYTICS = false;
+
 const HomePage = () => {
-  const heroRef = useRef(null);
-  const [showMobileHeroBg, setShowMobileHeroBg] = useState(false);
   const features = [
     { icon: Shield, title: '100% Secure & Anonymous', description: 'Your identity is completely protected with end-to-end encryption.', color: '#4285F4' },
     { icon: Gift, title: 'Reward-Backed Reporting', description: 'Get rewarded for verified reports through our secure PayCode system.', color: '#00C853' },
@@ -156,23 +157,6 @@ const HomePage = () => {
     { initialValue: 10.0, hourlyIncrease: 0.1, label: 'Rewards Paid', icon: Trophy, prefix: 'N', suffix: 'M', isDecimal: true },
     { initialValue: 5640, hourlyIncrease: 9, label: 'Active Users', icon: Users }
   ];
-
-  // Observe hero visibility to limit mobile fixed BG to hero only
-  useEffect(() => {
-    const node = heroRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowMobileHeroBg(entry.isIntersecting);
-      },
-      {
-        root: null,
-        threshold: 0,
-      }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
 
   // Generate SEO metadata
   const seoMeta = generateSEOMeta({
@@ -204,35 +188,45 @@ const HomePage = () => {
 
   return (
     <>
-      <style>{`
-        .hero-bg {
-          background-image: url('/WBMedia/general/Main WB Slider.jpg');
-        }
-      `}</style>
       <SEOHead
         {...seoMeta}
         structuredData={structuredData}
       />
+      <div className="fixed inset-0 z-0 pointer-events-none bg-black" aria-hidden>
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="fixed inset-0 h-full w-full object-cover opacity-65"
+        >
+          <source src={HERO_VIDEO_SRC} type="video/mp4" />
+        </video>
+      </div>
+
       <section 
-        className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-cover bg-center md:bg-fixed hero-bg"
-        ref={heroRef}
+        className={`relative z-10 flex flex-col justify-center overflow-hidden ${
+          SHOW_HERO_ANALYTICS ? 'min-h-screen' : 'min-h-[calc(100dvh-4rem)]'
+        }`}
       >
-        {/* Mobile fixed background layer for iOS Safari, only while hero is visible */}
-        {showMobileHeroBg && (
-          <div
-            className="fixed inset-0 bg-cover bg-center md:hidden z-0"
-            style={{ backgroundImage: `url('/WBMedia/general/Main WB Slider mobile.jpg')` }}
-          />
-        )}
-        <div className="absolute inset-0 z-10" style={{ backgroundColor: '#00000069' }} />
-        
-        <div className="relative z-20 w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center flex-grow flex flex-col justify-center">
+        <div
+          className={`relative z-20 w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center${
+            SHOW_HERO_ANALYTICS ? ' flex-grow flex flex-col justify-center' : ''
+          }`}
+        >
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="flex flex-col items-center justify-center flex-grow"
-            style={{ marginTop: '9rem', marginBottom: '55px' }}
+            className={`flex flex-col items-center justify-center${
+              SHOW_HERO_ANALYTICS ? ' flex-grow' : ''
+            }`}
+            style={
+              SHOW_HERO_ANALYTICS
+                ? { marginTop: '9rem', marginBottom: '55px' }
+                : undefined
+            }
           >
             <div className="w-full max-w-6xl mx-auto md:-translate-x-12">
               <h1 className="text-[43px] md:text-6xl font-bold mb-6 text-white leading-tight text-center lg:whitespace-nowrap">
@@ -262,6 +256,7 @@ const HomePage = () => {
           </motion.div>
         </div>
 
+        {SHOW_HERO_ANALYTICS && (
         <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:mt-auto sm:mb-10">
              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               {stats.map((stat, index) => (
@@ -273,10 +268,13 @@ const HomePage = () => {
               ))}
             </div>
         </div>
+        )}
       </section>
 
-      <section className="py-20 bg-muted/30">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative z-10 py-20">
+        <div className="absolute inset-0 bg-background" aria-hidden />
+        <div className="absolute inset-0 bg-muted/30" aria-hidden />
+        <div className="relative max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold">
                 <span className="text-[#707070] dark:text-muted-foreground">Why Choose </span>
@@ -296,17 +294,36 @@ const HomePage = () => {
         </div>
       </section>
 
-      <TrustedByCarousel />
+      <div className="relative z-10">
+        <TrustedByCarousel />
+      </div>
 
       {/* Removed the 'What You Can Do On WhistleBlower.ng' section as requested */}
 
       {/* Full-bleed sticky sections */}
-      <section className="relative">
+      <section className="relative z-10">
         <StickySections />
       </section>
 
-      {/* BountyAccordion moved to Sticky Scroll Sample page on request */}
-      {/* Partner with Us section moved to StickySections component */}
+      <HomeLatestNews />
+
+      <section className="relative isolate z-[60] py-20 bg-[#ff5100] text-white">
+        <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            <span className="text-white/80">Partner </span>
+            <span className="text-white">with Us</span>
+          </h2>
+          <p className="text-lg mb-8 max-w-3xl mx-auto opacity-90">
+            Are you a public organization or government agency interested in receiving reports directly? Join our partner network and enhance transparency in your operations.
+          </p>
+          <Link href="/partner-program">
+            <Button size="lg" className="uppercase tracking-[1px] px-8 py-4 text-sm bg-[#171717] text-[#f6f6f6] hover:bg-[#f6f6f6] hover:text-[#171717] group">
+              LEARN MORE ABOUT PARTNERSHIP
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </Button>
+          </Link>
+        </div>
+      </section>
     </>
   );
 };

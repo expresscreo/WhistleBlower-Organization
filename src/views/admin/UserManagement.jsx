@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, PlusCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff, CheckCircle, Ban } from 'lucide-react';
+import { FieldError, FieldSuccess, PageErrorBanner, FormFeedback } from '@/components/ui/form-feedback';
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff, CheckCircle, Ban } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -23,6 +23,9 @@ const UserManagement = () => {
   const [selectedPlan, setSelectedPlan] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -30,7 +33,11 @@ const UserManagement = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [plans, setPlans] = useState([]);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [listFeedback, setListFeedback] = useState({ error: '', success: '' });
+  const [addFeedback, setAddFeedback] = useState({ error: '', success: '' });
+  const [editFeedback, setEditFeedback] = useState({ error: '', success: '' });
+  const [deleteFeedback, setDeleteFeedback] = useState({ error: '', success: '' });
   const { profile, loading: profileLoading, permissions } = useAuth();
   
   // Refs to prevent unnecessary re-fetching
@@ -67,6 +74,7 @@ const UserManagement = () => {
     
     console.log('Actually fetching users...');
     setLoading(true);
+    setFetchError('');
     lastFetchTime.current = now;
     let query = supabase
       .from('users')
@@ -83,7 +91,7 @@ const UserManagement = () => {
     const { data, error } = await query;
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching users', description: error.message });
+      setFetchError(error.message);
       setUsers([]);
     } else {
       const usersWithCounts = data.map(user => ({
@@ -139,7 +147,7 @@ const UserManagement = () => {
       hasInitialData.current = true;
     }
     setLoading(false);
-  }, [searchTerm, selectedOrganization, selectedPlan, selectedStatus, toast, profile, profileLoading]);
+  }, [searchTerm, selectedOrganization, selectedPlan, selectedStatus, profile, profileLoading]);
 
   // Store the latest fetchUsers in ref
   fetchUsersRef.current = fetchUsers;
@@ -170,65 +178,81 @@ const UserManagement = () => {
   }, [profileLoading, profile?.id]); // Only depend on profile.id, not the entire profile object
 
   const handleOpenAddModal = () => {
+    setAddFeedback({ error: '', success: '' });
     setNewUser({ name: '', email: '', password: '', organization_id: profile?.organization_id || '', user_type: 'staff' });
     setIsAddModalOpen(true);
   };
   
   const handleAddUser = async () => {
+    setAddFeedback({ error: '', success: '' });
     if(!newUser.email || !newUser.password || !newUser.name || !newUser.user_type || !newUser.organization_id){
-        toast({variant: 'destructive', title: 'Missing fields', description: 'Please fill out all required fields.'});
+        setAddFeedback({ error: 'Please fill out all required fields.', success: '' });
         return;
     }
-    
-    const { error } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-            data: {
-                name: newUser.name,
-                organization_id: newUser.organization_id,
-                user_type: newUser.user_type,
-            }
-        }
-    });
 
-    if (error) {
-        toast({variant: 'destructive', title: 'Failed to add user', description: error.message});
-    } else {
-        toast({title: 'User created successfully', description: 'Confirmation email sent.'});
-        setIsAddModalOpen(false);
-        fetchUsers();
+    setIsAdding(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+          email: newUser.email,
+          password: newUser.password,
+          options: {
+              data: {
+                  name: newUser.name,
+                  organization_id: newUser.organization_id,
+                  user_type: newUser.user_type,
+              }
+          }
+      });
+
+      if (error) {
+          setAddFeedback({ error: error.message, success: '' });
+      } else {
+          setAddFeedback({ error: '', success: 'User created successfully. Confirmation email sent.' });
+          setIsAddModalOpen(false);
+          fetchUsers();
+      }
+    } finally {
+      setIsAdding(false);
     }
   };
 
   const handleEdit = (user) => {
+    setEditFeedback({ error: '', success: '' });
     setSelectedUser({ ...user });
     setIsEditModalOpen(true);
   };
 
   const handleDelete = (user) => {
+    setDeleteFeedback({ error: '', success: '' });
     setSelectedUser(user);
     setIsDeleteModalOpen(true);
   };
 
   const confirmDelete = async () => {
     if (!selectedUser) return;
-    const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { user_id: selectedUser.id },
-    });
-    
-    if (error || (data && data.error)) {
-        toast({ variant: 'destructive', title: 'Error deleting user', description: error?.message || data.error });
-    } else {
-        toast({ title: 'User deleted successfully' });
-        fetchUsers();
+    setDeleteFeedback({ error: '', success: '' });
+    setIsDeletingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+          body: { user_id: selectedUser.id },
+      });
+
+      if (error || (data && data.error)) {
+          setDeleteFeedback({ error: error?.message || data.error, success: '' });
+      } else {
+          setDeleteFeedback({ error: '', success: 'User deleted successfully' });
+          fetchUsers();
+      }
+      setIsDeleteModalOpen(false);
+      setSelectedUser(null);
+    } finally {
+      setIsDeletingUser(false);
     }
-    setIsDeleteModalOpen(false);
-    setSelectedUser(null);
   };
 
   const handleSave = async () => {
     if (!selectedUser) return;
+    setEditFeedback({ error: '', success: '' });
 
     const selectedOrg = organizations.find(o => o.id === selectedUser.organization_id);
     const newPlanId = selectedOrg?.plans?.id;
@@ -242,25 +266,31 @@ const UserManagement = () => {
       user_type: selectedUser.user_type,
     };
 
-    const { error } = await supabase.from('users').update(userData).eq('id', selectedUser.id);
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from('users').update(userData).eq('id', selectedUser.id);
 
-    if (error) {
-      toast({ variant: 'destructive', title: 'Error saving user', description: error.message });
-    } else {
-      toast({ title: 'User updated successfully' });
-      fetchUsers();
+      if (error) {
+        setEditFeedback({ error: error.message, success: '' });
+      } else {
+        setEditFeedback({ error: '', success: 'User updated successfully' });
+        fetchUsers();
+      }
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
+    } finally {
+      setIsSaving(false);
     }
-    setIsEditModalOpen(false);
-    setSelectedUser(null);
   };
 
   const toggleUserStatus = async (user) => {
+    setListFeedback({ error: '', success: '' });
     const newStatus = !user.is_active;
     const { error } = await supabase.from('users').update({ is_active: newStatus }).eq('id', user.id);
     if (error) {
-      toast({ variant: 'destructive', title: 'Error updating user status', description: error.message });
+      setListFeedback({ error: error.message, success: '' });
     } else {
-      toast({ title: `User ${newStatus ? 'activated' : 'suspended'} successfully` });
+      setListFeedback({ error: '', success: `User ${newStatus ? 'activated' : 'suspended'} successfully` });
       fetchUsers();
     }
   };
@@ -277,7 +307,7 @@ const UserManagement = () => {
 
   return (
     <>
-      <Helmet><title>User Management - WhistleBlower.ng</title></Helmet>
+      <PageHead title="User Management - WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="User Management"
@@ -285,6 +315,10 @@ const UserManagement = () => {
         >
           {canManageUsers && <Button onClick={handleOpenAddModal}><PlusCircle className="mr-2 h-4 w-4" />Add User</Button>}
         </PageHeader>
+
+        <PageErrorBanner error={fetchError} title="Could not load users" />
+        <FieldError message={listFeedback.error} />
+        <FieldSuccess message={listFeedback.success} />
         
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -424,7 +458,8 @@ const UserManagement = () => {
               </div>
             </div>
           )}
-          <DialogFooter><Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button><Button onClick={handleSave}>Save Changes</Button></DialogFooter>
+          <FormFeedback error={editFeedback.error} success={editFeedback.success} className="px-6" />
+          <DialogFooter><Button variant="outline" onClick={() => setIsEditModalOpen(false)} disabled={isSaving}>Cancel</Button><Button onClick={handleSave} loading={isSaving}>Save Changes</Button></DialogFooter>
         </DialogContent>
       </Dialog>
       
@@ -438,7 +473,8 @@ const UserManagement = () => {
                 {(isSuperAdmin || isExecutiveAdmin) && <div className="space-y-2"><Label htmlFor="newOrganization">Organization</Label><Select disabled={!isSuperAdmin} value={newUser.organization_id} onValueChange={(value) => setNewUser({...newUser, organization_id: value})}><SelectTrigger><SelectValue placeholder="Select an organization" /></SelectTrigger><SelectContent>{organizations.map(org => (<SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>))}</SelectContent></Select></div>}
                 <div className="space-y-2"><Label htmlFor="newUserType">User Type</Label><Select value={newUser.user_type} onValueChange={(value) => setNewUser({...newUser, user_type: value})}><SelectTrigger><SelectValue placeholder="Select user type" /></SelectTrigger><SelectContent>{getEditableUserTypes().map(type => (<SelectItem key={type} value={type} className="capitalize">{type.replace(/_/g, ' ')}</SelectItem>))}</SelectContent></Select></div>
             </div>
-            <DialogFooter><Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button><Button onClick={handleAddUser}>Create User</Button></DialogFooter>
+            <FormFeedback error={addFeedback.error} success={addFeedback.success} className="px-6" />
+            <DialogFooter><Button variant="outline" onClick={() => setIsAddModalOpen(false)} disabled={isAdding}>Cancel</Button><Button onClick={handleAddUser} loading={isAdding}>Create User</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -448,9 +484,10 @@ const UserManagement = () => {
             <DialogTitle>Are you sure?</DialogTitle>
             <DialogDescription>This action cannot be undone. This will permanently delete the user "{selectedUser?.email}".</DialogDescription>
           </DialogHeader>
+          <FormFeedback error={deleteFeedback.error} success={deleteFeedback.success} className="px-6" />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete}>Delete User</Button>
+            <Button variant="destructive" onClick={confirmDelete} loading={isDeletingUser}>Delete User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

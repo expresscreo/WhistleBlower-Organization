@@ -1,5 +1,6 @@
-import React from 'react';
-import { Helmet } from 'react-helmet';
+'use client';
+
+import { usePageHead } from '@/hooks/usePageHead';
 
 /**
  * SEOHead Component
@@ -13,18 +14,15 @@ const SEOHead = ({
   type = 'website',
   keywords,
   canonical,
-  article,
   structuredData,
   noindex = false,
-  nofollow = false
+  nofollow = false,
 }) => {
-  // Generate robots meta content
   const robotsContent = [];
   if (noindex) robotsContent.push('noindex');
   if (nofollow) robotsContent.push('nofollow');
   if (robotsContent.length === 0) robotsContent.push('index', 'follow');
 
-  // Ensure we have safe string values
   const toSafeString = (val, fallback = '') => {
     if (typeof val === 'symbol') return fallback;
     if (val === null || val === undefined) return fallback;
@@ -40,46 +38,46 @@ const SEOHead = ({
     }
   };
 
-  const safeTitle = toSafeString(title, 'WhistleBlower.ng - Nigeria\'s Premier Crime Reporting Platform');
-  const safeDescription = toSafeString(description, 'Report crimes anonymously, place bounties, and help build a safer Nigeria with WhistleBlower.ng.');
-  const safeImage = toSafeString(image, 'https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg');
+  const safeTitle = toSafeString(title, "WhistleBlower.ng - Nigeria's Premier Crime Reporting Platform");
+  const safeDescription = toSafeString(
+    description,
+    'Report crimes anonymously, place bounties, and help build a safer Nigeria with WhistleBlower.ng.'
+  );
+  const safeImage = toSafeString(
+    image,
+    'https://whistleblower.ng/WBMedia/general/banner-WhistleBlower.jpeg'
+  );
   const safeUrl = toSafeString(url, 'https://whistleblower.ng');
   const safeKeywords = toSafeString(keywords);
 
-  const safeStructuredData = Array.isArray(structuredData) || (structuredData && typeof structuredData === 'object')
-    ? stripSymbols(structuredData)
-    : null;
+  const safeStructuredData =
+    Array.isArray(structuredData) || (structuredData && typeof structuredData === 'object')
+      ? stripSymbols(structuredData)
+      : null;
 
-  return (
-    <Helmet>
-      <title>{safeTitle}</title>
-      <meta name="description" content={safeDescription} />
-      {safeKeywords && <meta name="keywords" content={safeKeywords} />}
-      <meta name="robots" content={robotsContent.join(', ')} />
-      <link rel="canonical" href={canonical || safeUrl} />
+  usePageHead({
+    title: safeTitle,
+    description: safeDescription,
+    keywords: safeKeywords || undefined,
+    robots: robotsContent.join(', '),
+    canonical: canonical || safeUrl,
+    ogTitle: safeTitle,
+    ogDescription: safeDescription,
+    ogImage: safeImage,
+    ogUrl: safeUrl,
+    ogType: type,
+    ogSiteName: 'WhistleBlower.ng',
+    ogLocale: 'en_NG',
+    twitterCard: 'summary_large_image',
+    twitterSite: '@WhistleBlowerNG',
+    twitterCreator: '@WhistleBlowerNG',
+    twitterTitle: safeTitle,
+    twitterDescription: safeDescription,
+    twitterImage: safeImage,
+    structuredData: safeStructuredData,
+  });
 
-      <meta property="og:title" content={safeTitle} />
-      <meta property="og:description" content={safeDescription} />
-      <meta property="og:image" content={safeImage} />
-      <meta property="og:url" content={safeUrl} />
-      <meta property="og:type" content={type} />
-      <meta property="og:site_name" content="WhistleBlower.ng" />
-      <meta property="og:locale" content="en_NG" />
-
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content="@WhistleBlowerNG" />
-      <meta name="twitter:creator" content="@WhistleBlowerNG" />
-      <meta name="twitter:title" content={safeTitle} />
-      <meta name="twitter:description" content={safeDescription} />
-      <meta name="twitter:image" content={safeImage} />
-
-      {safeStructuredData && (
-        <script type="application/ld+json">
-          {JSON.stringify(safeStructuredData)}
-        </script>
-      )}
-    </Helmet>
-  );
+  return null;
 };
 
 export default SEOHead;

@@ -1,9 +1,6 @@
 import Link from 'next/link';
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Footer from '@/components/Footer';
 
 const StickySections = () => {
   const containerRef = useRef(null);
@@ -11,7 +8,6 @@ const StickySections = () => {
   const thirdSectionRef = useRef(null);
   const fourthSectionRef = useRef(null);
   const fifthSectionRef = useRef(null);
-  const sixthSectionRef = useRef(null);
 
   // Fade out the headline block in the first section as the second section scrolls into view
   const { scrollYProgress } = useScroll({
@@ -27,8 +23,6 @@ const StickySections = () => {
   const overlay3 = useTransform(p3, [0, 1], [0, 0.5]);
   const { scrollYProgress: p4 } = useScroll({ target: fifthSectionRef, offset: ["start 90%", "start 50%"] });
   const overlay4 = useTransform(p4, [0, 1], [0, 0.5]);
-  const { scrollYProgress: p5 } = useScroll({ target: sixthSectionRef, offset: ["start 100%", "start 0%"] });
-  const overlay5 = useTransform(p5, [0, 1], [0, 0.5]);
 
   return (
     <div ref={containerRef} className="relative">
@@ -168,8 +162,6 @@ const StickySections = () => {
 
       {/* Fifth Section (News & Updates) */}
       <div ref={fifthSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-50 px-8 pt-8 lg:pt-4 relative">
-        {/* Fade overlay for fifth section as Partner with Us section approaches */}
-        <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay5 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
@@ -193,32 +185,6 @@ const StickySections = () => {
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* Sixth Section (Partner with Us) */}
-      <div ref={sixthSectionRef} className="sticky top-0 py-20 bg-[#ff5100] text-white z-[100] relative">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              <span className="text-white/80">Partner </span>
-              <span className="text-white">with Us</span>
-            </h2>
-            <p className="text-lg mb-8 max-w-3xl mx-auto opacity-90">
-              Are you a public organization or government agency interested in receiving reports directly? Join our partner network and enhance transparency in your operations.
-            </p>
-            <Link href="/partner-program">
-              <Button size="lg" className="uppercase tracking-[1px] px-8 py-4 text-sm bg-[#171717] text-[#f6f6f6] hover:bg-[#f6f6f6] hover:text-[#171717] group">
-                LEARN MORE ABOUT PARTNERSHIP
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-      
-      {/* Footer attached after Partner with Us section */}
-      <div className="relative z-[110]">
-        <Footer />
       </div>
     </div>
   );

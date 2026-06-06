@@ -1,23 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { sanitizeFilename } from '@/lib/utils';
 
 const EvidenceUploader = ({ evidenceFiles, setEvidenceFiles, uploadProgress, isSubmitting }) => {
-    const { toast } = useToast();
+    const [uploadError, setUploadError] = useState('');
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
             const oversizedFiles = newFiles.filter(file => file.size > 25 * 1024 * 1024);
             if (oversizedFiles.length > 0) {
-                toast({ title: 'File(s) too large', description: 'Please ensure all files are smaller than 25MB.', variant: 'destructive' });
+                setUploadError('Please ensure all files are smaller than 25MB.');
                 return;
             }
+            setUploadError('');
             setEvidenceFiles(prev => [...prev, ...newFiles]);
         }
     };
@@ -37,6 +38,7 @@ const EvidenceUploader = ({ evidenceFiles, setEvidenceFiles, uploadProgress, isS
                 </Label>
                 <Input id="file-upload" type="file" onChange={handleFileChange} className="hidden" multiple />
             </div>
+            <FieldError message={uploadError} className="mt-2" />
             {evidenceFiles.length > 0 && (
                 <div className="space-y-2 mt-2">
                     {evidenceFiles.map((file, index) => (

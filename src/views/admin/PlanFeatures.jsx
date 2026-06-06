@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Save } from 'lucide-react';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
+import { Save } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import PageHeader from '@/components/admin/PageHeader';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
@@ -15,18 +15,21 @@ import PageContentWrapper from '@/components/admin/PageContentWrapper';
 const PlanFeatures = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [planFeedback, setPlanFeedback] = useState({});
+  const [savingPlanId, setSavingPlanId] = useState(null);
 
   const fetchPlans = useCallback(async () => {
     setLoading(true);
+    setFetchError('');
     const { data, error } = await supabase.from('plans').select('*').order('price');
     if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching plans', description: error.message });
+      setFetchError(error.message);
     } else {
       setPlans(data.map(p => ({ ...p, features: p.feature_flags?.features || [] })));
     }
     setLoading(false);
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     fetchPlans();
@@ -51,23 +54,31 @@ const PlanFeatures = () => {
     const plan = plans.find(p => p.id === planId);
     const { id, features, ...planData } = plan;
     planData.feature_flags = { features };
-    
-    const { error } = await supabase.from('plans').update(planData).eq('id', planId);
-    if (error) {
-      toast({ variant: 'destructive', title: `Failed to save ${plan.name} plan`, description: error.message });
-    } else {
-      toast({ title: `${plan.name} plan saved successfully!` });
+
+    setPlanFeedback((prev) => ({ ...prev, [planId]: { error: '', success: '' } }));
+    setSavingPlanId(planId);
+    try {
+      const { error } = await supabase.from('plans').update(planData).eq('id', planId);
+      if (error) {
+        setPlanFeedback((prev) => ({ ...prev, [planId]: { error: error.message, success: '' } }));
+      } else {
+        setPlanFeedback((prev) => ({ ...prev, [planId]: { error: '', success: `${plan.name} plan saved successfully!` } }));
+      }
+    } finally {
+      setSavingPlanId(null);
     }
   };
 
   return (
     <>
-      <Helmet><title>Plan Features - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Plan Features - WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Plan Features Management"
           description="Update plan information that appears on the public pricing page."
         />
+
+        <PageErrorBanner error={fetchError} title="Could not load plans" />
         
         {/* Plan Details */}
         <div className="space-y-8">
@@ -103,7 +114,9 @@ const PlanFeatures = () => {
                       rows={8}
                     />
                   </div>
-                  <Button onClick={() => handleSavePlan(plan.id)}><Save className="mr-2 h-4 w-4" />Save {plan.name} Plan</Button>
+                  <Button onClick={() => handleSavePlan(plan.id)} loading={savingPlanId === plan.id}><Save className="mr-2 h-4 w-4" />Save {plan.name} Plan</Button>
+                  <FieldError message={planFeedback[plan.id]?.error} className="mt-2" />
+                  <FieldSuccess message={planFeedback[plan.id]?.success} className="mt-2" />
                 </CardContent>
               </Card>
             ))

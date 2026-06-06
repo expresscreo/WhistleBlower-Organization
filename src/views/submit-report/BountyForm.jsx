@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, Award, FileType2, List, MapPin, Eye, EyeOff, Upload, X } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Award, FileType2, List, MapPin, Calendar, Eye, EyeOff, Upload, X } from 'lucide-react';
+import { formatDateForInput } from '@/components/submit-report/reportFormUtils';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { Progress } from '@/components/ui/progress';
 import { sanitizeFilename, formatNumberWithCommas } from '@/lib/utils';
+import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/components/media/MaximizableThumbnailOverlay';
 
  
 
@@ -20,14 +22,16 @@ const crimeTypes = [
 ];
 
 const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
-    const { toast } = useToast();
+    const [formError, setFormError] = useState('');
+    const [uploadError, setUploadError] = useState('');
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         typeOfCrime: '',
         state: '',
-            fullAddress: '',
+        fullAddress: '',
         lga: '',
+        dateOfIncident: null,
         bountyAmount: '',
         password: '',
         confirmPassword: '',
@@ -37,6 +41,7 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
     const [lgas, setLgas] = useState([]);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [filePreviewUrls, setFilePreviewUrls] = useState({});
 
     const handleInputChange = useCallback((field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -59,9 +64,10 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
             const newFiles = Array.from(e.target.files);
             const oversizedFiles = newFiles.filter(file => file.size > 25 * 1024 * 1024);
             if (oversizedFiles.length > 0) {
-                toast({ title: 'File(s) too large', description: 'Please ensure all files are smaller than 25MB.', variant: 'destructive' });
+                setUploadError('Please ensure all files are smaller than 25MB.');
                 return;
             }
+            setUploadError('');
             handleInputChange('evidenceFiles', [...formData.evidenceFiles, ...newFiles]);
         }
     };
@@ -70,18 +76,39 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
         handleInputChange('evidenceFiles', formData.evidenceFiles.filter((_, i) => i !== index));
     };
 
+    useEffect(() => {
+        const nextPreviewUrls = {};
+
+        formData.evidenceFiles.forEach((file, index) => {
+            if (file.type?.startsWith('image/')) {
+                nextPreviewUrls[index] = URL.createObjectURL(file);
+            }
+        });
+
+        setFilePreviewUrls(nextPreviewUrls);
+
+        return () => {
+            Object.values(nextPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
+        };
+    }, [formData.evidenceFiles]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        setFormError('');
         if (!formData.agreeTerms) {
-            toast({ title: 'Terms and Conditions', description: 'You must agree to the terms and conditions.', variant: 'destructive' });
+            setFormError('You must agree to the terms and conditions.');
+            return;
+        }
+        if (!formData.dateOfIncident) {
+            setFormError('Please provide the date of incident.');
             return;
         }
         if (formData.evidenceFiles.length === 0) {
-            toast({ title: 'Supporting Files Required', description: 'Please attach at least one supporting file for your bounty.', variant: 'destructive' });
+            setFormError('Please attach at least one supporting file for your bounty.');
             return;
         }
         if (formData.password.length < 8 || formData.password !== formData.confirmPassword) {
-            toast({ title: 'Password Error', description: 'Passwords must be at least 8 characters long and must match.', variant: 'destructive' });
+            setFormError('Passwords must be at least 8 characters long and must match.');
             return;
         }
         const submissionData = {
@@ -127,6 +154,22 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                     <Label htmlFor="bounty-address" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />Full Address (Optional)</Label>
                     <Input id="bounty-address" placeholder="e.g., 123 Akure Road, Ikeja, Lagos" value={formData.fullAddress} onChange={(e) => handleInputChange('fullAddress', e.target.value)} />
                 </div>
+                <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="bounty-incident-date" className="flex items-center"><Calendar className="mr-2 h-4 w-4" />Date of Incident</Label>
+                    <Input
+                        id="bounty-incident-date"
+                        type="date"
+                        max={formatDateForInput(new Date())}
+                        value={formatDateForInput(formData.dateOfIncident)}
+                        onChange={(e) =>
+                            handleInputChange(
+                                'dateOfIncident',
+                                e.target.value ? new Date(`${e.target.value}T12:00:00`) : null
+                            )
+                        }
+                        required
+                    />
+                </div>
             </div>
             <div className="space-y-4">
                 <Label>Attach Supporting Files</Label>
@@ -142,7 +185,21 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                     <div className="space-y-2 mt-2">
                         {formData.evidenceFiles.map((file, index) => (
                             <div key={index} className="flex items-center justify-between text-sm bg-muted p-2">
-                                <div className="flex-grow">
+                                {filePreviewUrls[index] && (
+                                    <div className={`${maximizableThumbnailGroupClass} mr-3 h-14 w-14 flex-shrink-0 rounded`}>
+                                        <img
+                                            src={filePreviewUrls[index]}
+                                            alt={sanitizeFilename(file.name)}
+                                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                        />
+                                        <MaximizableThumbnailOverlay
+                                            iconRingClassName="h-8 w-8"
+                                            iconClassName="h-4 w-4"
+                                            overlayClassName="rounded"
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex-grow min-w-0">
                                     <div className="flex justify-between items-center">
                                         <span className="truncate pr-2">{sanitizeFilename(file.name)}</span>
                                         {isSubmitting && uploadProgress[index] > 0 && <span className="text-xs">{Math.round(uploadProgress[index])}%</span>}
@@ -181,8 +238,10 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                 <Checkbox id="bounty-terms" checked={formData.agreeTerms} onCheckedChange={(c) => handleInputChange('agreeTerms', c)} />
                 <Label htmlFor="bounty-terms" className="text-sm">I have read and agree to the <Link href="/terms-of-service" className="underline">Terms and Conditions</Link>.</Label>
             </div>
-            <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !formData.agreeTerms}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting Bounty...</> : 'Submit Bounty'}
+            <FieldError message={uploadError} className="mt-2" />
+            <FieldError message={formError} />
+            <Button type="submit" size="lg" className="w-full" loading={isSubmitting} disabled={!formData.agreeTerms}>
+                Submit Bounty
             </Button>
         </motion.form>
     );

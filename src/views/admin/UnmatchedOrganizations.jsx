@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -19,10 +19,12 @@ const UnmatchedOrganizations = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedOrgId, setSelectedOrgId] = useState('');
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [matchFeedback, setMatchFeedback] = useState({ error: '', success: '' });
 
   const fetchUnmatchedReports = useCallback(async () => {
     setLoading(true);
+    setFetchError('');
     const { data, error } = await supabase
       .from('reports')
       .select('id, report_id, organization_name')
@@ -30,12 +32,12 @@ const UnmatchedOrganizations = () => {
       .not('organization_name', 'is', null);
     
     if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching reports', description: error.message });
+      setFetchError(error.message);
     } else {
       setUnmatchedReports(data);
     }
     setLoading(false);
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     fetchUnmatchedReports();
@@ -49,12 +51,15 @@ const UnmatchedOrganizations = () => {
   const handleMatchClick = (report) => {
     setSelectedReport(report);
     setSelectedOrgId('');
+    setMatchFeedback({ error: '', success: '' });
     setIsModalOpen(true);
   };
 
   const handleConfirmMatch = async () => {
+    setMatchFeedback({ error: '', success: '' });
+
     if (!selectedReport || !selectedOrgId) {
-      toast({ variant: 'destructive', title: 'Selection required', description: 'Please select an organization to match.' });
+      setMatchFeedback({ error: 'Please select an organization to match.', success: '' });
       return;
     }
 
@@ -64,11 +69,12 @@ const UnmatchedOrganizations = () => {
       .eq('id', selectedReport.id);
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Failed to match organization', description: error.message });
-    } else {
-      toast({ title: 'Organization matched successfully!' });
-      fetchUnmatchedReports();
+      setMatchFeedback({ error: error.message, success: '' });
+      return;
     }
+
+    setMatchFeedback({ error: '', success: 'Organization matched successfully!' });
+    fetchUnmatchedReports();
     setIsModalOpen(false);
     setSelectedReport(null);
     setSelectedOrgId('');
@@ -76,50 +82,54 @@ const UnmatchedOrganizations = () => {
 
   return (
     <>
-      <Helmet><title>Unmatched Organizations - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Unmatched Organizations - WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Unmatched Organizations"
           description="Match free-text organization names from reports to official organizations in the system."
         />
+
+        <PageErrorBanner error={fetchError} title="Could not load reports" />
         
         {/* Organizations Table */}
         <Card>
           <CardContent>
             <div className="overflow-x-auto">
-              <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Report ID</TableHead>
-                  <TableHead>Submitted Name</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <>
-                    <NavbarLoader />
-                    <TableRow><TableCell colSpan="3" className="text-center">
-                      {/* Loading indication is handled by NavbarLoader */}
-                    </TableCell></TableRow>
-                  </>
-                ) : unmatchedReports.length > 0 ? (
-                  unmatchedReports.map(report => (
-                    <TableRow key={report.id}>
-                      <TableCell>{report.report_id}</TableCell>
-                      <TableCell className="font-medium">{report.organization_name}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleMatchClick(report)}>
-                          <LinkIcon className="mr-2 h-4 w-4" /> Match
-                        </Button>
-                      </TableCell>
+              {loading ? (
+                <>
+                  <NavbarLoader />
+                  <div className="flex justify-center p-8">
+                    {/* Loading indication is handled by NavbarLoader */}
+                  </div>
+                </>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Report ID</TableHead>
+                      <TableHead>Submitted Name</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow><TableCell colSpan="3" className="text-center text-muted-foreground">No unmatched organizations to review.</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {unmatchedReports.length > 0 ? (
+                      unmatchedReports.map(report => (
+                        <TableRow key={report.id}>
+                          <TableCell>{report.report_id}</TableCell>
+                          <TableCell className="font-medium">{report.organization_name}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => handleMatchClick(report)}>
+                              <LinkIcon className="mr-2 h-4 w-4" /> Match
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow><TableCell colSpan="3" className="text-center text-muted-foreground">No unmatched organizations to review.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -147,6 +157,8 @@ const UnmatchedOrganizations = () => {
                     ))}
                 </SelectContent>
             </Select>
+            <FieldError message={matchFeedback.error} className="mt-3" />
+            <FieldSuccess message={matchFeedback.success} className="mt-3" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>

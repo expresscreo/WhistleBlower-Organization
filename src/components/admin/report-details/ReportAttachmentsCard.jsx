@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -9,7 +8,6 @@ import { sanitizeFilename } from '@/lib/utils';
 import { getLocalFileUrl } from '@/lib/fileUtils';
 
 const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
-  const { toast } = useToast();
   const [url, setUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const rawFileName = path.split('/').pop();
@@ -35,7 +33,7 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
       setUrl(data.signedUrl);
       return data.signedUrl;
     } catch (e) {
-      toast({ title: 'Error', description: 'Could not load preview.', variant: 'destructive' });
+      console.error('Could not load preview:', e);
       return null;
     } finally {
       setLoading(false);
@@ -55,8 +53,6 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } else {
-      toast({ title: 'Download failed', description: 'Could not create a secure download link.', variant: 'destructive' });
     }
   };
   
@@ -78,7 +74,7 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
   };
 
   return (
-    <div className="border bg-card overflow-hidden group p-3">
+    <div className="border bg-card overflow-hidden group p-3 space-y-2">
         <div className="flex items-center gap-2">
             {isVoiceNotePrimary ? <Mic className="h-5 w-5 text-primary flex-shrink-0"/> : <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0"/>}
             <p className="text-sm truncate flex-grow">{fileName}</p>

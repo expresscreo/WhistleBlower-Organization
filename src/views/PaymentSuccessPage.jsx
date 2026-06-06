@@ -1,16 +1,13 @@
 import Link from 'next/link';
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 const PaymentSuccessPage = () => {
   return (
     <>
-      <Helmet>
-        <title>Payment Successful! - WhistleBlower.ng</title>
-        <meta name="description" content="Your payment was successful. Your account has been activated. Proceed to login." />
-      </Helmet>
+      <PageHead title="Payment Successful! - WhistleBlower.ng" description="Your payment was successful. Your account has been activated. Proceed to login." />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

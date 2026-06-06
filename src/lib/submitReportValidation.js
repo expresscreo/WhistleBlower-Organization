@@ -1,4 +1,4 @@
-export function validateStep(step, context) {
+export function validateStepById(stepId, context) {
   const {
     formData,
     descriptionMode,
@@ -6,21 +6,25 @@ export function validateStep(step, context) {
     isFeedbackMode,
     hasLgasForState,
     isBountyMode,
+    isMostWantedMode,
   } = context;
 
-  switch (step) {
-    case 1: {
-      if (!formData.organization?.value) {
+  switch (stepId) {
+    case 'organization': {
+      if (isBountyMode || isMostWantedMode) return { valid: true };
+      const orgName = formData.organization?.label?.trim();
+      if (!orgName || orgName.length < 3) {
         return {
           valid: false,
           title: 'Organization required',
-          description: 'Please search for and select an organization.',
+          description:
+            'Please enter your organization name (at least 3 characters). Select a match or use your typed name.',
           focusId: 'companyName',
         };
       }
       return { valid: true };
     }
-    case 2: {
+    case 'context': {
       if (!formData.category?.trim()) {
         return {
           valid: false,
@@ -33,7 +37,9 @@ export function validateStep(step, context) {
         return {
           valid: false,
           title: 'State required',
-          description: 'Please select the state where the incident occurred.',
+          description: isBountyMode
+            ? 'Please select the state where you observed this.'
+            : 'Please select the state where the incident occurred.',
           focusId: 'stateOfIncident',
         };
       }
@@ -45,7 +51,7 @@ export function validateStep(step, context) {
           focusId: 'lga',
         };
       }
-      if (!formData.dateOfIncident) {
+      if (!isBountyMode && !formData.dateOfIncident) {
         return {
           valid: false,
           title: 'Date required',
@@ -53,9 +59,36 @@ export function validateStep(step, context) {
           focusId: 'dateOfIncident',
         };
       }
+      if (isMostWantedMode && !formData.timeSeen?.trim()) {
+        return {
+          valid: false,
+          title: 'Time required',
+          description: 'Please provide the time you saw this person.',
+          focusId: 'timeSeen',
+        };
+      }
       return { valid: true };
     }
-    case 3: {
+    case 'match': {
+      if (!Array.isArray(formData.mostWantedIdentifiers) || formData.mostWantedIdentifiers.length === 0) {
+        return {
+          valid: false,
+          title: 'Match details required',
+          description: 'Select at least one identifier that matched the alert.',
+          focusId: 'mostWantedIdentifiers',
+        };
+      }
+      return { valid: true };
+    }
+    case 'story': {
+      if (isMostWantedMode && descriptionMode === 'voice') {
+        return {
+          valid: false,
+          title: 'Text description required',
+          description: 'Most Wanted tips currently require text details.',
+          focusId: 'reportDescription',
+        };
+      }
       if (descriptionMode === 'voice') {
         if (!voiceNoteFile?.blob) {
           return {
@@ -71,7 +104,9 @@ export function validateStep(step, context) {
         return {
           valid: false,
           title: 'Title required',
-          description: 'Please enter a title for your report.',
+          description: isBountyMode
+            ? 'Please confirm the bounty title.'
+            : 'Please enter a title for your report.',
           focusId: 'reportTitle',
         };
       }
@@ -79,15 +114,17 @@ export function validateStep(step, context) {
         return {
           valid: false,
           title: 'Description required',
-          description: 'Please provide a detailed description.',
+          description: isBountyMode
+            ? 'Please describe the information you have about this bounty.'
+            : 'Please provide a detailed description.',
           focusId: 'reportDescription',
         };
       }
       return { valid: true };
     }
-    case 4:
+    case 'evidence':
       return { valid: true };
-    case 5: {
+    case 'finish': {
       if (!isFeedbackMode) {
         const pwd = formData.anonymousPassword || '';
         const confirm = formData.confirmPassword || '';
@@ -123,10 +160,26 @@ export function validateStep(step, context) {
   }
 }
 
-export function validateAllSteps(context) {
-  for (let step = 1; step <= 5; step += 1) {
-    const result = validateStep(step, context);
-    if (!result.valid) return { ...result, step };
+/** @deprecated Use validateStepById with step id from submitReportStepMeta */
+export function validateStep(step, context) {
+  const stepIds = ['organization', 'context', 'match', 'story', 'evidence', 'finish'];
+  return validateStepById(stepIds[step - 1], context);
+}
+
+export function validateAllSteps(context, steps) {
+  const stepList = steps || [
+    { id: 'organization' },
+    { id: 'context' },
+    { id: 'story' },
+    { id: 'evidence' },
+    { id: 'finish' },
+  ];
+
+  for (let i = 0; i < stepList.length; i += 1) {
+    const result = validateStepById(stepList[i].id, context);
+    if (!result.valid) {
+      return { ...result, step: i + 1, stepId: stepList[i].id };
+    }
   }
   return { valid: true };
 }

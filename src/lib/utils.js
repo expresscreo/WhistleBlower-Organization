@@ -10,10 +10,47 @@ export const sanitizeFilename = (filename) => {
 };
 
 export const formatNumberWithCommas = (value) => {
-  if (!value) return '';
-  const stringValue = String(value).replace(/,/g, '');
-  if (isNaN(Number(stringValue))) return value;
-  return Number(stringValue).toLocaleString('en-US');
+  if (value === null || value === undefined) return '';
+  const raw = String(value).replace(/,/g, '');
+  if (!raw) return '';
+
+  if (/^\d+$/.test(raw)) {
+    return raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  const decimalMatch = raw.match(/^(\d+)\.(\d*)$/);
+  if (decimalMatch) {
+    const [, intPart, decPart] = decimalMatch;
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return `${formattedInt}.${decPart}`;
+  }
+
+  if (/^\d+\.$/.test(raw)) {
+    const intPart = raw.slice(0, -1);
+    return `${intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.`;
+  }
+
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+/** Strip HTML tags and collapse whitespace for plain-text previews. */
+export const htmlToPlainText = (html) => {
+  if (!html) return '';
+  return String(html)
+    .replace(/<img[^>]*>/gi, ' [Image] ')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/p>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
 // Create URL-safe slugs from titles
@@ -22,6 +59,7 @@ export const slugify = (input) => {
   return String(input)
     .toLowerCase()
     .normalize('NFKD')
+    .replace(/,/g, '')
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/[\s_-]+/g, '-')

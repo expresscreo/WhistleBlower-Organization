@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Ban, CheckCircle, ChevronDown, Loader2, QrCode, Link2Off, MessageSquare } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -38,14 +38,19 @@ const OrganizationsManagement = () => {
     const [qrTitle, setQrTitle] = useState('');
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [plans, setPlans] = useState([]);
-    const { toast } = useToast();
+    const [fetchError, setFetchError] = useState('');
+    const [formFeedback, setFormFeedback] = useState({ error: '', success: '' });
+    const [deleteFeedback, setDeleteFeedback] = useState({ error: '', success: '' });
+    const [usersExpandError, setUsersExpandError] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [expandedOrgId, setExpandedOrgId] = useState(null);
     const [orgUsers, setOrgUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
 
     const fetchOrganizations = useCallback(async () => {
         setLoading(true);
+        setFetchError('');
         let query = supabase.from('organizations').select('id, name, status, created_at, plans(id, name, report_limit)');
         if (searchTerm) {
             query = query.ilike('name', `%${searchTerm}%`);
@@ -53,7 +58,7 @@ const OrganizationsManagement = () => {
 
         const { data, error } = await query;
         if (error) {
-            toast({ variant: 'destructive', title: 'Error fetching organizations', description: error.message });
+            setFetchError(error.message);
         } else {
             const today = new Date();
             const start = startOfMonth(today);
@@ -86,7 +91,7 @@ const OrganizationsManagement = () => {
             setOrganizations(filteredOrgs);
         }
         setLoading(false);
-    }, [searchTerm, selectedPlan, selectedStatus, toast]);
+    }, [searchTerm, selectedPlan, selectedStatus]);
 
     useEffect(() => {
         fetchOrganizations();
@@ -108,9 +113,10 @@ const OrganizationsManagement = () => {
             setLoadingUsers(true);
             const { data, error } = await supabase.from('users').select('id, name, email, user_type').eq('organization_id', orgId);
             if (error) {
-                toast({ variant: 'destructive', title: 'Error fetching users', description: error.message });
+                setUsersExpandError(error.message);
                 setOrgUsers([]);
             } else {
+                setUsersExpandError('');
                 setOrgUsers(data);
             }
             setLoadingUsers(false);
@@ -118,16 +124,19 @@ const OrganizationsManagement = () => {
     };
 
     const handleAdd = () => {
+        setFormFeedback({ error: '', success: '' });
         setSelectedOrg({ name: '', plan_id: '', status: 'active' });
         setIsModalOpen(true);
     };
 
     const handleEdit = (org) => {
+        setFormFeedback({ error: '', success: '' });
         setSelectedOrg({ ...org, plan_id: org.plans.id });
         setIsModalOpen(true);
     };
 
     const handleDelete = (org) => {
+        setDeleteFeedback({ error: '', success: '' });
         setSelectedOrg(org);
         setIsDeleteModalOpen(true);
     };
@@ -145,7 +154,7 @@ const OrganizationsManagement = () => {
             setQrCodeUrl(dataUrl);
             setIsQrModalOpen(true);
         } catch (err) {
-            toast({ variant: 'destructive', title: 'QR Code Error', description: 'Could not generate QR code.' });
+            setFormFeedback({ error: 'Could not generate QR code.', success: '' });
         }
     };
 
@@ -162,15 +171,16 @@ const OrganizationsManagement = () => {
 
     const confirmDelete = async () => {
         if (!selectedOrg) return;
+        setDeleteFeedback({ error: '', success: '' });
         setIsDeleting(true);
         const { data, error } = await supabase.functions.invoke('delete-organization', {
             body: { organization_id: selectedOrg.id },
         });
 
         if (error || data?.error) {
-            toast({ variant: 'destructive', title: 'Error deleting organization', description: error?.message || data?.error });
+            setDeleteFeedback({ error: error?.message || data?.error, success: '' });
         } else {
-            toast({ title: 'Organization deleted successfully' });
+            setDeleteFeedback({ error: '', success: 'Organization deleted successfully' });
             fetchOrganizations();
         }
         setIsDeleting(false);
@@ -180,32 +190,38 @@ const OrganizationsManagement = () => {
 
     const handleSave = async () => {
         if (!selectedOrg) return;
+        setFormFeedback({ error: '', success: '' });
         const orgData = {
             name: selectedOrg.name,
             plan_id: selectedOrg.plan_id,
             status: selectedOrg.status,
         };
 
-        let error;
-        if (selectedOrg.id) {
-            ({ error } = await supabase.from('organizations').update(orgData).eq('id', selectedOrg.id));
-        } else {
-            ({ error } = await supabase.from('organizations').insert(orgData));
-        }
+        setIsSaving(true);
+        try {
+            let error;
+            if (selectedOrg.id) {
+                ({ error } = await supabase.from('organizations').update(orgData).eq('id', selectedOrg.id));
+            } else {
+                ({ error } = await supabase.from('organizations').insert(orgData));
+            }
 
-        if (error) {
-            toast({ variant: 'destructive', title: 'Error saving organization', description: error.message });
-        } else {
-            toast({ title: `Organization ${selectedOrg.id ? 'updated' : 'added'} successfully` });
-            fetchOrganizations();
+            if (error) {
+                setFormFeedback({ error: error.message, success: '' });
+            } else {
+                setFormFeedback({ error: '', success: `Organization ${selectedOrg.id ? 'updated' : 'added'} successfully` });
+                fetchOrganizations();
+            }
+            setIsModalOpen(false);
+            setSelectedOrg(null);
+        } finally {
+            setIsSaving(false);
         }
-        setIsModalOpen(false);
-        setSelectedOrg(null);
     };
 
     return (
         <>
-            <Helmet><title>Organizations Management - WhistleBlower.ng</title></Helmet>
+            <PageHead title="Organizations Management - WhistleBlower.ng" />
             <div className="space-y-8">
                 <PageHeader 
                     title="Organizations Management"
@@ -216,6 +232,9 @@ const OrganizationsManagement = () => {
                     </Link>
                     <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Add Organization</Button>
                 </PageHeader>
+
+                <PageErrorBanner error={fetchError} title="Could not load organizations" />
+                <FieldError message={usersExpandError} />
                 
                 {/* Search and Filters */}
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -359,9 +378,11 @@ const OrganizationsManagement = () => {
                             </Select>
                         </div>
                     </div>
+                    <FieldError message={formFeedback.error} className="mx-6" />
+                    <FieldSuccess message={formFeedback.success} className="mx-6" />
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSave}>Save</Button>
+                        <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleSave} loading={isSaving}>Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -372,10 +393,11 @@ const OrganizationsManagement = () => {
                         <DialogTitle>Are you sure?</DialogTitle>
                         <DialogDescription>This action cannot be undone. This will permanently delete the organization "{selectedOrg?.name}" and all associated data (users, reports, billing). This is irreversible.</DialogDescription>
                     </DialogHeader>
+                    <FieldError message={deleteFeedback.error} className="mx-6" />
+                    <FieldSuccess message={deleteFeedback.success} className="mx-6" />
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} disabled={isDeleting}>Cancel</Button>
-                        <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
-                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button variant="destructive" onClick={confirmDelete} loading={isDeleting}>
                             Delete
                         </Button>
                     </DialogFooter>

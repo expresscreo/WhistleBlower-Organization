@@ -1,10 +1,10 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Loader2, Mic, Text } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { FileText, Mic, Text } from 'lucide-react';
+import { FieldError } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
 import { hashPassword } from '@/lib/cryptoUtils';
 
@@ -26,7 +26,7 @@ import { generateReportId } from '@/lib/utils';
 import { hashPassword } from '@/lib/cryptoUtils';
 
 const SubmitReportPage = () => {
-    const { toast } = useToast();
+    const [submitError, setSubmitError] = useState('');
     const router = useRouter();
     const searchParams = useSearchParams();
     
@@ -67,7 +67,7 @@ const SubmitReportPage = () => {
                     .single();
                 
                 if (error || !data) {
-                    toast({ title: "Invalid Organization", description: "The organization ID in the link is not valid.", variant: "destructive" });
+                    setSubmitError('The organization ID in the link is not valid.');
                     router.replace('/submit-report');
                 } else {
                     setFormData(prev => ({ ...prev, organizationName: data.name, organizationId: data.id }));
@@ -76,7 +76,7 @@ const SubmitReportPage = () => {
             };
             fetchOrganization();
         }
-    }, [searchParams, toast, router]);
+    }, [searchParams, router]);
 
     const handleInputChange = useCallback((field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -86,16 +86,17 @@ const SubmitReportPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitError('');
         if (!formData.agreeTerms) {
-            toast({ title: 'Terms and Conditions', description: 'You must agree to the terms and conditions.', variant: 'destructive' });
+            setSubmitError('You must agree to the terms and conditions.');
             return;
         }
         if (formData.password.length < 8 || formData.password !== formData.confirmPassword) {
-            toast({ title: 'Password Error', description: 'Passwords must be at least 8 characters long and must match.', variant: 'destructive' });
+            setSubmitError('Passwords must be at least 8 characters long and must match.');
             return;
         }
         if (submissionType === 'voice' && !voiceNote) {
-            toast({ title: 'Voice Note Required', description: 'Please submit a voice note for your report.', variant: 'destructive' });
+            setSubmitError('Please submit a voice note for your report.');
             return;
         }
         
@@ -139,7 +140,7 @@ const SubmitReportPage = () => {
                 ].filter(Boolean).join('\n\n');
 
                 // Determine bounty id. If not provided in query, try to resolve or create a bounty placeholder
-                let targetBountyId = bountyIdFromQuery ? Number(bountyIdFromQuery) : null;
+                let targetBountyId = bountyIdFromQuery || null;
                 if (!targetBountyId) {
                     // Try match an existing bounty by title
                     const { data: existingBounty } = await supabase
@@ -285,7 +286,7 @@ const SubmitReportPage = () => {
 
         } catch (error) {
             console.error("Submission error details:", error);
-            toast({ title: "Submission Failed", description: error.message || "An unexpected error occurred. Please try again.", variant: "destructive" });
+            setSubmitError(error.message || 'An unexpected error occurred. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -297,7 +298,7 @@ const SubmitReportPage = () => {
   
     return (
       <>
-        <Helmet><title>Submit Report - WhistleBlower.ng</title></Helmet>
+        <PageHead title="Submit Report - WhistleBlower.ng" />
         <div className="py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-12">
@@ -306,6 +307,7 @@ const SubmitReportPage = () => {
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">Report crimes and illegal activities safely. Your identity is protected.</p>
             </motion.div>
             <motion.form onSubmit={handleSubmit} className="space-y-8 bg-card p-8 border">
+              <FieldError message={submitError} />
               
               <div className="flex justify-center bg-muted p-1 space-x-1">
                 <Button type="button" onClick={() => setSubmissionType('text')} variant={submissionType === 'text' ? 'default' : 'ghost'} className="flex-1">
@@ -374,8 +376,8 @@ const SubmitReportPage = () => {
                 <Checkbox id="terms" checked={formData.agreeTerms} onCheckedChange={(c) => handleInputChange('agreeTerms', c)} />
                 <Label htmlFor="terms" className="text-sm">I have read and agree to the <Link href="/terms-of-service" className="underline">Terms and Conditions</Link>.</Label>
               </div>
-              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !formData.agreeTerms}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit Report'}
+              <Button type="submit" size="lg" className="w-full" loading={isSubmitting} disabled={!formData.agreeTerms}>
+                Submit Report
               </Button>
             </motion.form>
           </div>

@@ -32,10 +32,10 @@ const DashboardLayout = ({ children }) => {
     const navLinks = [
         { href: '/admin/overview', label: 'Overview', icon: LayoutDashboard, pageName: 'Overview' },
         { href: '/admin/reports', label: 'Reports', icon: FileText, pageName: 'Reports' },
-        { href: '/admin/customer-feedback', label: 'Customer Feedback', icon: MessageSquare, pageName: 'Customer Feedback' },
-        { href: '/admin/triage', label: 'Triage', icon: FolderGit2, pageName: 'Triage' },
         { href: '/admin/bounties', label: 'Bounties', icon: Award, pageName: 'Bounties' },
+        { href: '/admin/customer-feedback', label: 'Customer Feedback', icon: MessageSquare, pageName: 'Customer Feedback' },
         { href: '/admin/news-editor', label: 'News Editor', icon: Newspaper, pageName: 'News Editor' },
+        { href: '/admin/triage', label: 'Triage', icon: FolderGit2, pageName: 'Triage' },
         { href: '/admin/user-management', label: 'User Management', icon: Users, pageName: 'User Management' },
         { href: '/admin/organizations-management', label: 'Organizations', icon: Building, pageName: 'Organizations' },
         { href: '/admin/unmatched-organizations', label: 'Unmatched Orgs', icon: GitBranch, pageName: 'Unmatched Organization' },

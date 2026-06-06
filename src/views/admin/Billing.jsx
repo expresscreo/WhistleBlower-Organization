@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { format } from 'date-fns';
 import { Loader2, AlertCircle } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
@@ -19,11 +19,13 @@ const Billing = () => {
     const [billingHistory, setBillingHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const { toast } = useToast();
+    const [fetchError, setFetchError] = useState('');
+    const [actionNotice, setActionNotice] = useState('');
 
     const fetchBillingHistory = useCallback(async () => {
         if (!profile || !profile.organization_id) return;
         setLoading(true);
+        setFetchError('');
         const { data, error } = await supabase
             .from('billing')
             .select('*')
@@ -31,12 +33,12 @@ const Billing = () => {
             .order('created_at', { ascending: false });
 
         if (error) {
-            toast({ variant: 'destructive', title: 'Error fetching billing history', description: error.message });
+            setFetchError(error.message);
         } else {
             setBillingHistory(data);
         }
         setLoading(false);
-    }, [profile, toast]);
+    }, [profile]);
 
     useEffect(() => {
         if (!profileLoading && profile) {
@@ -58,12 +60,15 @@ const Billing = () => {
     
     return (
         <>
-            <Helmet><title>Billing - WhistleBlower.ng</title></Helmet>
+            <PageHead title="Billing - WhistleBlower.ng" />
             <div className="space-y-8">
                 <PageHeader 
                     title="Billing"
                     description="View your billing history and manage payments."
                 />
+
+                <PageErrorBanner error={fetchError} title="Could not load billing history" />
+
                 {(organizationStatus === 'suspended' || organizationStatus === 'pending_payment') && (
                      <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-[#2e2e2e]">
                         <CardHeader className="flex flex-row items-center gap-4">
@@ -81,6 +86,7 @@ const Billing = () => {
                 )}
                 {/* Search */}
                 <Input placeholder="Search by plan, status, or reference..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <FieldSuccess message={actionNotice} className="text-left" />
                 
                 {/* Billing History Table */}
                 <Card>
@@ -117,9 +123,9 @@ const Billing = () => {
                                             <TableCell className="text-muted-foreground">{item.paystack_ref}</TableCell>
                                             <TableCell>
                                                 {item.status.toLowerCase() === 'pending' ? (
-                                                    <Button size="sm" onClick={() => toast({ title: 'Feature coming soon!'})} className="uppercase">Pay Now</Button>
+                                                    <Button size="sm" onClick={() => setActionNotice('Pay Now is coming soon.')} className="uppercase">Pay Now</Button>
                                                 ) : (
-                                                    <Button size="sm" variant="outline" onClick={() => toast({ title: 'Feature coming soon!'})} className="uppercase">View Receipt</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => setActionNotice('View Receipt is coming soon.')} className="uppercase">View Receipt</Button>
                                                 )}
                                             </TableCell>
                                         </TableRow>

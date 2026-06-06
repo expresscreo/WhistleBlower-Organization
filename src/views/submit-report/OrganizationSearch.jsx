@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Building } from 'lucide-react';
 
 const FormLabel = ({ id, children, required = false }) => (
@@ -13,10 +13,10 @@ const FormLabel = ({ id, children, required = false }) => (
 );
 
 const OrganizationSearch = ({ organizationName, onOrganizationChange, isOrgFromUrl }) => {
-    const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState(organizationName || "");
     const [suggestions, setSuggestions] = useState([]);
     const [isFocused, setIsFocused] = useState(false);
+    const [searchError, setSearchError] = useState('');
 
     useEffect(() => {
         setSearchTerm(organizationName);
@@ -35,11 +35,13 @@ const OrganizationSearch = ({ organizationName, onOrganizationChange, isOrgFromU
             .limit(5);
 
         if (error) {
-            toast({ title: "Error", description: "Could not fetch organization suggestions.", variant: "destructive" });
+            setSearchError('Could not fetch organization suggestions.');
+            setSuggestions([]);
         } else {
+            setSearchError('');
             setSuggestions(data);
         }
-    }, [toast, isOrgFromUrl]);
+    }, [isOrgFromUrl]);
 
     useEffect(() => {
         const debounce = setTimeout(() => {
@@ -78,6 +80,7 @@ const OrganizationSearch = ({ organizationName, onOrganizationChange, isOrgFromU
                 disabled={isOrgFromUrl}
                 className={isOrgFromUrl ? 'bg-muted cursor-not-allowed' : ''}
             />
+            <FieldError message={searchError} />
             {isFocused && suggestions.length > 0 && !isOrgFromUrl && (
                 <div className="absolute z-10 w-full bg-card border shadow-lg mt-1 max-h-60 overflow-y-auto">
                     {suggestions.map(org => (

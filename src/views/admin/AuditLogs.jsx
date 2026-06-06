@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { PageErrorBanner } from '@/components/ui/form-feedback';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ const AuditLogs = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [actionFilter, setActionFilter] = useState('all');
   const [availableActions, setAvailableActions] = useState([]);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
   const { profile, loading: profileLoading } = useUserProfile();
   
   // Refs to prevent unnecessary re-fetching
@@ -47,6 +47,7 @@ const AuditLogs = () => {
     }
     
     setLoading(true);
+    setFetchError('');
     lastFetchTime.current = now;
 
     const from = (currentPage - 1) * LOGS_PER_PAGE;
@@ -69,14 +70,14 @@ const AuditLogs = () => {
     const { data, error, count } = await query;
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching audit logs', description: error.message });
+      setFetchError(error.message);
     } else {
       setLogs(data);
       setTotalPages(Math.ceil(count / LOGS_PER_PAGE));
       hasInitialData.current = true;
     }
     setLoading(false);
-  }, [toast, profile, currentPage, actionFilter]);
+  }, [profile, currentPage, actionFilter]);
 
   // Store the latest fetchLogs in ref
   fetchLogsRef.current = fetchLogs;
@@ -98,12 +99,12 @@ const AuditLogs = () => {
       const { data, error } = await query;
       
       if (error) {
-          toast({ variant: 'destructive', title: 'Error fetching actions', description: error.message });
+          setFetchError(error.message);
       } else if (data) {
           const uniqueActions = [...new Set(data.map(item => item.action))];
           setAvailableActions(uniqueActions);
       }
-  }, [profile, toast, availableActions.length]);
+  }, [profile, availableActions.length]);
 
 
   // Initial data fetch - only runs when profile is loaded or when page/filter changes
@@ -124,7 +125,7 @@ const AuditLogs = () => {
 
   return (
     <>
-      <Helmet><title>Audit Logs - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Audit Logs - WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Audit Logs"
@@ -140,6 +141,8 @@ const AuditLogs = () => {
             </SelectContent>
           </Select>
         </PageHeader>
+
+        <PageErrorBanner error={fetchError} title="Could not load audit logs" />
         
         {/* Audit Logs Table */}
         <Card>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Button } from '@/components/ui/button';
 import { Mic, StopCircle, Trash2, Loader2, AlertTriangle, CheckCircle, UploadCloud, RefreshCw } from 'lucide-react';
 // import * as Tone from 'tone'; // Temporarily disabled due to build issues
@@ -8,8 +8,8 @@ import { Mic, StopCircle, Trash2, Loader2, AlertTriangle, CheckCircle, UploadClo
 
 
 const VoiceRecorder = ({ onRecordingComplete }) => {
-    const { toast } = useToast();
     const [recorderState, setRecorderState] = useState('idle');
+    const [recorderError, setRecorderError] = useState('');
     const [audioBlob, setAudioBlob] = useState(null);
     const [audioUrl, setAudioUrl] = useState(null);
 
@@ -43,11 +43,9 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
             setRecorderState('recording');
         } catch (error) {
             console.error("Audio initialization error:", error);
-            toast({
-                variant: "destructive",
-                title: "Microphone Access Denied",
-                description: "Please allow microphone access. If you've already allowed it, try refreshing the page.",
-            });
+            setRecorderError(
+              'Please allow microphone access. If you\'ve already allowed it, try refreshing the page.'
+            );
             setRecorderState('error');
         }
     };
@@ -63,10 +61,7 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
         if (audioBlob) {
             onRecordingComplete(audioBlob);
             setRecorderState('submitted');
-            toast({
-                title: "Voice Note Ready",
-                description: "Your voice note is attached and ready for submission with your report.",
-            });
+            setRecorderError('');
         }
     };
     
@@ -179,6 +174,7 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
 
             <div className="flex flex-col items-center justify-center gap-4 min-h-[150px]">
                 {renderControls()}
+                <FieldError message={recorderError} />
             </div>
              <div className="text-xs text-muted-foreground bg-secondary p-3 mt-4 flex items-start gap-2 rounded-md">
                 <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />

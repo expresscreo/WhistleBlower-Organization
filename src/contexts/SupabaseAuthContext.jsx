@@ -2,7 +2,6 @@
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   const fetchUserAndPermissions = useCallback(async (sessionUser) => {
     if (sessionUser) {
@@ -84,17 +82,8 @@ export const AuthProvider = ({ children }) => {
     permissions,
     loading,
     signUp: (email, password, options) => supabase.auth.signUp({ email, password, options }),
-    login: async (email, password) => {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Sign in Failed",
-          description: error.message || "Something went wrong",
-        });
-      }
-      return { data, error };
-    },
+    login: (email, password) =>
+      supabase.auth.signInWithPassword({ email, password }),
     logout: async () => {
       await supabase.auth.signOut();
       setUser(null);

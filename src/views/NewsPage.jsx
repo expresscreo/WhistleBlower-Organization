@@ -1,31 +1,45 @@
-import { useRouter, useParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { PageErrorBanner } from '@/components/ui/form-feedback';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Info, Calendar, Bookmark, Newspaper, Target, Hand, Megaphone } from 'lucide-react';
+import { Loader2, AlertTriangle, Calendar, Bookmark, Newspaper, Target, Hand, Megaphone, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
-import { slugify } from '@/lib/utils';
+import { cn, slugify, htmlToPlainText } from '@/lib/utils';
+import { getMostWantedCardExcerpt } from '@/lib/mostWantedUtils';
+import {
+    fetchBountyLocationLookup,
+    filterNewsByLocation,
+} from '@/lib/newsLocationFilter';
+import MaximizableImage from '@/components/media/MaximizableImage';
+import CompactNewsListItem from '@/components/news/CompactNewsListItem';
+import FeaturedNewsListItem from '@/components/news/FeaturedNewsListItem';
 
 const NewsCard = ({ item }) => {
     const bountyPostUrl = item.bounty_id ? `/bounties/${slugify(item.title)}` : null;
     const slug = item.slug || slugify(item.title);
     const newsPostUrl = `/news/post/${slug}`;
+    const cardExcerpt =
+        item.category === 'most_wanted'
+            ? getMostWantedCardExcerpt(item)
+            : htmlToPlainText(item.content);
 
     return (
         <Card className="flex flex-col h-full overflow-hidden">
             {item.featured_image_url && (
-                <div className="aspect-video overflow-hidden bg-muted">
-                    <img src={item.featured_image_url} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
-                </div>
+                <MaximizableImage
+                    src={item.featured_image_url}
+                    alt={item.title}
+                    wrapperClassName="aspect-video w-full bg-muted"
+                    imageClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
             )}
             <CardHeader>
                 {item.category === 'bounty' && item.bounty_id ? (
@@ -43,12 +57,9 @@ const NewsCard = ({ item }) => {
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
-                <div 
-                    className="text-muted-foreground text-sm line-clamp-4 prose dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ 
-                        __html: item.content?.replace(/<img[^>]*>/g, '[Image]') || '' 
-                    }}
-                />
+                <p className="text-muted-foreground text-sm line-clamp-2">
+                    {cardExcerpt}
+                </p>
             </CardContent>
             <CardFooter>
                 {item.category === 'bounty' && bountyPostUrl ? (
@@ -57,20 +68,16 @@ const NewsCard = ({ item }) => {
                             <Target className="mr-2 h-4 w-4" /> View Bounty
                         </Button>
                     </Link>
+                ) : item.category === 'most_wanted' ? (
+                    <Link href={newsPostUrl} className="w-full">
+                        <Button className="w-full uppercase bg-red-600 hover:bg-red-700 text-white">
+                            <AlertTriangle className="mr-2 h-4 w-4" /> View Alert
+                        </Button>
+                    </Link>
                 ) : (
                     <Link href={newsPostUrl} className="w-full">
-                        <Button variant={item.category === 'bounty' ? 'default' : 'outline'} className="w-full uppercase">
-                            {item.category === 'bounty' ? (
-                                <>
-                                    <Target className="mr-2 h-4 w-4" /> View Bounty
-                                </>
-                            ) : item.category === 'most_wanted' ? (
-                                <>
-                                    <Info className="mr-2 h-4 w-4" /> View Alert
-                                </>
-                            ) : (
-                                'Read More'
-                            )}
+                        <Button variant="outline" className="w-full uppercase">
+                            Read More
                         </Button>
                     </Link>
                 )}
@@ -78,6 +85,14 @@ const NewsCard = ({ item }) => {
         </Card>
     );
 };
+
+const NEWS_PER_PAGE = 9;
+
+const filterSelectClassName = cn(
+    'flex h-10 w-full appearance-none border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background',
+    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+    'disabled:cursor-not-allowed disabled:opacity-50'
+);
 
 const categoryDetails = {
     all: {
@@ -103,18 +118,30 @@ const categoryDetails = {
 };
 
 const NewsPage = () => {
-    const { category = 'all' } = useParams();
+    const pathname = usePathname();
     const router = useRouter();
-    const { toast } = useToast();
-
+    const [fetchError, setFetchError] = useState('');
     const [news, setNews] = useState([]);
+    const [bountyLookup, setBountyLookup] = useState({});
     const [loading, setLoading] = useState(true);
     
     const [selectedState, setSelectedState] = useState('all');
     const [selectedLga, setSelectedLga] = useState('all');
     const [lgas, setLgas] = useState([]);
+    const [visibleCount, setVisibleCount] = useState(NEWS_PER_PAGE);
 
+    const category = useMemo(() => {
+        const [, firstSegment, secondSegment] = pathname.split('/');
+        if (firstSegment !== 'news') return 'all';
+        return categoryDetails[secondSegment] ? secondSegment : 'all';
+    }, [pathname]);
     const currentCategory = categoryDetails[category] || categoryDetails.all;
+    const filteredNews = useMemo(
+        () => filterNewsByLocation(news, { state: selectedState, lga: selectedLga }, bountyLookup),
+        [news, selectedState, selectedLga, bountyLookup]
+    );
+    const visibleNews = useMemo(() => filteredNews.slice(0, visibleCount), [filteredNews, visibleCount]);
+    const hasMoreNews = visibleCount < filteredNews.length;
     const Icon = currentCategory.icon;
 
     // Generate SEO metadata based on category
@@ -142,6 +169,7 @@ const NewsPage = () => {
 
     const fetchNews = useCallback(async () => {
         setLoading(true);
+        setFetchError('');
         try {
             let query = supabase.from('news').select(`*`).eq('status', 'published');
 
@@ -158,18 +186,32 @@ const NewsPage = () => {
                 featured_image_url: resolveImageUrl(item.featured_image)
             }));
 
+            const lookup = await fetchBountyLocationLookup(supabase, newsWithImageUrls);
+
+            setBountyLookup(lookup);
             setNews(newsWithImageUrls);
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error fetching news', description: error.message });
+            setFetchError(error.message);
+            setBountyLookup({});
             setNews([]);
         } finally {
             setLoading(false);
         }
-    }, [category, toast]);
+    }, [category]);
 
     useEffect(() => {
         fetchNews();
     }, [fetchNews]);
+
+    useEffect(() => {
+        setVisibleCount(NEWS_PER_PAGE);
+    }, [category, selectedState, selectedLga]);
+
+    useEffect(() => {
+        setSelectedState('all');
+        setSelectedLga('all');
+        setLgas([]);
+    }, [category]);
 
     // Real-time subscription for news updates
     useEffect(() => {
@@ -198,18 +240,35 @@ const NewsPage = () => {
         };
     }, [fetchNews]);
 
-    useEffect(() => {
-        if (selectedState && selectedState !== 'all') {
-            const stateData = nigerianStatesAndLgas.find(s => s.state === selectedState);
+    const handleStateChange = (event) => {
+        const value = event.target.value;
+        setSelectedState(value);
+        setSelectedLga('all');
+        if (value && value !== 'all') {
+            const stateData = nigerianStatesAndLgas.find((s) => s.state === value);
             setLgas(stateData ? stateData.lgas : []);
         } else {
             setLgas([]);
         }
-        setSelectedLga('all');
-    }, [selectedState]);
+    };
 
-    const handleCategoryChange = (newCategory) => {
-        router.push(newCategory && newCategory !== 'all' ? `/news/${newCategory}` : '/news');
+    const handleCategoryChange = (event) => {
+        const newCategory = event.target.value;
+        setVisibleCount(NEWS_PER_PAGE);
+        const nextCategory = newCategory || 'all';
+        const activeCategory = category || 'all';
+        if (nextCategory === activeCategory) return;
+
+        const href = nextCategory !== 'all' ? `/news/${nextCategory}` : '/news';
+        router.push(href);
+    };
+
+    const handleLgaChange = (event) => {
+        setSelectedLga(event.target.value);
+    };
+
+    const handleLoadMore = () => {
+        setVisibleCount((count) => Math.min(count + NEWS_PER_PAGE, filteredNews.length));
     };
 
     // Generate SEO metadata based on category
@@ -233,14 +292,17 @@ const NewsPage = () => {
             description: getPageDescription(category),
             mainEntity: {
                 '@type': 'ItemList',
-                numberOfItems: news.length,
-                itemListElement: news.slice(0, 10).map((item, index) => ({
+                numberOfItems: filteredNews.length,
+                itemListElement: filteredNews.slice(0, 10).map((item, index) => ({
                     '@type': 'ListItem',
                     position: index + 1,
                     item: {
                         '@type': 'Article',
                         headline: item.title,
-                        description: item.content?.replace(/<[^>]*>/g, '').substring(0, 160),
+                        description: (item.category === 'most_wanted' && item.most_wanted_details
+                            ? getMostWantedCardExcerpt(item)
+                            : htmlToPlainText(item.content)
+                        ).substring(0, 160),
                         url: item.bounty_id ? `/bounties/${slugify(item.title)}` : `/news/post/${item.slug || `${slugify(item.title)}`}`,
                         datePublished: item.created_at,
                         author: {
@@ -268,55 +330,102 @@ const NewsPage = () => {
                     </p>
                 </div>
 
+                <PageErrorBanner error={fetchError} title="Could not load news" className="mb-8" />
+
                 <div className="mb-8 p-4 border bg-card rounded-lg">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label className="text-sm font-medium mb-2 block">Category</label>
-                            <Select value={category || 'all'} onValueChange={handleCategoryChange}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Filter by category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Categories</SelectItem>
-                                    <SelectItem value="news">News</SelectItem>
-                                    <SelectItem value="bounty">Bounty</SelectItem>
-                                    <SelectItem value="most_wanted">Most Wanted</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <label htmlFor="news-category-filter" className="text-sm font-medium mb-2 block">Category</label>
+                            <div className="relative">
+                                <select
+                                    id="news-category-filter"
+                                    value={category || 'all'}
+                                    onChange={handleCategoryChange}
+                                    className={filterSelectClassName}
+                                    aria-label="Filter by category"
+                                >
+                                    <option value="all">All Categories</option>
+                                    <option value="news">News</option>
+                                    <option value="bounty">Bounty</option>
+                                    <option value="most_wanted">Most Wanted</option>
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
+                            </div>
                         </div>
                         <div>
-                            <label className="text-sm font-medium mb-2 block">State</label>
-                            <Select value={selectedState} onValueChange={setSelectedState} disabled>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Filter by state" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All States</SelectItem>
-                                    {nigerianStatesAndLgas.map(s => <SelectItem key={s.state} value={s.state}>{s.state}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <label htmlFor="news-state-filter" className="text-sm font-medium mb-2 block">State</label>
+                            <div className="relative">
+                                <select
+                                    id="news-state-filter"
+                                    value={selectedState}
+                                    onChange={handleStateChange}
+                                    className={filterSelectClassName}
+                                    aria-label="Filter by state"
+                                >
+                                    <option value="all">All States</option>
+                                    {nigerianStatesAndLgas.map((state) => (
+                                        <option key={state.state} value={state.state}>
+                                            {state.state}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
+                            </div>
                         </div>
                         <div>
-                            <label className="text-sm font-medium mb-2 block">City/LGA</label>
-                            <Select value={selectedLga} onValueChange={setSelectedLga} disabled>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Filter by city/LGA" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All LGAs</SelectItem>
-                                    {lgas.map(lga => <SelectItem key={lga} value={lga}>{lga}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <label htmlFor="news-lga-filter" className="text-sm font-medium mb-2 block">City/LGA</label>
+                            <div className="relative">
+                                <select
+                                    id="news-lga-filter"
+                                    value={selectedLga}
+                                    onChange={handleLgaChange}
+                                    disabled={selectedState === 'all' || lgas.length === 0}
+                                    className={filterSelectClassName}
+                                    aria-label="Filter by city/LGA"
+                                >
+                                    <option value="all">All LGAs</option>
+                                    {lgas.map((lga) => (
+                                        <option key={lga} value={lga}>
+                                            {lga}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {loading ? (
                     <div className="flex justify-center items-center min-h-[40vh]"><Loader2 className="h-16 w-16 animate-spin" /></div>
-                ) : news.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {news.map(item => <NewsCard key={item.id} item={item} />)}
-                    </div>
+                ) : filteredNews.length > 0 ? (
+                    <>
+                        <div className="flex flex-col gap-5 md:hidden">
+                            {visibleNews.length > 0 && (
+                                <FeaturedNewsListItem item={visibleNews[0]} />
+                            )}
+                            {visibleNews.slice(1).map((item) => (
+                                <CompactNewsListItem key={item.id} item={item} />
+                            ))}
+                        </div>
+                        <div className="hidden gap-8 md:grid md:grid-cols-2 lg:grid-cols-3">
+                            {visibleNews.map((item) => (
+                                <NewsCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                        {hasMoreNews && (
+                            <div className="mt-10 flex justify-center">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="min-w-[10rem] uppercase"
+                                    onClick={handleLoadMore}
+                                >
+                                    Load more
+                                </Button>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <div className="text-center py-16">
                         <p className="text-xl text-muted-foreground">No articles found for the selected filters.</p>

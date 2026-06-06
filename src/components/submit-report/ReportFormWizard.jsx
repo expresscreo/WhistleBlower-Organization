@@ -3,12 +3,11 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/components/ui/use-toast';
-import { validateStep } from '@/lib/submitReportValidation';
-import { getSubmitReportSteps } from './submitReportStepMeta';
+import { FieldError } from '@/components/ui/form-feedback';
+import { validateStepById } from '@/lib/submitReportValidation';
+import { getSubmitReportSteps, enrichStepMeta } from './submitReportStepMeta';
 import FormStepIndicator from './FormStepIndicator';
 import FormReviewSummary from './FormReviewSummary';
 import ContactInfo from './ContactInfo';
@@ -17,6 +16,7 @@ import OrganizationStep from './steps/OrganizationStep';
 import ContextStep from './steps/ContextStep';
 import StoryStep from './steps/StoryStep';
 import EvidenceStep from './steps/EvidenceStep';
+import MostWantedMatchStep from './steps/MostWantedMatchStep';
 
 export default function ReportFormWizard({
   formData,
@@ -32,20 +32,26 @@ export default function ReportFormWizard({
   onFilesChange,
   isFeedbackMode,
   isBountyMode,
+  isMostWantedMode,
+  bountyTitle,
+  mostWantedContext,
   isSubmitting,
-  voiceSubmitProgress,
   onHeaderChange,
   hasLgasForState,
 }) {
-  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
+  const [fieldError, setFieldError] = useState({ message: '', focusId: null });
+
+  const errorFor = (focusId) =>
+    fieldError.focusId === focusId ? fieldError.message : '';
 
   const steps = useMemo(
-    () => getSubmitReportSteps({ isFeedbackMode, isBountyMode }),
-    [isFeedbackMode, isBountyMode]
+    () => getSubmitReportSteps({ isFeedbackMode, isBountyMode, isMostWantedMode }),
+    [isFeedbackMode, isBountyMode, isMostWantedMode]
   );
   const totalSteps = steps.length;
+  const activeStepId = steps[currentStep - 1]?.id;
   const stepMeta = steps[currentStep - 1];
   const progress = (currentStep / totalSteps) * 100;
 
@@ -56,39 +62,39 @@ export default function ReportFormWizard({
       voiceNoteFile,
       isFeedbackMode,
       isBountyMode,
+      isMostWantedMode,
       hasLgasForState,
     }),
-    [formData, descriptionMode, voiceNoteFile, isFeedbackMode, isBountyMode, hasLgasForState]
+    [formData, descriptionMode, voiceNoteFile, isFeedbackMode, isBountyMode, isMostWantedMode, hasLgasForState]
   );
 
   const notifyHeader = useCallback(
     (step, dir) => {
+      const baseMeta = steps[step - 1];
       onHeaderChange?.({
         currentStep: step,
         direction: dir,
-        stepMeta: steps[step - 1],
+        stepMeta: enrichStepMeta(baseMeta, { isBountyMode, isMostWantedMode, bountyTitle }),
       });
     },
-    [onHeaderChange, steps]
+    [onHeaderChange, steps, isBountyMode, isMostWantedMode, bountyTitle]
   );
 
   useEffect(() => {
     notifyHeader(currentStep, direction);
   }, [currentStep, direction, notifyHeader]);
 
-  const runValidation = (step) => {
-    const result = validateStep(step, validationContext);
+  const runValidation = (stepId = activeStepId) => {
+    const result = validateStepById(stepId, validationContext);
     if (!result.valid) {
-      toast({
-        title: result.title,
-        description: result.description,
-        variant: 'destructive',
-      });
+      const message = [result.title, result.description].filter(Boolean).join(': ');
+      setFieldError({ message, focusId: result.focusId ?? null });
       if (result.focusId) {
         setTimeout(() => document.getElementById(result.focusId)?.focus(), 100);
       }
       return false;
     }
+    setFieldError({ message: '', focusId: null });
     return true;
   };
 
@@ -100,7 +106,7 @@ export default function ReportFormWizard({
   };
 
   const handleContinue = () => {
-    if (!runValidation(currentStep)) return;
+    if (!runValidation()) return;
     if (currentStep < totalSteps) goToStep(currentStep + 1, 1);
   };
 
@@ -113,20 +119,135 @@ export default function ReportFormWizard({
   };
 
   const handleSkipEvidence = () => {
-    if (currentStep === 4) goToStep(5, 1);
+    if (activeStepId === 'evidence') goToStep(currentStep + 1, 1);
   };
 
-  const submitLabel = isSubmitting
-    ? voiceSubmitProgress != null
-      ? `Changing Your Voice & Submitting... ${voiceSubmitProgress}%`
-      : 'Submitting...'
-    : isFeedbackMode
-      ? 'Submit Feedback'
-      : isBountyMode
-        ? 'Submit Tip'
-        : 'Submit Report';
+  const submitLabel = isFeedbackMode
+    ? 'Submit Feedback'
+    : isMostWantedMode
+      ? 'Submit Most Wanted Tip'
+    : isBountyMode
+      ? 'Submit Tip'
+      : 'Submit Report';
 
-  const hasOrganization = !!formData.organization?.value;
+  const canUploadEvidence = isBountyMode || isMostWantedMode || !!formData.organization?.label?.trim();
+
+  const renderStepContent = () => {
+    switch (activeStepId) {
+      case 'organization':
+        return (
+          <OrganizationStep
+            formData={formData}
+            onOrganizationChange={onOrganizationChange}
+            isOrganizationLocked={isOrganizationLocked}
+            fieldError={errorFor('companyName')}
+          />
+        );
+      case 'context':
+        return (
+          <ContextStep
+            formData={formData}
+            handleSelectChange={handleSelectChange}
+            isFeedbackMode={isFeedbackMode}
+            isBountyMode={isBountyMode}
+            isMostWantedMode={isMostWantedMode}
+            mostWantedContext={mostWantedContext}
+            fieldErrors={{
+              category: errorFor('category'),
+              stateOfIncident: errorFor('stateOfIncident'),
+              lga: errorFor('lga'),
+              dateOfIncident: errorFor('dateOfIncident'),
+              timeSeen: errorFor('timeSeen'),
+            }}
+          />
+        );
+      case 'match':
+        return (
+          <MostWantedMatchStep
+            formData={formData}
+            handleSelectChange={handleSelectChange}
+            fieldErrors={{
+              identifiers: errorFor('mostWantedIdentifiers'),
+            }}
+          />
+        );
+      case 'story':
+        return (
+          <StoryStep
+            formData={formData}
+            handleSelectChange={handleSelectChange}
+            descriptionMode={descriptionMode}
+            onDescriptionModeChange={onDescriptionModeChange}
+            voiceNoteFile={voiceNoteFile}
+            onVoiceNoteComplete={onVoiceNoteComplete}
+            onVoiceNoteClear={onVoiceNoteClear}
+            hasOrganization={canUploadEvidence}
+            isBountyMode={isBountyMode}
+            isMostWantedMode={isMostWantedMode}
+            fieldErrors={{
+              voice: errorFor('voice-recorder'),
+              title: errorFor('reportTitle'),
+              description: errorFor('reportDescription'),
+            }}
+          />
+        );
+      case 'evidence':
+        return (
+          <EvidenceStep
+            files={files}
+            onFilesChange={onFilesChange}
+            hasOrganization={canUploadEvidence}
+            disabled={isSubmitting}
+            isBountyMode={isBountyMode}
+          />
+        );
+      case 'finish':
+        return (
+          <div className="space-y-6">
+            <FormReviewSummary
+              formData={formData}
+              descriptionMode={descriptionMode}
+              files={files}
+              onGoToStep={(s) => goToStep(s, -1)}
+              isFeedbackMode={isFeedbackMode}
+              isBountyMode={isBountyMode}
+              isMostWantedMode={isMostWantedMode}
+              steps={steps}
+              bountyTitle={bountyTitle}
+            />
+            {!isFeedbackMode && (
+              <ContactInfo
+                formData={formData}
+                onInputChange={handleSelectChange}
+                embedded
+                isBountyMode={isBountyMode || isMostWantedMode}
+                fieldErrors={{
+                  anonymousPassword: errorFor('anonymousPassword'),
+                  confirmPassword: errorFor('confirmPassword'),
+                }}
+              />
+            )}
+            <FieldError message={errorFor('agreeTerms')} className="mb-2" />
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="agreeTerms"
+                checked={formData.agreeTerms}
+                onCheckedChange={(c) => handleSelectChange('agreeTerms', !!c)}
+              />
+              <label htmlFor="agreeTerms" className="text-sm leading-snug cursor-pointer">
+                I have read and agree to the{' '}
+                <Link href="/terms-of-service" className="text-primary underline">
+                  Terms and Conditions
+                </Link>
+                .
+              </label>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -138,97 +259,32 @@ export default function ReportFormWizard({
         onStepClick={handleStepClick}
       />
 
-      <div className="submit-report-step-body overflow-visible px-4 md:px-8 pt-4 md:pt-6 pb-28 md:pb-6">
+      <div className="submit-report-step-body box-border w-full max-w-full min-w-0 px-4 md:px-8 pt-4 md:pt-6 pb-28 md:pb-6">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={currentStep}
+            key={activeStepId}
             custom={direction}
-            initial={{ opacity: 0, x: direction * 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction * -40 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
-            className="space-y-4 overflow-visible"
+            className="submit-report-step-fields box-border w-full max-w-full min-w-0 space-y-4"
           >
-            {currentStep === 1 && (
-              <OrganizationStep
-                formData={formData}
-                onOrganizationChange={onOrganizationChange}
-                isOrganizationLocked={isOrganizationLocked}
-              />
-            )}
-            {currentStep === 2 && (
-              <ContextStep
-                formData={formData}
-                handleSelectChange={handleSelectChange}
-                isFeedbackMode={isFeedbackMode}
-                isBountyMode={isBountyMode}
-              />
-            )}
-            {currentStep === 3 && (
-              <StoryStep
-                formData={formData}
-                handleSelectChange={handleSelectChange}
-                descriptionMode={descriptionMode}
-                onDescriptionModeChange={onDescriptionModeChange}
-                voiceNoteFile={voiceNoteFile}
-                onVoiceNoteComplete={onVoiceNoteComplete}
-                onVoiceNoteClear={onVoiceNoteClear}
-                hasOrganization={hasOrganization}
-                isBountyMode={isBountyMode}
-              />
-            )}
-            {currentStep === 4 && (
-              <EvidenceStep
-                files={files}
-                onFilesChange={onFilesChange}
-                hasOrganization={hasOrganization}
-                disabled={isSubmitting}
-              />
-            )}
-            {currentStep === 5 && (
-              <div className="space-y-6">
-                <FormReviewSummary
-                  formData={formData}
-                  descriptionMode={descriptionMode}
-                  files={files}
-                  onGoToStep={(s) => goToStep(s, -1)}
-                  isFeedbackMode={isFeedbackMode}
-                />
-                {!isFeedbackMode && (
-                  <ContactInfo
-                    formData={formData}
-                    onInputChange={handleSelectChange}
-                    embedded
-                  />
-                )}
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="agreeTerms"
-                    checked={formData.agreeTerms}
-                    onCheckedChange={(c) => handleSelectChange('agreeTerms', !!c)}
-                  />
-                  <label htmlFor="agreeTerms" className="text-sm leading-snug cursor-pointer">
-                    I have read and agree to the{' '}
-                    <Link href="/terms-of-service" className="text-primary underline">
-                      Terms and Conditions
-                    </Link>
-                    .
-                  </label>
-                </div>
-              </div>
-            )}
+            {fieldError.message && !fieldError.focusId ? (
+              <FieldError message={fieldError.message} />
+            ) : null}
+            {renderStepContent()}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Desktop footer */}
       <div className="hidden md:flex items-center gap-3 px-4 md:px-8 pt-6 pb-6 border-t">
         {currentStep > 1 && (
           <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>
             Back
           </Button>
         )}
-        {currentStep === 4 && (
+        {activeStepId === 'evidence' && (
           <Button type="button" variant="ghost" onClick={handleSkipEvidence} disabled={isSubmitting}>
             Skip for now
           </Button>
@@ -241,14 +297,14 @@ export default function ReportFormWizard({
         ) : (
           <Button
             type="submit"
-            disabled={isSubmitting || !formData.agreeTerms}
+            loading={isSubmitting}
+            disabled={!formData.agreeTerms}
             onClick={(e) => {
-              if (!runValidation(5)) {
+              if (!runValidation('finish')) {
                 e.preventDefault();
               }
             }}
           >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitLabel}
           </Button>
         )}
@@ -261,7 +317,7 @@ export default function ReportFormWizard({
         onContinue={handleContinue}
         isSubmitting={isSubmitting}
         submitLabel={submitLabel}
-        showSkip={currentStep === 4}
+        showSkip={activeStepId === 'evidence'}
         onSkip={handleSkipEvidence}
       />
     </>

@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/lib/customSupabaseClient';
-import { Loader2 } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 
 const ProfileSettings = () => {
-    const { toast } = useToast();
+    const [profileFeedback, setProfileFeedback] = useState({ error: '', success: '' });
+    const [passwordFeedback, setPasswordFeedback] = useState({ error: '', success: '' });
     const { user } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -30,6 +30,7 @@ const ProfileSettings = () => {
     }, [user]);
 
     const handleProfileUpdate = async () => {
+        setProfileFeedback({ error: '', success: '' });
         setLoading(true);
         // Update name in users table
         const { error: nameError } = await supabase
@@ -38,7 +39,7 @@ const ProfileSettings = () => {
             .eq('id', user.id);
         
         if (nameError) {
-            toast({ variant: 'destructive', title: 'Error updating name', description: nameError.message });
+            setProfileFeedback({ error: nameError.message, success: '' });
             setLoading(false);
             return;
         }
@@ -47,26 +48,27 @@ const ProfileSettings = () => {
         if(email !== user.email) {
             const { error: emailError } = await supabase.auth.updateUser({ email });
             if(emailError) {
-                 toast({ variant: 'destructive', title: 'Error updating email', description: emailError.message });
+                 setProfileFeedback({ error: emailError.message, success: '' });
                  setLoading(false);
                  return;
             }
         }
-        toast({ title: 'Profile updated successfully!' });
+        setProfileFeedback({ error: '', success: 'Profile updated successfully!' });
         setLoading(false);
     };
 
     const handlePasswordUpdate = async () => {
         if(password !== confirmPassword || password.length < 6) {
-            toast({ variant: 'destructive', title: 'Password Error', description: 'Passwords must match and be at least 6 characters.' });
+            setPasswordFeedback({ error: 'Passwords must match and be at least 6 characters.', success: '' });
             return;
         }
+        setPasswordFeedback({ error: '', success: '' });
         setLoading(true);
         const { error } = await supabase.auth.updateUser({ password });
         if(error) {
-            toast({ variant: 'destructive', title: 'Error updating password', description: error.message });
+            setPasswordFeedback({ error: error.message, success: '' });
         } else {
-            toast({ title: 'Password updated successfully!' });
+            setPasswordFeedback({ error: '', success: 'Password updated successfully!' });
             setPassword('');
             setConfirmPassword('');
         }
@@ -80,7 +82,9 @@ const ProfileSettings = () => {
                 <CardContent className="space-y-4">
                     <div className="space-y-2"><Label htmlFor="name">Full Name</Label><Input id="name" value={name} onChange={e => setName(e.target.value)} className="!transition-none" /></div>
                     <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} disabled className="!transition-none"/></div>
-                    <Button onClick={handleProfileUpdate} disabled={loading} className="!transition-none">{loading ? <Loader2 className="mr-2 h-4 w-4"/> : null} Update Profile</Button>
+                    <Button onClick={handleProfileUpdate} loading={loading} className="!transition-none">Update Profile</Button>
+                    <FieldError message={profileFeedback.error} />
+                    <FieldSuccess message={profileFeedback.success} />
                 </CardContent>
             </Card>
              <Card>
@@ -88,7 +92,9 @@ const ProfileSettings = () => {
                 <CardContent className="space-y-4">
                     <div className="space-y-2"><Label htmlFor="new-password">New Password</Label><Input id="new-password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="!transition-none" /></div>
                     <div className="space-y-2"><Label htmlFor="confirm-password">Confirm New Password</Label><Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="!transition-none" /></div>
-                    <Button onClick={handlePasswordUpdate} disabled={loading} className="!transition-none">{loading ? <Loader2 className="mr-2 h-4 w-4"/> : null} Update Password</Button>
+                    <Button onClick={handlePasswordUpdate} loading={loading} className="!transition-none">Update Password</Button>
+                    <FieldError message={passwordFeedback.error} />
+                    <FieldSuccess message={passwordFeedback.success} />
                 </CardContent>
             </Card>
         </div>
@@ -97,9 +103,11 @@ const ProfileSettings = () => {
 
 
 const Settings = () => {
-  const { toast } = useToast();
+  const [settingsFetchError, setSettingsFetchError] = useState('');
+  const [settingsSaveFeedback, setSettingsSaveFeedback] = useState({ error: '', success: '' });
   const { profile, loading: profileLoading } = useUserProfile();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const settingsLoadedRef = useRef(false);
   const [appSettings, setAppSettings] = useState({
     maintenance_mode: false,
@@ -120,13 +128,14 @@ const Settings = () => {
       if (settingsLoadedRef.current) return;
       
       setLoading(true);
+      setSettingsFetchError('');
       const { data, error } = await supabase.from('app_settings').select('*').limit(1).single();
       if (data) {
         setAppSettings(prev => ({...prev, ...data}));
       } else if (error && error.code === 'PGRST116') {
         // No settings found, use defaults
       } else if (error) {
-        toast({ variant: 'destructive', title: 'Error fetching settings', description: error.message });
+        setSettingsFetchError(error.message);
       }
       setLoading(false);
       settingsLoadedRef.current = true;
@@ -137,22 +146,23 @@ const Settings = () => {
     } else {
         setLoading(false);
     }
-  }, [toast, profile?.user_type]); // Only depend on user_type, not the entire profile object
+  }, [profile?.user_type]); // Only depend on user_type, not the entire profile object
   
   const handleSettingChange = (key, value) => {
     setAppSettings(prev => ({...prev, [key]: value}));
   };
 
   const handleSaveSettings = async () => {
-    setLoading(true);
+    setSettingsSaveFeedback({ error: '', success: '' });
+    setSaving(true);
     const { id, ...saveData } = appSettings;
     const { error } = await supabase.from('app_settings').upsert({ id: id || 1, ...saveData });
     if (error) {
-      toast({ variant: 'destructive', title: 'Failed to save settings', description: error.message });
+      setSettingsSaveFeedback({ error: error.message, success: '' });
     } else {
-      toast({ title: 'Settings saved successfully!' });
+      setSettingsSaveFeedback({ error: '', success: 'Settings saved successfully!' });
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   const isSuperAdmin = profile?.user_type === 'super_admin';
@@ -160,7 +170,7 @@ const Settings = () => {
   if(loading || profileLoading) {
     return (
       <>
-        <Helmet><title>Loading Settings - WhistleBlower.ng</title></Helmet>
+        <PageHead title="Loading Settings - WhistleBlower.ng" />
         <NavbarLoader />
         <div className="space-y-8">
           <div className="flex justify-between items-center">
@@ -181,14 +191,16 @@ const Settings = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Settings - WhistleBlower.ng</title>
-      </Helmet>
+      <PageHead title="Settings - WhistleBlower.ng" />
       <div className="space-y-8 [&_*]:!transition-none [&_*]:!animate-none">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-3xl font-bold">Settings</h1>
-            {isSuperAdmin && <Button onClick={handleSaveSettings} disabled={loading} className="!transition-none w-full sm:w-auto">{loading ? <Loader2 className="mr-2 h-4 w-4" /> : null}Save All Settings</Button>}
+            {isSuperAdmin && <Button onClick={handleSaveSettings} loading={saving} className="!transition-none w-full sm:w-auto">Save All Settings</Button>}
         </div>
+
+        <PageErrorBanner error={settingsFetchError} title="Could not load settings" />
+        <FieldError message={settingsSaveFeedback.error} />
+        <FieldSuccess message={settingsSaveFeedback.success} />
         
         <Tabs defaultValue="profile" className="[&_*]:!transition-none">
           <div className="overflow-x-auto">

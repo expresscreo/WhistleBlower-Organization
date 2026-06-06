@@ -1,5 +1,10 @@
 import '@/index.css';
+import ScopedGoogleAnalytics from '@/components/ScopedGoogleAnalytics';
 import Providers from './providers';
+import { resolveGaMeasurementId } from '@/lib/env';
+
+const gaMeasurementId = resolveGaMeasurementId();
+const enableAnalytics = process.env.NODE_ENV === 'production';
 
 export const metadata = {
   title: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
@@ -102,6 +107,9 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <Providers>{children}</Providers>
+        {enableAnalytics && gaMeasurementId ? (
+          <ScopedGoogleAnalytics gaId={gaMeasurementId} />
+        ) : null}
       </body>
     </html>
   );

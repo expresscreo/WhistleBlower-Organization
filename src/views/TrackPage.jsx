@@ -5,8 +5,8 @@ import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import TrackReportPage from './TrackReportPage';
@@ -14,8 +14,7 @@ import TrackBountyPage from './TrackBountyPage';
 
 const TrackPage = () => {
     const router = useRouter();
-    const { toast } = useToast();
-
+    const [searchError, setSearchError] = useState('');
     const [idInput, setIdInput] = useState('');
     const [passwordInput, setPasswordInput] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -33,17 +32,24 @@ const TrackPage = () => {
         const storedPassword = sessionStorage.getItem('trackPassword');
         const storedType = sessionStorage.getItem('trackType');
 
-        if (storedId && storedPassword && storedType) {
+        if (storedId && storedPassword) {
+            const type = storedType || (storedId.startsWith('WBB') ? 'bounty' : 'report');
             setTrackId(storedId);
             setTrackPassword(storedPassword);
-            setTrackType(storedType);
+            setTrackType(type);
+        }
+        const authError = sessionStorage.getItem('trackAuthError');
+        if (authError) {
+            setSearchError(authError);
+            sessionStorage.removeItem('trackAuthError');
         }
     }, []);
 
     const handleSearch = async (e) => {
         e.preventDefault();
+        setSearchError('');
         if (!idInput || !passwordInput) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please enter both an ID and a password.' });
+            setSearchError('Please enter both an ID and a password.');
             return;
         }
         setLoading(true);
@@ -87,7 +93,21 @@ const TrackPage = () => {
                             <form onSubmit={handleSearch} className="space-y-4">
                                 <div className="text-left">
                                     <Label htmlFor="trackId">Report / Bounty ID</Label>
-                                    <Input id="trackId" type="text" placeholder="Enter your ID (e.g., WB123... or WBB123...)" value={idInput} onChange={(e) => setIdInput(e.target.value)} />
+                                    <Input
+                                        id="trackId"
+                                        name="track-submission-id"
+                                        type="text"
+                                        inputMode="text"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        autoCapitalize="characters"
+                                        spellCheck={false}
+                                        data-1p-ignore="true"
+                                        data-lpignore="true"
+                                        placeholder="Enter your ID (e.g., WB123... or WBB123...)"
+                                        value={idInput}
+                                        onChange={(e) => setIdInput(e.target.value)}
+                                    />
                                 </div>
                                 <div className="space-y-2 relative text-left">
                                     <Label htmlFor="password">Password</Label>
@@ -96,8 +116,9 @@ const TrackPage = () => {
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>
                                 </div>
-                                <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Track Submission'}
+                                <FieldError message={searchError} />
+                                <Button type="submit" className="w-full" loading={loading}>
+                                    Track Submission
                                 </Button>
                             </form>
                         </Card>

@@ -82,19 +82,13 @@ const MessageInput = forwardRef(({
           )}
           
           {/* Send button */}
-          <Button 
-            onClick={handleSendMessage} 
-            disabled={isSubmitting || !newMessage.trim()}
+          <Button
+            onClick={handleSendMessage}
+            loading={isSubmitting}
+            disabled={!newMessage.trim()}
             size="sm"
           >
-            {isSubmitting ? (
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                <span className="text-xs">Sending...</span>
-              </div>
-            ) : (
-              replyToMessage ? 'Reply' : 'Send'
-            )}
+            {replyToMessage ? 'Reply' : 'Send'}
           </Button>
         </div>
         

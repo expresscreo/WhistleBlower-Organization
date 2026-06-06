@@ -5,7 +5,7 @@ import { Check, ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldSuccess } from '@/components/ui/form-feedback';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
@@ -93,7 +93,7 @@ const FAQItem = ({ question, answer, align = 'left' }) => (
 );
 
 const PricingPage = () => {
-  const { toast } = useToast();
+  const [enterpriseNotice, setEnterpriseNotice] = useState('');
   const [isAnnual, setIsAnnual] = useState(false);
 
   const plans = [
@@ -112,8 +112,9 @@ const PricingPage = () => {
 
   const handleGetStarted = (planId) => {
     if (planId === 'enterprise-plus') {
-      toast({ title: "🚧 Custom Pricing Available!", description: "Contact our sales team for custom Enterprise Plus pricing and features!" });
+      setEnterpriseNotice('Contact our sales team for custom Enterprise Plus pricing and features.');
     } else {
+      setEnterpriseNotice('');
       window.location.href = `/register?plan=${planId}`;
     }
   };
@@ -144,6 +145,7 @@ const PricingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch">
             {plans.map((plan, index) => <PricingCard key={index} plan={plan} isAnnual={isAnnual} onGetStarted={handleGetStarted} />)}
           </div>
+          <FieldSuccess message={enterpriseNotice} className="mt-6 max-w-2xl mx-auto" />
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} viewport={{ once: true }} className="mt-20 text-center">
             <h2 className="text-3xl font-bold mb-8">Frequently Asked <span className="gradient-text">Questions</span></h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 max-w-5xl mx-auto">

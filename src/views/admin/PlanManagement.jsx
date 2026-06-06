@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Save } from 'lucide-react';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
+import { Save } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
@@ -37,12 +37,14 @@ const PlanManagement = () => {
   const [reportLimits, setReportLimits] = useState({});
   const [activeTab, setActiveTab] = useState('');
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState({ error: '', success: '' });
   const { profile, loading: profileLoading } = useAuth();
   const { fetchPlans, loading } = useAdminData();
   
   const loadPlansData = useCallback(async () => {
     if (profile?.user_type !== 'super_admin') return;
+    setFetchError('');
     
     try {
       const plansData = await fetchPlans();
@@ -71,13 +73,9 @@ const PlanManagement = () => {
       
     } catch (error) {
       console.error('Failed to load plans data:', error);
-      toast({
-        title: 'Error fetching data',
-        description: error.message,
-        variant: 'destructive'
-      });
+      setFetchError(error.message);
     }
-  }, [profile?.user_type, fetchPlans, toast]);
+  }, [profile?.user_type, fetchPlans]);
 
   useEffect(() => {
     if (!profileLoading) {
@@ -111,6 +109,7 @@ const PlanManagement = () => {
   };
   const handleSaveChanges = async (planId, rolesForPlan) => {
     setSaving(true);
+    setSaveFeedback({ error: '', success: '' });
     try {
       // Update report limit
       const {
@@ -141,15 +140,9 @@ const PlanManagement = () => {
         });
         if (permsError) throw permsError;
       }
-      toast({
-        title: 'Plan settings saved successfully!'
-      });
+      setSaveFeedback({ error: '', success: 'Plan settings saved successfully!' });
     } catch (error) {
-      toast({
-        title: 'Error Saving Settings',
-        description: error.message,
-        variant: 'destructive'
-      });
+      setSaveFeedback({ error: error.message, success: '' });
     } finally {
       setSaving(false);
     }
@@ -160,13 +153,16 @@ const PlanManagement = () => {
             </div>;
   }
   return <>
-            <Helmet><title>Plan Permissions Management - WhistleBlower.ng</title></Helmet>
+            <PageHead title="Plan Permissions Management - WhistleBlower.ng" />
             <PageContentWrapper loading={loading.plans || profileLoading} loadingText="Loading plan management data...">
               <div className="space-y-8">
                 <PageHeader 
                   title="Plan Management" 
                   description="Control which features each plan can access and set report limits."
                 />
+                <PageErrorBanner error={fetchError} title="Could not load plan management data" />
+                <FieldError message={saveFeedback.error} />
+                <FieldSuccess message={saveFeedback.success} />
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <div className="overflow-x-auto">
                         <TabsList className="w-full sm:w-auto flex-nowrap">
@@ -183,8 +179,8 @@ const PlanManagement = () => {
                                                     <Label htmlFor={`limit-${plan.id}`} className="whitespace-nowrap">Monthly Report Limit</Label>
                                                     <Input id={`limit-${plan.id}`} type="number" className="w-24 flex-shrink-0" value={reportLimits[plan.id] || 0} onChange={e => handleReportLimitChange(plan.id, parseInt(e.target.value, 10))} />
                                                 </div>
-                                                <Button onClick={() => handleSaveChanges(plan.id, rolesForPlan)} disabled={saving} className="w-full sm:w-auto">
-                                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                                <Button onClick={() => handleSaveChanges(plan.id, rolesForPlan)} loading={saving} className="w-full sm:w-auto">
+                                                    <Save className="mr-2 h-4 w-4" />
                                                     Save Plan Settings
                                                 </Button>
                                             </div>

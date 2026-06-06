@@ -29,7 +29,7 @@ The admin-reporter chat feature has been successfully implemented in your projec
 - ✅ Read receipts with visual indicators
 - ✅ Connection status indicators (Live/Offline)
 - ✅ Auto-scroll to new messages
-- ✅ Message notifications (toast notifications)
+- ✅ Message notifications (badge count + scroll-to-bottom)
 - ✅ Reply functionality with quote preview
 - ✅ Scroll-to-bottom button when not at bottom
 - ✅ Enhanced UI with hover effects and animations

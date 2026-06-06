@@ -2,10 +2,10 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function WizardMobileFooter({
+  formId = 'submit-report-form',
   currentStep,
   totalSteps,
   onBack,
@@ -46,18 +46,11 @@ export default function WizardMobileFooter({
         {isLastStep ? (
           <Button
             type="submit"
-            form="submit-report-form"
-            disabled={isSubmitting}
+            form={formId}
+            loading={isSubmitting}
             className="flex-1"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {submitLabel}
-              </>
-            ) : (
-              submitLabel
-            )}
+            {submitLabel}
           </Button>
         ) : (
           <Button type="button" onClick={onContinue} disabled={isSubmitting} className="flex-1">

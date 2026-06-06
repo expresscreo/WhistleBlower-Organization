@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
-import { FileText, CheckSquare, Shield, Code, Server, AlertCircle, Edit, Mail } from 'lucide-react';
+import { FileText, CheckSquare, Shield, Code, Server, AlertCircle, Edit, Mail, Target } from 'lucide-react';
 
 const TermsOfServicePage = () => {
     return (
@@ -58,9 +58,25 @@ const TermsOfServicePage = () => {
                         </div>
 
                         <div className="flex items-start gap-4">
+                          <Target className="h-6 w-6 text-primary flex-shrink-0 mt-1"/>
+                          <div>
+                            <h2 className="text-xl font-bold">4. Bounty Setters &amp; Accuracy of Information</h2>
+                            <p className="text-muted-foreground mb-3">When you place a bounty on WhistleBlower.ng, you acknowledge and agree that:</p>
+                            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+                              <li>All information you provide—including case details, descriptions, locations, dates, evidence, and reward terms—is accurate, complete, and truthful to the best of your knowledge.</li>
+                              <li>You have reviewed your submission and understand that you are placing it with full knowledge that the information you provide is correct and reliable.</li>
+                              <li>You are solely responsible for the content, claims, and materials you submit in connection with a bounty.</li>
+                              <li>You will not knowingly submit false, misleading, defamatory, or fabricated information.</li>
+                              <li>You accept full responsibility for any harm, loss, legal claim, or liability arising from inaccurate, incomplete, or misleading information you provide.</li>
+                            </ul>
+                            <p className="text-muted-foreground mt-3">WhistleBlower.ng does not independently verify bounty submissions before publication and relies on your representations. We reserve the right to reject, suspend, modify, or remove any bounty that appears inaccurate, incomplete, or in violation of these terms.</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-4">
                           <Code className="h-6 w-6 text-primary flex-shrink-0 mt-1"/>
                           <div>
-                            <h2 className="text-xl font-bold">4. Intellectual Property</h2>
+                            <h2 className="text-xl font-bold">5. Intellectual Property</h2>
                             <p className="text-muted-foreground">All content, logos, and software on this platform are the property of WhistleBlower.ng and are protected by intellectual property laws. Unauthorized use is prohibited.</p>
                           </div>
                         </div>
@@ -68,7 +84,7 @@ const TermsOfServicePage = () => {
                         <div className="flex items-start gap-4">
                           <AlertCircle className="h-6 w-6 text-primary flex-shrink-0 mt-1"/>
                           <div>
-                            <h2 className="text-xl font-bold">5. Disclaimers</h2>
+                            <h2 className="text-xl font-bold">6. Disclaimers</h2>
                             <p className="text-muted-foreground">The service is provided "as is" without warranties. We do not guarantee error-free operation and are not responsible for the outcomes of investigations or the fulfillment of bounties based on submitted reports.</p>
                           </div>
                         </div>
@@ -76,7 +92,7 @@ const TermsOfServicePage = () => {
                         <div className="flex items-start gap-4">
                           <AlertCircle className="h-6 w-6 text-primary flex-shrink-0 mt-1"/>
                           <div>
-                            <h2 className="text-xl font-bold">6. Limitation of Liability</h2>
+                            <h2 className="text-xl font-bold">7. Limitation of Liability</h2>
                             <p className="text-muted-foreground">WhistleBlower.ng shall not be liable for any indirect, incidental, or consequential damages arising from your use of the service, including any financial loss related to bounties.</p>
                           </div>
                         </div>
@@ -84,7 +100,7 @@ const TermsOfServicePage = () => {
                         <div className="flex items-start gap-4">
                           <Edit className="h-6 w-6 text-primary flex-shrink-0 mt-1"/>
                           <div>
-                            <h2 className="text-xl font-bold">7. Changes to Terms</h2>
+                            <h2 className="text-xl font-bold">8. Changes to Terms</h2>
                             <p className="text-muted-foreground">We reserve the right to modify these terms at any time. Significant changes will be communicated, and continued use constitutes acceptance.</p>
                           </div>
                         </div>
@@ -92,7 +108,7 @@ const TermsOfServicePage = () => {
                         <div className="flex items-start gap-4">
                           <Mail className="h-6 w-6 text-primary flex-shrink-0 mt-1"/>
                           <div>
-                            <h2 className="text-xl font-bold">8. Contact Us</h2>
+                            <h2 className="text-xl font-bold">9. Contact Us</h2>
                             <p className="text-muted-foreground">If you have questions about these terms, contact us at <a href="mailto:legal@whistleblower.ng" className="text-primary hover:underline">legal@whistleblower.ng</a>.</p>
                           </div>
                         </div>

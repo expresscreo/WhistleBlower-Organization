@@ -1,19 +1,18 @@
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Loader2, MessageSquare, Calendar, Paperclip, Award, FileText, Info, Banknote } from 'lucide-react';
-import { format } from 'date-fns';
+import { MessageSquare, Award, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
+import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
 
 const ITEMS_PER_PAGE = 18;
-const MoneyIcon = () => <Banknote className="h-4 w-4" />;
 
 const toTitleCase = (str) => {
     if (!str) return '';
@@ -82,6 +81,7 @@ const BountiesManagement = () => {
         'pending_review': { progress: 10, color: 'bg-yellow-400', tag: 'bg-yellow-100 text-yellow-800' },
         'approved': { progress: 30, color: 'bg-blue-400', tag: 'bg-blue-100 text-blue-800' },
         'published': { progress: 60, color: 'bg-purple-400', tag: 'bg-purple-100 text-purple-800' },
+        'report_received': { progress: 75, color: 'bg-orange-400', tag: 'bg-orange-100 text-orange-800' },
         'resolved': { progress: 100, color: 'bg-green-500', tag: 'bg-green-100 text-green-800' },
         'rejected': { progress: 100, color: 'bg-red-400', tag: 'bg-red-100 text-red-800' },
         'refunded': { progress: 100, color: 'bg-gray-500', tag: 'bg-gray-100 text-gray-800' },
@@ -95,7 +95,7 @@ const BountiesManagement = () => {
 
     return (
         <>
-            <Helmet><title>Bounties Management - WhistleBlower.ng</title></Helmet>
+            <PageHead title="Bounties Management - WhistleBlower.ng" />
             <PageContentWrapper loading={loading.bounties} loadingText="Loading bounties and reports...">
                 <div className="space-y-8">
                     <PageHeader 
@@ -131,17 +131,26 @@ const BountiesManagement = () => {
                                     const isBounty = item.item_type === 'bounty';
                                     const currentStatus = statusConfig[item.status] || { progress: 0, color: 'bg-gray-400', tag: 'bg-gray-100 text-gray-800' };
                                     const attachmentCount = Array.isArray(item.evidence || item.evidence_path) ? (item.evidence || item.evidence_path).length : 0;
-                                    const date = item.created_at || item.submitted_at;
 
                                     return (
-                                        <Card key={item.id} className="flex flex-col hover:shadow-lg transition-shadow bg-card cursor-pointer rounded-none" onClick={() => handleCardClick(item)}>
+                                        <Card key={`${item.item_type}-${item.id}`} className="flex flex-col hover:shadow-lg transition-shadow bg-card cursor-pointer rounded-none" onClick={() => handleCardClick(item)}>
                                             <CardHeader className="pb-4">
                                                 <div className="flex justify-between items-start gap-2">
-                                                    <span className={cn('text-xs font-semibold px-2.5 py-1 flex items-center', currentStatus.tag)}>
-                                                        {isBounty ? <Award className="w-3 h-3 mr-1.5" /> : <FileText className="w-3 h-3 mr-1.5" />}
-                                                        {toTitleCase(item.status)}
-                                                    </span>
-                                                    <MessageSquare className="w-5 h-5 text-primary hover:text-primary/80" />
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <span className={cn('text-xs font-semibold px-2.5 py-1 flex items-center', currentStatus.tag)}>
+                                                            {isBounty ? <Award className="w-3 h-3 mr-1.5" /> : <FileText className="w-3 h-3 mr-1.5" />}
+                                                            {toTitleCase(item.status)}
+                                                        </span>
+                                                        {isBounty && item.linked_report_count > 0 && (
+                                                            <span
+                                                                className={cn('text-xs font-semibold px-2.5 py-1 shrink-0', currentStatus.tag)}
+                                                                title={`${item.linked_report_count} hunter report${item.linked_report_count === 1 ? '' : 's'}`}
+                                                            >
+                                                                {item.linked_report_count}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <MessageSquare className="w-5 h-5 text-primary hover:text-primary/80 shrink-0" />
                                                 </div>
                                                 <CardTitle className="text-sm font-semibold uppercase text-muted-foreground pt-2">
                                                     {isBounty ? `Bounty ID: ${item.bounty_id}` : `Report ID: ${item.report_id}`}
@@ -155,24 +164,14 @@ const BountiesManagement = () => {
                                                 <h3 className="text-lg font-bold line-clamp-1">{item.title}</h3>
                                                 <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
                                             </CardContent>
-                                            <div className="p-4 pt-2 border-t mt-2">
-                                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                                                    <div className="flex items-center gap-2 -ml-4">
-                                                        <div className={cn('flex items-center gap-2 font-semibold pl-0 py-1 text-xs relative overflow-hidden', 
-                                                            isBounty ? 'bg-red-500 text-white' : 'bg-green-500 text-white')} 
-                                                            style={{
-                                                                paddingRight: '16px',
-                                                                clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)'
-                                                            }}>
-                                                            <Info className="w-4 h-4 ml-4" />
-                                                            <span>{isBounty ? 'Placed Bounty' : 'Bounty Report'}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /><span className="font-semibold text-muted-foreground">{date ? format(new Date(date), 'MM/dd/yyyy') : 'N/A'}</span></div>
-                                                    <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-primary" /><span className="font-semibold text-muted-foreground">{attachmentCount} attachment(s)</span></div>
-                                                    {isBounty && <div className="flex items-center gap-2 font-semibold text-primary"><Banknote className="w-4 h-4" /><span className="font-black">{item.bounty_amount ? Number(item.bounty_amount).toLocaleString() : 'No Reward'}</span></div>}
-                                                </div>
-                                            </div>
+                                            <ReportCardMetaFooter
+                                                company={isBounty ? 'Placed Bounty' : 'Bounty Report'}
+                                                companyLabel="Type"
+                                                companyHighlight={isBounty ? 'red' : 'green'}
+                                                urgency={isBounty ? 'High' : item.urgency}
+                                                incidentDate={isBounty ? (item.incident_date || item.created_at) : (item.incident_date || item.created_at || item.submitted_at)}
+                                                attachmentCount={attachmentCount}
+                                            />
                                         </Card>
                                     );
                                 })}

@@ -1,4 +1,4 @@
-import { Building, MapPin, FileText, Paperclip, Shield } from 'lucide-react';
+import { Building, MapPin, FileText, Paperclip, Shield, Eye } from 'lucide-react';
 
 const REPORT_STEPS = [
   {
@@ -62,34 +62,105 @@ const FEEDBACK_REPORT_STEPS = [
   },
 ];
 
+/** Bounty tips skip organization — the bounty itself provides context. */
 const BOUNTY_REPORT_STEPS = [
   {
-    ...REPORT_STEPS[0],
-    title: 'Bounty information',
-    subtitle: 'Confirm the organization related to this bounty tip.',
-  },
-  {
-    ...REPORT_STEPS[1],
+    id: 'context',
+    shortLabel: 'Context',
     title: 'Tip context',
-    subtitle: 'When and where did you observe this? Select the best category.',
+    subtitle: 'Where did you observe this? Confirm the category for this bounty.',
+    icon: MapPin,
   },
   {
-    ...REPORT_STEPS[2],
+    id: 'story',
+    shortLabel: 'Your tip',
     title: 'Your tip',
-    subtitle: 'Provide details about what you know regarding this bounty.',
+    subtitle: 'Share what you know about this bounty. Be as detailed as possible.',
+    icon: FileText,
   },
-  REPORT_STEPS[3],
   {
-    ...REPORT_STEPS[4],
+    id: 'evidence',
+    shortLabel: 'Evidence',
+    title: 'Supporting evidence',
+    subtitle: 'Optional files strengthen your tip. You can skip this step.',
+    icon: Paperclip,
+  },
+  {
+    id: 'finish',
+    shortLabel: 'Finish',
     title: 'Review & submit',
     subtitle: 'Confirm your tip, set secure access, and submit.',
+    icon: Shield,
   },
 ];
 
-export function getSubmitReportSteps({ isFeedbackMode = false, isBountyMode = false } = {}) {
+/** Most Wanted tips skip organization and focus on sightings. */
+const MOST_WANTED_REPORT_STEPS = [
+  {
+    id: 'context',
+    shortLabel: 'Alert context',
+    title: 'Most Wanted alert context',
+    subtitle: 'Confirm the alert and share where and when you saw this person.',
+    icon: MapPin,
+  },
+  {
+    id: 'match',
+    shortLabel: 'What matched',
+    title: 'What matched this person?',
+    subtitle: 'Tell us what identifying details matched the alert.',
+    icon: Eye,
+  },
+  {
+    id: 'story',
+    shortLabel: 'Your intel',
+    title: 'Share your intel',
+    subtitle: 'Describe what you observed and any immediate risk details.',
+    icon: FileText,
+  },
+  {
+    id: 'evidence',
+    shortLabel: 'Evidence',
+    title: 'Supporting evidence',
+    subtitle: 'Optional files can help investigators verify the sighting.',
+    icon: Paperclip,
+  },
+  {
+    id: 'finish',
+    shortLabel: 'Finish',
+    title: 'Review & submit',
+    subtitle: 'Confirm your tip and submit securely.',
+    icon: Shield,
+  },
+];
+
+export function enrichStepMeta(stepMeta, { isBountyMode = false, isMostWantedMode = false, bountyTitle = '' } = {}) {
+  if (isBountyMode && stepMeta?.id === 'context' && bountyTitle.trim()) {
+    return {
+      ...stepMeta,
+      title: `Tip about “${bountyTitle.trim()}”`,
+      subtitle: 'Where did you observe this? Confirm the category for this bounty.',
+    };
+  }
+  if (isMostWantedMode && stepMeta?.id === 'context' && bountyTitle.trim()) {
+    return {
+      ...stepMeta,
+      title: `Tip about “${bountyTitle.trim()}”`,
+      subtitle: 'Confirm this alert and share sighting location and time.',
+    };
+  }
+  return stepMeta;
+}
+
+export function getSubmitReportSteps({ isFeedbackMode = false, isBountyMode = false, isMostWantedMode = false } = {}) {
+  if (isMostWantedMode) return MOST_WANTED_REPORT_STEPS;
   if (isBountyMode) return BOUNTY_REPORT_STEPS;
   if (isFeedbackMode) return FEEDBACK_REPORT_STEPS;
   return REPORT_STEPS;
+}
+
+export function getStepNumber(steps, stepId) {
+  const index = steps.findIndex((s) => s.id === stepId);
+  return index >= 0 ? index + 1 : null;
 }
 
 export const TOTAL_SUBMIT_REPORT_STEPS = REPORT_STEPS.length;

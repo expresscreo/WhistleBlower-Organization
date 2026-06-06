@@ -1,34 +1,36 @@
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, Banknote } from 'lucide-react';
+import { Loader2, LogOut, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { verifyPassword } from '@/lib/cryptoUtils';
-import { useToast } from '@/components/ui/use-toast';
+import {
+    authenticateTrackedBounty,
+    updateTrackedBounty,
+} from '@/lib/trackApi';
 import ChatWindow from '@/views/track-report/ChatWindow';
 import UpdateReportDialog from '@/views/track-report/UpdateReportDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
-import AttachmentPreview from './track-report/AttachmentPreview';
-import { sanitizeFilename } from '@/lib/utils';
+import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGallery';
 import { uploadFileToLocal } from '@/lib/fileUtils';
+import { fetchPublishedBountyPostPath } from '@/lib/bountyPostUrl';
 import SEOHead from '@/components/SEOHead';
-import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
-
-const MoneyIcon = () => <Banknote className="h-4 w-4" />;
+import { generateSEOMeta } from '@/lib/seoUtils';
 
 const statusConfig = {
     'pending_review': { progress: 10, color: 'bg-yellow-400', label: 'Pending Review' },
     'approved': { progress: 30, color: 'bg-blue-400', label: 'Approved' },
     'published': { progress: 60, color: 'bg-purple-400', label: 'Published' },
+    'report_received': { progress: 75, color: 'bg-orange-400', label: 'Report Received' },
     'resolved': { progress: 100, color: 'bg-green-500', label: 'Resolved' },
     'rejected': { progress: 100, color: 'bg-red-500', label: 'Rejected' },
     'refunded': { progress: 100, color: 'bg-gray-500', label: 'Refunded' },
 };
 
-const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
+const BountySummary = ({ bounty, publishedBountyUrl, onUpdateBounty, onLogout }) => {
     const currentStatus = statusConfig[bounty.status] || { progress: 0, color: 'bg-gray-400', label: 'Unknown' };
     const evidencePaths = Array.isArray(bounty.evidence) ? bounty.evidence : [];
 
@@ -61,6 +63,23 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
                     </div>
                     <Progress value={currentStatus.progress} indicatorClassName={currentStatus.color} />
                 </div>
+
+                {publishedBountyUrl && (
+                    <div className="rounded-lg border bg-primary/5 p-4 sm:p-5 space-y-3">
+                        <div>
+                            <p className="font-semibold">Your bounty is live</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                View the public page others see on the site and share it with potential contributors.
+                            </p>
+                        </div>
+                        <Button asChild className="w-full sm:w-auto uppercase">
+                            <Link href={publishedBountyUrl}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                View published bounty
+                            </Link>
+                        </Button>
+                    </div>
+                )}
                 
                 {/* Report Title */}
                 <div className="border-t pt-6 border-b pb-6">
@@ -71,6 +90,7 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
                 {/* Report Info */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                     <div><p className="text-sm text-muted-foreground">Type of Crime</p><p className="font-semibold">{bounty.type_of_crime}</p></div>
+                    <div><p className="text-sm text-muted-foreground">Incident Date</p><p className="font-semibold">{format(new Date(bounty.incident_date || bounty.created_at), 'PPP')}</p></div>
                     <div><p className="text-sm text-muted-foreground">Submitted</p><p className="font-semibold">{format(new Date(bounty.created_at), 'PPP')}</p></div>
                     <div><p className="text-sm text-muted-foreground">Bounty Amount</p><p className="font-bold text-primary text-lg">{bounty.bounty_amount ? `${Number(bounty.bounty_amount).toLocaleString()}` : 'Not specified'}</p></div>
                     <div><p className="text-sm text-muted-foreground">Location</p><p className="font-semibold">{bounty.location}{bounty.state ? `, ${bounty.state}` : ''}</p></div>
@@ -81,11 +101,8 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
                 
                 {/* Attachments */}
                 <div className="mt-6 border-t pt-6">
-                    <h3 className="font-semibold text-xl mb-4">Attachments</h3>
                     {evidencePaths.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {evidencePaths.map((path, index) => <AttachmentPreview key={index} path={path} />)}
-                        </div>
+                        <EvidenceThumbnailGallery paths={evidencePaths} title="Attachments" />
                     ) : (
                         <p className="text-sm text-muted-foreground">No attachments for this bounty.</p>
                     )}
@@ -97,7 +114,8 @@ const BountySummary = ({ bounty, onUpdateBounty, onLogout }) => {
 
 const TrackBountyPage = ({ bountyId, password }) => {
     const router = useRouter();
-    const { toast } = useToast();
+    const [updateFeedback, setUpdateFeedback] = useState({ error: '', success: '' });
+    const [chatError, setChatError] = useState('');
 
     const [loading, setLoading] = useState(true);
     const [bountyData, setBountyData] = useState(null);
@@ -111,76 +129,57 @@ const TrackBountyPage = ({ bountyId, password }) => {
     const [newEvidenceFiles, setNewEvidenceFiles] = useState([]);
     const [isUpdating, setIsUpdating] = useState(false);
     const [uploadProgress, setUploadProgress] = useState({});
+    const [publishedBountyUrl, setPublishedBountyUrl] = useState(null);
 
     const handleLogout = () => {
         sessionStorage.removeItem('trackId');
         sessionStorage.removeItem('trackPassword');
         sessionStorage.removeItem('trackType');
         setBountyData(null);
+        setPublishedBountyUrl(null);
         setAuthenticated(false);
         router.replace('/');
     };
 
     const handleAuthentication = useCallback(async () => {
         setLoading(true);
-        console.log('Starting authentication for bounty:', bountyId, 'with password:', password);
-        
-        const { data, error } = await supabase.from('bounties').select('*').eq('bounty_id', bountyId).single();
-
-        if (error || !data) {
-            console.error('Bounty not found:', error);
-            toast({ variant: 'destructive', title: 'Bounty Not Found', description: 'Please check the Bounty ID and try again.' });
-            setLoading(false);
-            handleLogout();
-            return;
-        }
-
-        console.log('Bounty data found:', {
-            bounty_id: data.bounty_id,
-            has_password: !!data.password,
-            password_value: data.password,
-            password_length: data.password?.length
-        });
-
-        // Verify password using Web Crypto API
-        // The verifyPassword function handles all format detection internally
-        const isValidPassword = await verifyPassword(password, data.password, '');
-
-        console.log('Password verification result:', isValidPassword);
-        console.log('Type of isValidPassword:', typeof isValidPassword);
-        console.log('Boolean value of isValidPassword:', Boolean(isValidPassword));
-
-        if (!isValidPassword) {
-            console.log('Authentication failed - isValidPassword is falsy');
-            toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
-            setLoading(false);
-            handleLogout();
-            return;
-        }
-
-        console.log('Authentication successful - proceeding to set bounty data');
-
         try {
-            setBountyData(data);
-            console.log('Bounty data set successfully');
-            
+            const { bounty } = await authenticateTrackedBounty(bountyId, password);
+            setBountyData(bounty);
             setAuthenticated(true);
-            console.log('Authentication state set to true');
-            
             setLoading(false);
-            console.log('Loading state set to false');
         } catch (error) {
-            console.error('Error setting bounty data or authentication state:', error);
+            sessionStorage.setItem('trackAuthError', error.message || 'Please check the Bounty ID and password.');
+            setLoading(false);
+            router.push('/track');
         }
-    }, [bountyId, password, router, toast]);
+    }, [bountyId, password, router]);
 
     useEffect(() => {
         handleAuthentication();
     }, [handleAuthentication]);
 
+    useEffect(() => {
+        if (!bountyData?.id) {
+            setPublishedBountyUrl(null);
+            return;
+        }
+
+        let cancelled = false;
+
+        fetchPublishedBountyPostPath(supabase, bountyData).then((path) => {
+            if (!cancelled) setPublishedBountyUrl(path);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [bountyData?.id, bountyData?.status, bountyData?.title]);
+
     const handleUpdateBounty = async () => {
+        setUpdateFeedback({ error: '', success: '' });
         if (!updateMessage.trim() && newEvidenceFiles.length === 0) {
-            toast({ variant: "destructive", title: "Nothing to update", description: "Please add a message or files." });
+            setUpdateFeedback({ error: 'Please add a message or files.', success: '' });
             return;
         }
         setIsUpdating(true);
@@ -203,56 +202,42 @@ const TrackBountyPage = ({ bountyId, password }) => {
                     
                     newPaths.push(filePath);
                 } catch (error) {
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: `Could not upload ${file.name}: ${error.message}` });
+                    setUpdateFeedback({ error: `Could not upload ${file.name}: ${error.message}`, success: '' });
                     setIsUpdating(false);
                     return;
                 }
             }
         }
         
-        const { error: updateError } = await supabase.from('bounty_updates').insert({ bounty_id: bountyData.id, message: `${updateMessage}\n\n${newPaths.length > 0 ? `Added ${newPaths.length} new file(s).` : ''}`.trim(), updated_by: null });
-        
-        if (updateError) {
-            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not add your update.' });
-        } else {
-            const updatedEvidence = [...(bountyData.evidence || []), ...newPaths];
-            const { data: updatedBountyData, error: bountyUpdateError } = await supabase.from('bounties').update({ evidence: updatedEvidence }).eq('id', bountyData.id).select().single();
-            
-            if (!bountyUpdateError) {
-                setBountyData(updatedBountyData);
-                toast({ title: "Success", description: "Your bounty has been updated." });
-                setIsUpdateDialogOpen(false);
-                setUpdateMessage('');
-                setNewEvidenceFiles([]);
-            } else {
-                toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save new evidence links.' });
-            }
+        try {
+            const { bounty: updatedBountyData } = await updateTrackedBounty({
+                bountyId,
+                password,
+                message: updateMessage,
+                evidencePaths: newPaths,
+            });
+
+            setBountyData(updatedBountyData);
+            setUpdateFeedback({ error: '', success: 'Your bounty has been updated.' });
+            setIsUpdateDialogOpen(false);
+            setUpdateMessage('');
+            setNewEvidenceFiles([]);
+        } catch (error) {
+            console.error('Bounty update failed:', error);
+            setUpdateFeedback({ error: 'Could not add your update.', success: '' });
         }
         setIsUpdating(false);
     };
 
     const handleSendMessage = () => {
-        toast({
-            title: '🚧 Feature Not Implemented',
-            description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀",
-        });
+        setChatError('Bounty chat is not available yet. Use “Update bounty” to add information.');
     };
 
-    console.log('Component render state:', { 
-        loading, 
-        authenticated, 
-        hasBountyData: !!bountyData,
-        bountyId,
-        password: password ? '***' : 'none'
-    });
-
     if (loading) {
-        console.log('Rendering loading state');
         return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="h-16 w-16 animate-spin" /></div>;
     }
 
     if (!authenticated || !bountyData) {
-        console.log('Rendering authentication required state');
         return (
             <div className="container mx-auto px-4 py-8 sm:py-16 md:py-24 min-h-screen">
                 <div className="max-w-2xl mx-auto">
@@ -314,8 +299,13 @@ const TrackBountyPage = ({ bountyId, password }) => {
                                     <h1 className="text-2xl sm:text-3xl font-bold break-words">Report Summary</h1>
                                 </div>
                                 <div className="space-y-8">
-                                    <BountySummary bounty={bountyData} onUpdateBounty={() => setIsUpdateDialogOpen(true)} onLogout={handleLogout} />
-                                    <ChatWindow updates={updates} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} />
+                                    <BountySummary
+                                        bounty={bountyData}
+                                        publishedBountyUrl={publishedBountyUrl}
+                                        onUpdateBounty={() => setIsUpdateDialogOpen(true)}
+                                        onLogout={handleLogout}
+                                    />
+                                    <ChatWindow updates={updates} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} sendError={chatError} />
                                 </div>
                             </motion.div>
                         )}
@@ -323,7 +313,7 @@ const TrackBountyPage = ({ bountyId, password }) => {
                 </div>
             </div>
             {bountyData && (
-                <UpdateReportDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} onUpdate={handleUpdateBounty} updateMessage={updateMessage} setUpdateMessage={setUpdateMessage} newEvidenceFiles={newEvidenceFiles} setNewEvidenceFiles={setNewEvidenceFiles} isUpdating={isUpdating} uploadProgress={uploadProgress} />
+                <UpdateReportDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} onUpdate={handleUpdateBounty} updateMessage={updateMessage} setUpdateMessage={setUpdateMessage} newEvidenceFiles={newEvidenceFiles} setNewEvidenceFiles={setNewEvidenceFiles} isUpdating={isUpdating} uploadProgress={uploadProgress} updateError={updateFeedback.error} updateSuccess={updateFeedback.success} />
             )}
         </>
     );

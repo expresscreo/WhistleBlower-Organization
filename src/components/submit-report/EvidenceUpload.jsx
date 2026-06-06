@@ -1,28 +1,27 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { MAX_EVIDENCE_FILE_BYTES, formatFileSize } from './reportFormUtils';
 import { sanitizeFilename } from '@/lib/utils';
+import { TipFieldGroup } from './TipFieldLabel';
 
 export default function EvidenceUpload({
   files,
   onFilesChange,
   hasOrganization,
   disabled = false,
+  isBountyMode = false,
 }) {
-  const { toast } = useToast();
+  const [uploadError, setUploadError] = useState('');
   const inputRef = useRef(null);
 
   const handlePick = () => {
+    setUploadError('');
     if (!hasOrganization) {
-      toast({
-        title: 'Organization required',
-        description: 'Please select an organization before uploading evidence.',
-        variant: 'destructive',
-      });
+      setUploadError('Please select an organization before uploading evidence.');
       return;
     }
     inputRef.current?.click();
@@ -32,16 +31,20 @@ export default function EvidenceUpload({
     const picked = Array.from(e.target.files || []);
     e.target.value = '';
     const valid = [];
+    const oversized = [];
     for (const file of picked) {
       if (file.size > MAX_EVIDENCE_FILE_BYTES) {
-        toast({
-          title: 'File too large',
-          description: `${file.name} exceeds the 200MB limit.`,
-          variant: 'destructive',
-        });
+        oversized.push(file.name);
         continue;
       }
       valid.push(file);
+    }
+    if (oversized.length) {
+      setUploadError(
+        `The following files exceed the 200MB limit: ${oversized.join(', ')}`
+      );
+    } else {
+      setUploadError('');
     }
     if (valid.length) onFilesChange([...files, ...valid]);
   };
@@ -51,7 +54,13 @@ export default function EvidenceUpload({
   };
 
   return (
-    <div role="group" aria-label="Evidence upload" className="space-y-4">
+    <TipFieldGroup
+      isBountyMode={isBountyMode}
+      label="Supporting evidence"
+      optional
+      className="space-y-4"
+    >
+      <div role="group" aria-label="Evidence upload" className="space-y-4">
       <button
         type="button"
         onClick={handlePick}
@@ -70,6 +79,7 @@ export default function EvidenceUpload({
         onChange={handleChange}
         aria-hidden
       />
+      <FieldError message={uploadError} className="mt-3" />
       {files.length > 0 && (
         <ul className="space-y-2">
           {files.map((file, index) => (
@@ -94,6 +104,7 @@ export default function EvidenceUpload({
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </TipFieldGroup>
   );
 }

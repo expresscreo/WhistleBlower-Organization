@@ -1,11 +1,11 @@
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, RotateCcw, Calendar, Trash2, Award, FileText } from 'lucide-react';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
+import { RotateCcw, Calendar, Trash2, Award, FileText } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import PageHeader from '@/components/admin/PageHeader';
 import { format, addDays } from 'date-fns';
@@ -25,7 +25,8 @@ import {
 const TrashedReports = () => {
   const [trashedItems, setTrashedItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [actionFeedback, setActionFeedback] = useState({ error: '', success: '' });
   const router = useRouter();
   const { profile, loading: profileLoading } = useAuth();
   const [isProcessing, setIsProcessing] = useState(null);
@@ -41,6 +42,13 @@ const TrashedReports = () => {
       action: null,
       type: null,
   });
+
+  const purgeExpiredTrash = useCallback(async () => {
+    const { error } = await supabase.rpc('purge_expired_trash');
+    if (error) {
+      console.warn('Failed to purge expired trash:', error.message);
+    }
+  }, []);
 
   const fetchTrashedItems = useCallback(async (forceRefresh = false) => {
     if (!profile) return;
@@ -59,7 +67,10 @@ const TrashedReports = () => {
       return;
     }
     setLoading(true);
+    setFetchError('');
     lastFetchTime.current = now;
+
+    await purgeExpiredTrash();
     
     let reportQuery = supabase.from('reports').select('*').eq('is_trashed', true);
     let bountyQuery = supabase.from('bounties').select('*').eq('is_trashed', true);
@@ -72,7 +83,7 @@ const TrashedReports = () => {
     const [reportsRes, bountiesRes] = await Promise.all([reportQuery, bountyQuery]);
 
     if (reportsRes.error || bountiesRes.error) {
-      toast({ variant: 'destructive', title: 'Error fetching trashed items', description: reportsRes.error?.message || bountiesRes.error?.message });
+      setFetchError(reportsRes.error?.message || bountiesRes.error?.message);
       setTrashedItems([]);
     } else {
       const reports = reportsRes.data.map(r => ({ ...r, type: 'report' }));
@@ -82,7 +93,7 @@ const TrashedReports = () => {
       hasInitialData.current = true;
     }
     setLoading(false);
-  }, [toast, profile]);
+  }, [profile, purgeExpiredTrash]);
 
   // Store the latest fetchTrashedItems in ref
   fetchTrashedItemsRef.current = fetchTrashedItems;
@@ -92,7 +103,7 @@ const TrashedReports = () => {
     if (!profileLoading && profile) {
       const allowedRoles = ['super_admin', 'executive_admin'];
       if (!allowedRoles.includes(profile.user_type)) {
-          toast({ title: "Access Denied", description: "You don't have permission to view this page.", variant: "destructive" });
+          setFetchError("You don't have permission to view this page.");
           router.push('/admin/overview');
           return;
       }
@@ -100,7 +111,7 @@ const TrashedReports = () => {
         fetchTrashedItems(true); // Force initial fetch
       }
     }
-  }, [profileLoading, profile?.id, profile?.user_type, toast, router]); // Only depend on stable references
+  }, [profileLoading, profile?.id, profile?.user_type, router]); // Only depend on stable references
   
   const handleActionClick = (e, item, action, type) => {
     e.stopPropagation();
@@ -112,6 +123,7 @@ const TrashedReports = () => {
     if (!item || !action) return;
 
     setIsProcessing(item.id);
+    setActionFeedback({ error: '', success: '' });
     
     const tableName = type === 'report' ? 'reports' : 'bounties';
     let error;
@@ -124,16 +136,19 @@ const TrashedReports = () => {
             const { error: deleteBountyError } = await supabase.rpc('delete_bounty_and_dependencies', { p_bounty_id: item.id });
             error = deleteBountyError;
         } else {
-            const { error: deleteError } = await supabase.from(tableName).delete().eq('id', item.id);
+            const { error: deleteError } = await supabase.rpc('delete_report_and_dependencies', { p_report_id: item.id });
             error = deleteError;
         }
     }
 
     if (error) {
-      toast({ variant: 'destructive', title: `Failed to ${action} ${type}`, description: error.message });
+      setActionFeedback({ error: error.message, success: '' });
+    } else if (action === 'restore') {
+      setActionFeedback({ error: '', success: `${type.charAt(0).toUpperCase() + type.slice(1)} restored successfully` });
+      fetchTrashedItems(true);
     } else {
-      toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} ${action}d successfully` });
-      fetchTrashedItems();
+      setTrashedItems((prev) => prev.filter((entry) => entry.id !== item.id));
+      fetchTrashedItems(true);
     }
 
     setIsProcessing(null);
@@ -152,13 +167,18 @@ const TrashedReports = () => {
 
   return (
     <>
-      <Helmet><title>Trash - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Trash - WhistleBlower.ng" />
       {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
         <PageHeader 
           title="Trash" 
           description="Items in the trash will be automatically and permanently deleted after 30 days."
         />
+
+        <PageErrorBanner error={fetchError} title="Could not load trashed items" />
+        <FieldError message={actionFeedback.error} />
+        <FieldSuccess message={actionFeedback.success} />
+
         {loading || profileLoading ? (
           <div className="flex justify-center py-8">
             {/* Loading indication is handled by NavbarLoader */}
@@ -195,12 +215,12 @@ const TrashedReports = () => {
                        </div>
                        {isSuperAdmin && (
                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={(e) => handleActionClick(e, item, 'restore', item.type)} disabled={isProcessing === item.id} className="rounded-none">
-                               {isProcessing === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RotateCcw className="mr-2 h-4 w-4"/>}
+                            <Button variant="outline" size="sm" onClick={(e) => handleActionClick(e, item, 'restore', item.type)} loading={isProcessing === item.id} className="rounded-none">
+                               <RotateCcw className="mr-2 h-4 w-4"/>
                                Restore
                            </Button>
-                           <Button variant="destructive" size="sm" onClick={(e) => handleActionClick(e, item, 'delete', item.type)} disabled={isProcessing === item.id} className="rounded-none">
-                               {isProcessing === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
+                           <Button variant="destructive" size="sm" onClick={(e) => handleActionClick(e, item, 'delete', item.type)} loading={isProcessing === item.id} className="rounded-none">
+                               <Trash2 className="mr-2 h-4 w-4"/>
                                Delete
                            </Button>
                          </div>
@@ -224,9 +244,14 @@ const TrashedReports = () => {
                 : `This action is permanent and cannot be undone. This will permanently delete the ${dialogState.type} "${dialogState.item?.title}" and all associated data.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <FieldError message={actionFeedback.error} className="mx-6" />
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmAction} className={dialogState.action === 'delete' ? 'bg-destructive hover:bg-destructive/90' : ''}>
+            <AlertDialogAction
+              onClick={confirmAction}
+              loading={isProcessing === dialogState.item?.id}
+              className={dialogState.action === 'delete' ? 'bg-destructive hover:bg-destructive/90' : ''}
+            >
                 {dialogState.action === 'restore' ? 'Restore' : 'Delete Permanently'}
             </AlertDialogAction>
           </AlertDialogFooter>

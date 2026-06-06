@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const ContactPage = () => {
-    const { toast } = useToast();
     const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '', honeypot: '' });
     const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState({ error: '', success: '' });
 
     const handleChange = (e) => {
         const { id, value } = e.target;
@@ -22,11 +22,12 @@ const ContactPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setFeedback({ error: '', success: '' });
         setLoading(true);
 
         const { name, email, subject, message, honeypot } = formData;
         if (!name || !email || !subject || !message) {
-            toast({ variant: 'destructive', title: 'Validation Error', description: 'Please fill out all required fields.' });
+            setFeedback({ error: 'Please fill out all required fields.', success: '' });
             setLoading(false);
             return;
         }
@@ -38,16 +39,15 @@ const ContactPage = () => {
 
             if (error) throw new Error(error.message);
 
-            toast({
-                title: "Message Sent!",
-                description: "Thank you for contacting us. We'll get back to you shortly.",
+            setFeedback({
+                error: '',
+                success: "Thank you for contacting us. We'll get back to you shortly.",
             });
             setFormData({ name: '', email: '', subject: '', message: '', honeypot: '' });
         } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Submission Failed',
-                description: 'Could not send message. Please try again later.',
+            setFeedback({
+                error: 'Could not send message. Please try again later.',
+                success: '',
             });
         } finally {
             setLoading(false);
@@ -108,8 +108,10 @@ const ContactPage = () => {
                                     <Textarea id="message" value={formData.message} onChange={handleChange} required rows={5} />
                                 </div>
                                 <input type="hidden" id="honeypot" name="honeypot" value={formData.honeypot} onChange={handleChange} />
-                                <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                <FieldError message={feedback.error} />
+                                <FieldSuccess message={feedback.success} />
+                                <Button type="submit" className="w-full" loading={loading}>
+                                    <Send className="mr-2 h-4 w-4" />
                                     Send Message
                                 </Button>
                             </form>

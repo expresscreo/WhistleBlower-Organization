@@ -7,6 +7,7 @@ export default function EvidenceStep({
   onFilesChange,
   hasOrganization,
   disabled,
+  isBountyMode = false,
 }) {
   return (
     <EvidenceUpload
@@ -14,6 +15,7 @@ export default function EvidenceStep({
       onFilesChange={onFilesChange}
       hasOrganization={hasOrganization}
       disabled={disabled}
+      isBountyMode={isBountyMode}
     />
   );
 }

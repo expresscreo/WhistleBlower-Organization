@@ -1,19 +1,19 @@
 import { useRouter } from 'next/navigation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, MessageSquare, Building, Calendar, Paperclip, ChevronLeft, ChevronRight, FileUp, Mic } from 'lucide-react';
+import { PageErrorBanner } from '@/components/ui/form-feedback';
+import { Loader2, MessageSquare, ChevronLeft, ChevronRight, Mic } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import PageHeader from '@/components/admin/PageHeader';
+import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
 
 const FEEDBACK_PER_PAGE = 18;
 
@@ -30,7 +30,7 @@ const CustomerFeedback = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
   const router = useRouter();
   const { profile, loading: profileLoading } = useUserProfile();
   
@@ -62,12 +62,13 @@ const CustomerFeedback = () => {
     
     console.log('Actually fetching feedback...');
     setLoading(true);
+    setFetchError('');
     lastFetchTime.current = now;
 
     let query = supabase
       .from('reports')
       .select(`
-        id, report_id, title, description, status, category, incident_date, admin_has_viewed, is_trashed, created_at, evidence_path, is_voice_note, is_feedback,
+        id, report_id, title, description, status, category, incident_date, urgency, admin_has_viewed, is_trashed, created_at, evidence_path, is_voice_note, is_feedback,
         organizations(name),
         report_updates(created_at)
       `)
@@ -81,7 +82,7 @@ const CustomerFeedback = () => {
     const { data, error } = await query;
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching feedback', description: error.message });
+      setFetchError(error.message);
       setAllFeedback([]);
     } else {
         let processedFeedback = data.map(r => {
@@ -98,7 +99,7 @@ const CustomerFeedback = () => {
         hasInitialData.current = true;
     }
     setLoading(false);
-  }, [toast, profile]);
+  }, [profile]);
 
   // Store the latest fetchFeedback in ref
   fetchFeedbackRef.current = fetchFeedback;
@@ -159,13 +160,15 @@ const CustomerFeedback = () => {
 
   return (
     <>
-      <Helmet><title>Customer Feedback - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Customer Feedback - WhistleBlower.ng" />
       {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
         <PageHeader 
           title="Customer Feedback" 
           description="Review, manage, and track all submitted customer feedback."
         />
+
+        <PageErrorBanner error={fetchError} title="Could not load feedback" />
         
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -222,14 +225,12 @@ const CustomerFeedback = () => {
                                  <h3 className="text-lg font-bold line-clamp-1">{feedback.title}</h3>
                                  <p className="text-sm text-muted-foreground line-clamp-2">{feedback.description}</p>
                              </CardContent>
-                             <div className="p-4 pt-2 border-t mt-2">
-                                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                                     <div className="flex items-center gap-2 bg-[#fcfcfc] dark:bg-secondary p-1"><Building className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground line-clamp-1">{feedback.organizations?.name || feedback.organization_name}</span></div>
-                                     <div className="flex items-center gap-2 bg-[#fcfcfc] dark:bg-secondary p-1"><Calendar className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground">{feedback.incident_date ? format(new Date(feedback.incident_date), 'MM/dd/yyyy') : 'N/A'}</span></div>
-                                     <div className="flex items-center gap-2 bg-[#fcfcfc] dark:bg-secondary p-1"><FileUp className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground">{feedback.created_at ? format(new Date(feedback.created_at), 'MM/dd/yyyy') : 'N/A'}</span></div>
-                                     <div className="flex items-center gap-2 bg-[#fcfcfc] dark:bg-secondary p-1"><Paperclip className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground">{feedback.attachment_count} attachment(s)</span></div>
-                                 </div>
-                             </div>
+                             <ReportCardMetaFooter
+                                 company={feedback.organizations?.name || feedback.organization_name}
+                                 urgency={feedback.urgency}
+                                 incidentDate={feedback.incident_date}
+                                 attachmentCount={feedback.attachment_count}
+                             />
                           </Card>
                       )
                   })}

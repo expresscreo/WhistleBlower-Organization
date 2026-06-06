@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Building, PlusCircle, MoreHorizontal, Edit, Trash2, Ban, CheckCircle, Users, FileText, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -19,22 +19,27 @@ const CompaniesManagement = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [plans, setPlans] = useState([]);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [formFeedback, setFormFeedback] = useState({ error: '', success: '' });
+  const [deleteFeedback, setDeleteFeedback] = useState({ error: '', success: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
+    setFetchError('');
     let query = supabase.from('organizations').select('*, plans(name)');
     if (searchTerm) {
       query = query.ilike('name', `%${searchTerm}%`);
     }
     const { data, error } = await query;
     if (error) {
-      toast({ variant: 'destructive', title: 'Error fetching organizations', description: error.message });
+      setFetchError(error.message);
     } else {
       setOrganizations(data);
     }
     setLoading(false);
-  }, [searchTerm, toast]);
+  }, [searchTerm]);
 
   useEffect(() => {
     fetchOrganizations();
@@ -49,64 +54,80 @@ const CompaniesManagement = () => {
   }, []);
 
   const handleAdd = () => {
+    setFormFeedback({ error: '', success: '' });
     setSelectedOrg({ name: '', plan_id: '', status: 'active' });
     setIsModalOpen(true);
   };
 
   const handleEdit = (org) => {
+    setFormFeedback({ error: '', success: '' });
     setSelectedOrg(org);
     setIsModalOpen(true);
   };
 
   const handleDelete = (org) => {
+    setDeleteFeedback({ error: '', success: '' });
     setSelectedOrg(org);
     setIsDeleteModalOpen(true);
   };
 
   const confirmDelete = async () => {
-    const { error } = await supabase.from('organizations').delete().eq('id', selectedOrg.id);
-    if (error) {
-      toast({ variant: 'destructive', title: 'Error deleting organization', description: error.message });
-    } else {
-      toast({ title: 'Organization deleted successfully' });
-      fetchOrganizations();
+    setDeleteFeedback({ error: '', success: '' });
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('organizations').delete().eq('id', selectedOrg.id);
+      if (error) {
+        setDeleteFeedback({ error: error.message, success: '' });
+      } else {
+        setDeleteFeedback({ error: '', success: 'Organization deleted successfully' });
+        fetchOrganizations();
+      }
+      setIsDeleteModalOpen(false);
+      setSelectedOrg(null);
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleteModalOpen(false);
-    setSelectedOrg(null);
   };
 
   const handleSave = async () => {
+    setFormFeedback({ error: '', success: '' });
     const orgData = {
       name: selectedOrg.name,
       plan_id: selectedOrg.plan_id,
       status: selectedOrg.status,
     };
 
-    let error;
-    if (selectedOrg.id) {
-      ({ error } = await supabase.from('organizations').update(orgData).eq('id', selectedOrg.id));
-    } else {
-      ({ error } = await supabase.from('organizations').insert(orgData));
-    }
+    setIsSaving(true);
+    try {
+      let error;
+      if (selectedOrg.id) {
+        ({ error } = await supabase.from('organizations').update(orgData).eq('id', selectedOrg.id));
+      } else {
+        ({ error } = await supabase.from('organizations').insert(orgData));
+      }
 
-    if (error) {
-      toast({ variant: 'destructive', title: 'Error saving organization', description: error.message });
-    } else {
-      toast({ title: `Organization ${selectedOrg.id ? 'updated' : 'added'} successfully` });
-      fetchOrganizations();
+      if (error) {
+        setFormFeedback({ error: error.message, success: '' });
+      } else {
+        setFormFeedback({ error: '', success: `Organization ${selectedOrg.id ? 'updated' : 'added'} successfully` });
+        fetchOrganizations();
+      }
+      setIsModalOpen(false);
+      setSelectedOrg(null);
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
-    setSelectedOrg(null);
   };
 
   return (
     <>
-      <Helmet><title>Organizations Management - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Organizations Management - WhistleBlower.ng" />
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Organizations Management</h1>
           <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Add Organization</Button>
         </div>
+        <PageErrorBanner error={fetchError} title="Could not load organizations" />
         <Card>
           <CardHeader>
             <CardTitle>All Organizations</CardTitle>
@@ -176,9 +197,11 @@ const CompaniesManagement = () => {
               </Select>
             </div>
           </div>
+          <FieldError message={formFeedback.error} className="mx-6" />
+          <FieldSuccess message={formFeedback.success} className="mx-6" />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSave} loading={isSaving}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -190,9 +213,11 @@ const CompaniesManagement = () => {
             <DialogTitle>Are you sure?</DialogTitle>
             <DialogDescription>This action cannot be undone. This will permanently delete the organization "{selectedOrg?.name}".</DialogDescription>
           </DialogHeader>
+          <FieldError message={deleteFeedback.error} className="mx-6" />
+          <FieldSuccess message={deleteFeedback.success} className="mx-6" />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} loading={isDeleting}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const AuthenticationDialog = ({ open, onOpenChange, onVerify, authInput, setAuthInput, loading }) => {
     const [showPassword, setShowPassword] = useState(false);
@@ -37,8 +37,7 @@ const AuthenticationDialog = ({ open, onOpenChange, onVerify, authInput, setAuth
                     </Button>
                 </div>
                 <DialogFooter>
-                    <Button onClick={onVerify} className="w-full" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    <Button onClick={onVerify} className="w-full" loading={loading}>
                         Verify
                     </Button>
                 </DialogFooter>

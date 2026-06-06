@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,7 @@ const ChatWindow = ({
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const messageInputRef = useRef(null);
-  const { toast } = useToast();
+  const [messageError, setMessageError] = useState('');
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -69,12 +69,6 @@ const ChatWindow = ({
             if (newUpdate.updated_by !== currentUser?.id) {
               setNewMessageCount(prev => prev + 1);
               
-              const senderName = newUpdate.updated_by ? 'Admin' : 'Reporter';
-              toast({
-                title: 'New message received',
-                description: `You have a new message from ${senderName}`,
-                duration: 3000,
-              });
             }
           }
           if (onNewMessage) onNewMessage(newUpdate);
@@ -99,7 +93,7 @@ const ChatWindow = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [reportId, currentUser, onNewMessage, onRefreshMessages, toast]);
+  }, [reportId, currentUser, onNewMessage, onRefreshMessages]);
 
   // Handle scroll detection
   const handleScroll = (event) => {
@@ -126,6 +120,7 @@ const ChatWindow = ({
     if (!newMessage.trim() || isSubmitting) return;
     
     setIsSubmitting(true);
+    setMessageError('');
     
     try {
       const messageData = {
@@ -155,11 +150,7 @@ const ChatWindow = ({
       setReplyToMessage(null);
       
     } catch (error) {
-      toast({
-        title: 'Failed to send message',
-        description: error.message,
-        variant: 'destructive'
-      });
+      setMessageError(error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -339,6 +330,7 @@ const ChatWindow = ({
         </div>
         
         {/* Message input */}
+        <FieldError message={messageError} className="mx-4 mb-2" />
         <MessageInput
           ref={messageInputRef}
           newMessage={newMessage}

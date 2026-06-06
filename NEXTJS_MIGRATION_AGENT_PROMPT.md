@@ -133,7 +133,7 @@ export default nextConfig;
 
 - `HelmetProvider` (keep until metadata migrated per page)
 - `ThemeProvider`, `AuthProvider`, `PermissionsProvider`, `MobileMenuProvider`
-- `ScrollToTop`, `Toaster`, `ScrollToTopButton`
+- `ScrollToTop`, `ScrollToTopButton`
 - Wrap app chrome in `<Suspense fallback={null}>` (required for `useSearchParams` in router adapter)
 
 ---

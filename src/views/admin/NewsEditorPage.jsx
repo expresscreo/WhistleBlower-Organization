@@ -2,18 +2,32 @@ import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigat
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { uploadFileToLocal, getLocalFileUrl } from '@/lib/fileUtils';
+import { areSameMediaPath, resolveMediaUrl } from '@/lib/mediaUtils';
+import { isEvidencePathApproved, normalizePublishedEvidence } from '@/lib/publishedEvidence';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, PageErrorBanner } from '@/components/ui/form-feedback';
 import { ArrowLeft, Save, Eye, Image as ImageIcon, Upload, Bold, Italic, AlignLeft, AlignCenter, AlignRight, X, Underline, Strikethrough, List, ListOrdered, Type, Quote, Pilcrow, CheckCircle, Undo, Redo } from 'lucide-react';
 import { slugify } from '@/lib/utils';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { formatNumberWithCommas } from '@/lib/utils';
 import { consumeNavigationState } from '@/lib/navigation-state';
+import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGallery';
+import { isImagePath } from '@/lib/mediaUtils';
+import MostWantedEditorWizard from '@/components/admin/most-wanted-editor/MostWantedEditorWizard';
+import {
+  EMPTY_MOST_WANTED_DETAILS,
+  normalizeMostWantedDetails,
+  buildMostWantedContentSnippet,
+  buildMostWantedHeadline,
+  ensureMostWantedReportReference,
+  suggestMostWantedTitle,
+} from '@/lib/mostWantedUtils';
+import { validateMostWantedForSave } from '@/lib/mostWantedValidation';
 
 const NewsEditorPage = () => {
     const router = useRouter();
@@ -26,17 +40,20 @@ const NewsEditorPage = () => {
         title: '',
         content: '',
         category: 'news',
-        status: 'draft',
+        status: 'published',
         featured_image: null,
         bounty_id: null,
-        bounty_amount: ''
+        bounty_amount: '',
+        most_wanted_details: { ...EMPTY_MOST_WANTED_DETAILS },
     });
+    const [mostWantedPendingGalleryFiles, setMostWantedPendingGalleryFiles] = useState([]);
     const [featuredImageFile, setFeaturedImageFile] = useState(null);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [inlineImages, setInlineImages] = useState([]);
     const [editorContent, setEditorContent] = useState('');
     const [bountyEvidence, setBountyEvidence] = useState([]);
+    const [publishedEvidencePaths, setPublishedEvidencePaths] = useState([]);
     const [bountyAmountVerified, setBountyAmountVerified] = useState(false);
     
     // Undo/Redo state management
@@ -44,7 +61,8 @@ const NewsEditorPage = () => {
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [isUndoRedo, setIsUndoRedo] = useState(false);
     
-    const { toast } = useToast();
+    const [fetchError, setFetchError] = useState('');
+    const [saveFeedback, setSaveFeedback] = useState({ error: '' });
     const editorRef = useRef(null);
     const contentInitializedRef = useRef(false);
 
@@ -86,12 +104,19 @@ const NewsEditorPage = () => {
             setCurrentItem({
                 ...data,
                 bounty_amount: bountyAmountPrefilled,
-                category: data?.category || 'bounty'
+                category: data?.category || 'bounty',
+                most_wanted_details: normalizeMostWantedDetails(data?.most_wanted_details),
             });
+            setMostWantedPendingGalleryFiles([]);
 
             setBountyAmountVerified(Boolean(prefill));
+            setPublishedEvidencePaths(normalizePublishedEvidence(data.published_evidence));
             setEditorContent(data.content || '');
-            setFeaturedImageUrl(getLocalFileUrl(data.featured_image));
+            if (data.featured_image) {
+                resolveMediaUrl(data.featured_image).then(setFeaturedImageUrl);
+            } else {
+                setFeaturedImageUrl(null);
+            }
             
             if (data.bounty_id) {
                 fetchBountyEvidence(data.bounty_id);
@@ -100,7 +125,7 @@ const NewsEditorPage = () => {
             contentInitializedRef.current = false;
         } catch (error) {
             console.error('Error loading news post:', error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load news post' });
+            setFetchError('Failed to load news post');
         } finally {
             setLoading(false);
         }
@@ -139,77 +164,148 @@ const NewsEditorPage = () => {
         insertImageIntoEditor(newImage);
         e.target.value = '';
         
-        toast({ title: 'Image added!', description: 'Image will be uploaded when you save the post.' });
     };
+
+    const updateEditorContentRef = useRef(() => {});
+
+    const removeEditorImageBlock = useCallback((wrap) => {
+        if (!wrap) return;
+
+        const img = wrap.querySelector('img');
+        const imageId = img?.dataset?.imageId;
+
+        if (imageId) {
+            const id = Number(imageId);
+            const image = inlineImages.find((item) => item.id === id);
+            if (image?.previewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(image.previewUrl);
+            }
+            setInlineImages((prev) => prev.filter((item) => item.id !== id));
+        }
+
+        wrap.remove();
+        updateEditorContentRef.current();
+    }, [inlineImages]);
+
+    const attachInlineImageRemoveButton = useCallback(
+        (wrap) => {
+            if (!wrap || wrap.querySelector('.inline-image-remove')) return;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'inline-image-remove';
+            button.setAttribute('aria-label', 'Remove image');
+            button.textContent = '×';
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                removeEditorImageBlock(wrap);
+            });
+
+            wrap.insertBefore(button, wrap.firstChild);
+        },
+        [removeEditorImageBlock]
+    );
+
+    const wrapEditorImage = useCallback(
+        (img) => {
+            if (!img || img.closest('.inline-image-wrap')) return img?.parentElement;
+
+            const wrap = document.createElement('div');
+            wrap.className = 'inline-image-wrap';
+            wrap.contentEditable = 'false';
+
+            img.classList.add('inline-image');
+            img.classList.remove('my-4', 'cursor-pointer');
+            if (!img.className.includes('rounded-md')) {
+                img.classList.add('max-w-full', 'h-auto', 'rounded-md', 'block');
+            }
+
+            const parent = img.parentNode;
+            if (parent) {
+                parent.insertBefore(wrap, img);
+                wrap.appendChild(img);
+            }
+
+            attachInlineImageRemoveButton(wrap);
+            return wrap;
+        },
+        [attachInlineImageRemoveButton]
+    );
+
+    const wrapExistingEditorImages = useCallback(
+        (editor) => {
+            if (!editor) return;
+
+            editor.querySelectorAll('.inline-image-wrap').forEach((wrap) => {
+                const existingButton = wrap.querySelector('.inline-image-remove');
+                if (existingButton) existingButton.remove();
+                attachInlineImageRemoveButton(wrap);
+            });
+
+            editor.querySelectorAll('img').forEach((img) => {
+                if (img.closest('.inline-image-wrap')) return;
+                if (!editor.contains(img)) return;
+                img.classList.add('inline-image');
+                wrapEditorImage(img);
+            });
+        },
+        [attachInlineImageRemoveButton, wrapEditorImage]
+    );
 
     const insertImageIntoEditor = (image) => {
         const editor = editorRef.current;
         if (!editor) return;
 
+        const wrap = document.createElement('div');
+        wrap.className = 'inline-image-wrap';
+        wrap.contentEditable = 'false';
+
         const img = document.createElement('img');
         img.src = image.previewUrl;
         img.alt = image.name;
-        img.className = 'inline-image max-w-full h-auto rounded-md my-4 cursor-pointer';
+        img.className = 'inline-image max-w-full h-auto rounded-md block';
         img.style.maxWidth = '100%';
         img.style.height = 'auto';
         img.style.width = '100%';
-        img.dataset.imageId = image.id;
-        
-        img.addEventListener('click', (e) => {
-            e.preventDefault();
-            showImageOptions(image.id);
-        });
+
+        if (image.id) {
+            img.dataset.imageId = String(image.id);
+        }
+
+        wrap.appendChild(img);
+        attachInlineImageRemoveButton(wrap);
 
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             range.deleteContents();
-            range.insertNode(img);
-            range.setStartAfter(img);
-            range.setEndAfter(img);
+            range.insertNode(wrap);
+            range.setStartAfter(wrap);
+            range.setEndAfter(wrap);
             selection.removeAllRanges();
             selection.addRange(range);
         } else {
-            editor.appendChild(img);
+            editor.appendChild(wrap);
         }
 
         updateEditorContent();
     };
 
-    const showImageOptions = (imageId) => {
-        const image = inlineImages.find(img => img.id === imageId);
-        if (!image) return;
+    const handleUseEvidenceAsFeatured = async (path, resolvedUrl) => {
+        const imageUrl = resolvedUrl || (await resolveMediaUrl(path));
+        setCurrentItem(prev => ({ ...prev, featured_image: path }));
+        setFeaturedImageFile(null);
+        setFeaturedImageUrl(imageUrl);
+    };
 
-        const imgElement = editorRef.current?.querySelector(`[data-image-id="${imageId}"]`);
-        if (!imgElement) return;
-
-        const input = window.prompt('Enter image width percentage (10-100). Type "remove" to delete. Leave blank to cancel.', '100');
-        if (input === null) {
-            return; // cancelled
-        }
-        const trimmed = input.trim().toLowerCase();
-        if (trimmed === 'remove') {
-            // Remove image from DOM
-            imgElement.remove();
-            // Remove from state
-            setInlineImages(prev => prev.filter(img => img.id !== imageId));
-            URL.revokeObjectURL(image.previewUrl);
-            updateEditorContent();
-            toast({ title: 'Image removed', description: 'Image has been removed from the content.' });
+    const handleApproveEvidenceForPublish = (path) => {
+        if (isEvidencePathApproved(path, publishedEvidencePaths)) {
             return;
         }
-        if (trimmed !== '') {
-            const value = Number(trimmed);
-            if (!Number.isNaN(value) && value >= 10 && value <= 100) {
-                imgElement.style.width = `${value}%`;
-                imgElement.style.height = 'auto';
-                imgElement.style.maxWidth = '100%';
-                updateEditorContent();
-                toast({ title: 'Image resized', description: `Set width to ${value}%.` });
-            } else {
-                toast({ variant: 'destructive', title: 'Invalid size', description: 'Please enter a number between 10 and 100, or type remove.' });
-            }
-        }
+
+        const canonicalPath = bountyEvidence.find((p) => areSameMediaPath(p, path)) || path;
+        setPublishedEvidencePaths((prev) => [...prev, canonicalPath]);
     };
 
     const updateEditorContent = () => {
@@ -219,12 +315,14 @@ const NewsEditorPage = () => {
         const content = editor.innerHTML;
         setEditorContent(content);
         setCurrentItem(prev => ({ ...prev, content }));
-        
+
         // Add to history if not an undo/redo operation
         if (!isUndoRedo) {
             addToHistory(content);
         }
     };
+
+    updateEditorContentRef.current = updateEditorContent;
 
     // Undo/Redo functionality
     const addToHistory = (content) => {
@@ -248,6 +346,7 @@ const NewsEditorPage = () => {
             const previousContent = history[historyIndex - 1];
             if (editorRef.current) {
                 editorRef.current.innerHTML = previousContent;
+                wrapExistingEditorImages(editorRef.current);
                 setEditorContent(previousContent);
                 setCurrentItem(prev => ({ ...prev, content: previousContent }));
             }
@@ -262,6 +361,7 @@ const NewsEditorPage = () => {
             const nextContent = history[historyIndex + 1];
             if (editorRef.current) {
                 editorRef.current.innerHTML = nextContent;
+                wrapExistingEditorImages(editorRef.current);
                 setEditorContent(nextContent);
                 setCurrentItem(prev => ({ ...prev, content: nextContent }));
             }
@@ -606,18 +706,22 @@ const NewsEditorPage = () => {
         }
 
         updateEditorContent();
+        requestAnimationFrame(() => {
+            if (editorRef.current) wrapExistingEditorImages(editorRef.current);
+        });
     };
 
     // Initialize editor content when component mounts or content changes
     useEffect(() => {
         if (editorRef.current && currentItem.content && !contentInitializedRef.current) {
             editorRef.current.innerHTML = currentItem.content;
+            wrapExistingEditorImages(editorRef.current);
             setEditorContent(currentItem.content);
             contentInitializedRef.current = true;
             // Initialize history with initial content
             addToHistory(currentItem.content);
         }
-    }, [currentItem.content]);
+    }, [currentItem.content, wrapExistingEditorImages]);
 
     // Keyboard shortcuts for undo/redo
     useEffect(() => {
@@ -635,9 +739,38 @@ const NewsEditorPage = () => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [historyIndex, history]);
 
+    const handleCategoryChange = (value) => {
+        setCurrentItem((prev) => ({
+            ...prev,
+            category: value,
+            most_wanted_details:
+                value === 'most_wanted'
+                    ? normalizeMostWantedDetails(prev.most_wanted_details)
+                    : prev.most_wanted_details,
+        }));
+        if (value !== 'most_wanted') {
+            setMostWantedPendingGalleryFiles([]);
+        }
+    };
+
     const handleSave = async () => {
-        if (!currentItem.title.trim()) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Title is required' });
+        setSaveFeedback({ error: '' });
+
+        const isMostWanted = currentItem.category === 'most_wanted';
+
+        if (isMostWanted) {
+            const validation = validateMostWantedForSave({
+                details: currentItem.most_wanted_details,
+                title: currentItem.title,
+                hasFeaturedImage: Boolean(featuredImageUrl || currentItem.featured_image),
+            });
+            if (!validation.valid) {
+                const message = [validation.title, validation.description].filter(Boolean).join(': ');
+                setSaveFeedback({ error: message });
+                return;
+            }
+        } else if (!currentItem.title.trim()) {
+            setSaveFeedback({ error: 'Title is required' });
             return;
         }
 
@@ -682,8 +815,35 @@ const NewsEditorPage = () => {
                 });
             }
 
+            let galleryEvidencePaths = [...publishedEvidencePaths];
+
+            if (isMostWanted && mostWantedPendingGalleryFiles.length > 0) {
+                const subfolder = currentItem.id || slugify(currentItem.title) || 'new';
+                for (const file of mostWantedPendingGalleryFiles) {
+                    try {
+                        const path = await uploadFileToLocal(file, 'news', subfolder);
+                        galleryEvidencePaths.push(path);
+                    } catch (e) {
+                        console.error('Most wanted gallery upload failed:', e);
+                    }
+                }
+                setMostWantedPendingGalleryFiles([]);
+            }
+
+            const mostWantedDetails = isMostWanted
+                ? ensureMostWantedReportReference(currentItem.most_wanted_details)
+                : null;
+
+            const resolvedTitle = isMostWanted
+                ? buildMostWantedHeadline(mostWantedDetails) || suggestMostWantedTitle(mostWantedDetails)
+                : currentItem.title;
+
+            const resolvedContent = isMostWanted
+                ? buildMostWantedContentSnippet(resolvedTitle, mostWantedDetails)
+                : finalContent;
+
             // Generate slug from title
-            const baseSlug = slugify(currentItem.title);
+            const baseSlug = slugify(resolvedTitle);
             let finalSlug = baseSlug;
 
             // Try to ensure unique slug if column exists by checking conflicts
@@ -705,12 +865,15 @@ const NewsEditorPage = () => {
             }
 
             const newsData = {
-                title: currentItem.title,
-                content: finalContent,
+                title: resolvedTitle,
+                content: resolvedContent,
                 category: currentItem.category,
                 status: currentItem.status,
                 featured_image: featuredImagePath,
                 bounty_id: currentItem.bounty_id,
+                most_wanted_details: isMostWanted ? mostWantedDetails : null,
+                published_evidence:
+                    currentItem.category === 'bounty' || isMostWanted ? galleryEvidencePaths : [],
                 updated_at: new Date().toISOString(),
                 // Include slug optimistically; we'll retry without it if DB doesn't have the column
                 slug: finalSlug
@@ -723,14 +886,38 @@ const NewsEditorPage = () => {
                 return supabase.from('news').insert([payload]);
             };
 
-            // First attempt: with slug
-            let result = await saveWithData(newsData, isEditing);
+            const saveNewsPayload = async (payload, edit) => {
+                let currentPayload = { ...payload };
+                let result = await saveWithData(currentPayload, edit);
 
-            // Fallback: if slug column doesn't exist, retry without slug
-            if (result.error && /slug/i.test(result.error.message || '')) {
-                const { slug, ...withoutSlug } = newsData;
-                result = await saveWithData(withoutSlug, isEditing);
-            }
+                if (result.error && /slug/i.test(result.error.message || '')) {
+                    const { slug, ...withoutSlug } = currentPayload;
+                    currentPayload = withoutSlug;
+                    result = await saveWithData(currentPayload, edit);
+                }
+
+                if (result.error && /published_evidence/i.test(result.error.message || '')) {
+                    const { published_evidence, ...withoutPublishedEvidence } = currentPayload;
+                    currentPayload = withoutPublishedEvidence;
+                    result = await saveWithData(currentPayload, edit);
+                    if (!result.error) {
+                        setSaveFeedback({ error: 'Evidence approvals not saved. Add the published_evidence column to the news table (see supabase/migrations) to persist approved photos.' });
+                    }
+                }
+
+                if (result.error && /most_wanted_details/i.test(result.error.message || '')) {
+                    const { most_wanted_details, ...withoutMostWanted } = currentPayload;
+                    currentPayload = withoutMostWanted;
+                    result = await saveWithData(currentPayload, edit);
+                    if (!result.error) {
+                        setSaveFeedback({ error: 'Most Wanted details not saved. Run the most_wanted_details migration on the news table.' });
+                    }
+                }
+
+                return result;
+            };
+
+            let result = await saveNewsPayload(newsData, isEditing);
 
             if (result.error) throw result.error;
 
@@ -762,12 +949,10 @@ const NewsEditorPage = () => {
                 }
             }
 
-            toast({ title: 'Success', description: `News post ${isEditing ? 'updated' : 'created'} successfully!` });
-
             router.push('/admin/news-editor');
         } catch (error) {
             console.error('Error saving news post:', error);
-            toast({ variant: 'destructive', title: 'Error', description: `Failed to save news post: ${error.message || error}` });
+            setSaveFeedback({ error: `Failed to save news post: ${error.message || error}` });
         } finally {
             setIsUploading(false);
         }
@@ -779,11 +964,12 @@ const NewsEditorPage = () => {
 
     return (
         <>
-            <Helmet>
-                <title>{isEditing ? 'Edit' : 'Create'} News Post - WhistleBlower.ng</title>
-            </Helmet>
+            <PageHead title={`${isEditing ? 'Edit' : 'Create'} News Post - WhistleBlower.ng`} />
             
-            <div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
+            
+                <PageErrorBanner error={fetchError} title="Could not load news post" />
+                <FieldError message={saveFeedback.error} />
+<div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
                     {/* Header */}
                     <div className="flex items-center gap-4 mb-8">
                         <Button
@@ -805,17 +991,45 @@ const NewsEditorPage = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
                         {/* Main Editor */}
-                        <div className="lg:col-span-2">
+                        <div className="min-w-0 lg:col-span-2">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Content</CardTitle>
+                                    <CardTitle>
+                                        {currentItem.category === 'most_wanted' ? 'Most Wanted Alert' : 'Content'}
+                                    </CardTitle>
                                     <CardDescription>
-                                        Write and format your news content
+                                        {currentItem.category === 'most_wanted'
+                                            ? 'Complete each step to build a structured wanted alert'
+                                            : 'Write and format your news content'}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
+                                    {currentItem.category === 'most_wanted' ? (
+                                        <MostWantedEditorWizard
+                                            title={currentItem.title}
+                                            onTitleChange={(title) =>
+                                                setCurrentItem((prev) => ({ ...prev, title }))
+                                            }
+                                            details={currentItem.most_wanted_details}
+                                            onDetailsChange={(most_wanted_details) =>
+                                                setCurrentItem((prev) => ({ ...prev, most_wanted_details }))
+                                            }
+                                            featuredImageUrl={featuredImageUrl}
+                                            onFeaturedFileSelect={handleFileSelect}
+                                            onFeaturedRemove={() => {
+                                                setFeaturedImageFile(null);
+                                                setFeaturedImageUrl(null);
+                                                setCurrentItem((prev) => ({ ...prev, featured_image: null }));
+                                            }}
+                                            galleryPaths={publishedEvidencePaths}
+                                            onGalleryPathsChange={setPublishedEvidencePaths}
+                                            pendingGalleryFiles={mostWantedPendingGalleryFiles}
+                                            onPendingGalleryFilesChange={setMostWantedPendingGalleryFiles}
+                                        />
+                                    ) : (
+                                    <>
                                     {/* Title */}
                                     <div className="space-y-2">
                                         <Label htmlFor="title">Title</Label>
@@ -1044,15 +1258,18 @@ const NewsEditorPage = () => {
                                         />
                                         
                                         <p className="text-xs text-muted-foreground">
-                                            💡 Tip: Click on images to remove them. Use the toolbar for formatting.
+                                            Tip: Use the × on an image to remove it from the content.
                                         </p>
                                     </div>
+                                    </>
+                                    )}
                                 </CardContent>
                             </Card>
                         </div>
 
-                        {/* Sidebar */}
-                        <div className="space-y-6">
+                        {/* Sidebar — sticky while scrolling the editor */}
+                        <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:z-10 lg:max-h-[calc(100vh-5rem)]">
+                            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain lg:pr-1">
                             {/* Settings */}
                             <Card>
                                 <CardHeader>
@@ -1064,7 +1281,7 @@ const NewsEditorPage = () => {
                                         <Label htmlFor="category">Category</Label>
                                         <Select
                                             value={currentItem.category}
-                                            onValueChange={(value) => setCurrentItem({ ...currentItem, category: value })}
+                                            onValueChange={handleCategoryChange}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select category" />
@@ -1113,106 +1330,104 @@ const NewsEditorPage = () => {
                                                 <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="published">Published</SelectItem>
                                                 <SelectItem value="draft">Draft</SelectItem>
-                                                <SelectItem value="published">Publish</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* Featured Image */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Featured Image</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleFileSelect}
-                                            className="hidden"
-                                            id="featured-image"
-                                        />
-                                        <Label htmlFor="featured-image" className="cursor-pointer">
-                                            <div className="flex items-center gap-2 p-4 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground transition-colors">
-                                                <Upload className="h-5 w-5" />
-                                                <span>Choose Featured Image</span>
-                                            </div>
-                                        </Label>
-                                    </div>
-
-                                    {featuredImageUrl && (
-                                        <div className="relative">
-                                            <img
-                                                src={featuredImageUrl}
-                                                alt="Featured"
-                                                className="w-full h-48 object-cover rounded-lg"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="sm"
-                                                className="absolute top-2 right-2"
-                                                onClick={() => {
-                                                    setFeaturedImageFile(null);
-                                                    setFeaturedImageUrl(null);
-                                                }}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* Bounty Evidence (if applicable) */}
-                            {currentItem.category === 'bounty' && bountyEvidence.length > 0 && (
+                            {/* Featured Image — news posts; Most Wanted uses wizard media step */}
+                            {currentItem.category !== 'most_wanted' &&
+                                (currentItem.category !== 'bounty' || !currentItem.bounty_id) && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Bounty Evidence</CardTitle>
+                                        <CardTitle>Featured Image</CardTitle>
                                     </CardHeader>
-                                    <CardContent>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {bountyEvidence.map((evidence, index) => (
-                                                <img
-                                                    key={index}
-                                                    src={getLocalFileUrl(evidence)}
-                                                    alt={`Evidence ${index + 1}`}
-                                                    className="w-full h-20 object-cover rounded cursor-pointer"
-                                                    onClick={() => insertImageIntoEditor({
-                                                        id: Date.now() + index,
-                                                        previewUrl: getLocalFileUrl(evidence),
-                                                        name: `evidence-${index + 1}`
-                                                    })}
-                                                />
-                                            ))}
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileSelect}
+                                                className="hidden"
+                                                id="featured-image"
+                                            />
+                                            <Label htmlFor="featured-image" className="cursor-pointer">
+                                                <div className="flex items-center gap-2 p-4 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground transition-colors">
+                                                    <Upload className="h-5 w-5" />
+                                                    <span>Choose Featured Image</span>
+                                                </div>
+                                            </Label>
                                         </div>
+
+                                        {featuredImageUrl && (
+                                            <div className="relative">
+                                                <img
+                                                    src={featuredImageUrl}
+                                                    alt="Featured"
+                                                    className="w-full h-48 object-cover rounded-lg"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="absolute top-2 right-2"
+                                                    onClick={() => {
+                                                        setFeaturedImageFile(null);
+                                                        setFeaturedImageUrl(null);
+                                                        setCurrentItem(prev => ({ ...prev, featured_image: null }));
+                                                    }}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             )}
 
-                            {/* Actions */}
-                            <div className="space-y-2">
+                            {/* Bounty evidence from linked bounty */}
+                            {currentItem.category === 'bounty' && currentItem.bounty_id && (
+                                <Card className="overflow-hidden border-primary/20 shadow-sm">
+                                    <CardHeader className="space-y-1 border-b bg-primary/5 pb-4">
+                                        <CardTitle className="flex items-center gap-2 text-base">
+                                            <ImageIcon className="h-4 w-4 text-primary" />
+                                            Bounty Photos
+                                        </CardTitle>
+                                        <CardDescription className="text-xs leading-relaxed">
+                                            Images from the Bounty Setter. Set a cover image, or approve photos for the public bounty gallery on the post page.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="pt-4">
+                                        <EvidenceThumbnailGallery
+                                            variant="editor"
+                                            paths={bountyEvidence}
+                                            title=""
+                                            featuredPath={currentItem.featured_image}
+                                            insertedPaths={publishedEvidencePaths}
+                                            onSelectFeatured={handleUseEvidenceAsFeatured}
+                                            onInsertContent={handleApproveEvidenceForPublish}
+                                            showOtherAttachments={bountyEvidence.some((path) => !isImagePath(path))}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
+                            </div>
+
+                            {/* Actions — pinned to bottom of sticky sidebar */}
+                            <div className="shrink-0 space-y-2 border-t border-border bg-background/95 pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                                 <Button
+                                    variant="default"
                                     onClick={handleSave}
-                                    disabled={isUploading}
+                                    loading={isUploading}
                                     className="w-full"
                                 >
-                                    {isUploading ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                            {currentItem.status === 'published' ? 'Publishing...' : 'Saving...'}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="mr-2 h-4 w-4" />
-                                            {currentItem.status === 'published' ? 'PUBLISH' : 'SAVE'}
-                                        </>
-                                    )}
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {currentItem.status === 'published' ? 'Publish' : 'Save draft'}
                                 </Button>
-                                
+
                                 <Button
                                     variant="outline"
                                     onClick={() => router.push('/admin/news-editor')}
@@ -1221,7 +1436,7 @@ const NewsEditorPage = () => {
                                     Cancel
                                 </Button>
                             </div>
-                        </div>
+                        </aside>
                     </div>
             </div>
         </>

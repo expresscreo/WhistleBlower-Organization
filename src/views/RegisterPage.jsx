@@ -1,16 +1,16 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ name: '', organizationName: '', email: '', password: '', plan: '' });
@@ -22,7 +22,9 @@ const RegisterPage = () => {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
+  const [pageError, setPageError] = useState('');
+  const [orgSearchError, setOrgSearchError] = useState('');
+  const [formFeedback, setFormFeedback] = useState({ error: '', success: '' });
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -43,11 +45,11 @@ const RegisterPage = () => {
           setFormData(prev => ({ ...prev, plan: matchedPlan }));
         }
       } catch (error) {
-        toast({ variant: 'destructive', title: 'Error fetching data', description: error.message });
+        setPageError(error.message);
       }
     };
     fetchInitialData();
-  }, [searchParams, toast]);
+  }, [searchParams]);
 
   const handleOrgInputChange = async (value) => {
     setFormData(prev => ({ ...prev, organizationName: value, plan: '' }));
@@ -59,7 +61,7 @@ const RegisterPage = () => {
         .ilike('name', `%${value}%`);
       
       if (error) {
-        toast({ variant: "destructive", title: "Error searching organizations", description: error.message });
+        setOrgSearchError(error.message);
         setOrgSuggestions([]);
       } else {
         setOrgSuggestions(data);
@@ -95,8 +97,9 @@ const RegisterPage = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setFormFeedback({ error: '', success: '' });
     if (!formData.plan && !isExistingOrg) {
-        toast({ variant: "destructive", title: "Plan Required", description: "Please select a plan to continue." });
+        setFormFeedback({ error: 'Please select a plan to continue.', success: '' });
         return;
     }
     setLoading(true);
@@ -110,10 +113,9 @@ const RegisterPage = () => {
     });
     setLoading(false);
     if (!error) {
-      toast({ title: "Registration Successful!", description: "Please check your email to verify your account." });
       router.push('/login');
     } else {
-      toast({ variant: "destructive", title: "Registration Failed", description: error.message });
+      setFormFeedback({ error: error.message, success: '' });
     }
   };
 
@@ -121,9 +123,7 @@ const RegisterPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Register - WhistleBlower.ng</title>
-      </Helmet>
+      <PageHead title="Register - WhistleBlower.ng" />
       <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
@@ -134,6 +134,7 @@ const RegisterPage = () => {
             <CardDescription>Become a partner and start managing reports.</CardDescription>
           </CardHeader>
           <CardContent>
+            <PageErrorBanner error={pageError} title="Could not load registration" className="mb-4" />
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
@@ -159,6 +160,7 @@ const RegisterPage = () => {
                         ))}
                     </ul>
                 )}
+                <FieldError message={orgSearchError} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -185,8 +187,9 @@ const RegisterPage = () => {
                     <p className="text-xs text-muted-foreground mt-1">Plan is determined by the selected organization.</p>
                 )}
               </div>
-              <Button type="submit" className="w-full uppercase" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <FieldError message={formFeedback.error} />
+              <FieldSuccess message={formFeedback.success} />
+              <Button type="submit" className="w-full uppercase" loading={loading}>
                 Register
               </Button>
             </form>

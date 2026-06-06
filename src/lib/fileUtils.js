@@ -5,6 +5,28 @@
 import { sanitizeFilename } from './utils';
 import { supabase } from '@/lib/customSupabaseClient';
 
+const getPublicStorageUrl = (filePath) => {
+    try {
+        const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
+        return data?.publicUrl || filePath;
+    } catch (_) {
+        return filePath;
+    }
+};
+
+const normalizeWBMediaPath = (filePath) => {
+    if (!filePath || typeof filePath !== 'string') return null;
+    if (filePath.startsWith('/WBMedia/')) return filePath;
+    if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
+
+    const wbMediaIndex = filePath.indexOf('WBMedia/');
+    if (wbMediaIndex >= 0) {
+        return `/${filePath.slice(wbMediaIndex)}`;
+    }
+
+    return null;
+};
+
 // Upload to Supabase storage as a fallback when the local upload endpoint
 // is not available (e.g., on production static hosting).
 async function uploadFileToSupabaseFallback(file, category, subfolder, fileName) {
@@ -72,7 +94,8 @@ export const uploadFileToLocal = async (file, category = 'general', subfolder = 
         // - In production, use PHP endpoint /upload.php to save under WBMedia
         // - Only for reporter evidence flows elsewhere should we fall back to Supabase
         try {
-            const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+            const host = typeof window !== 'undefined' ? window.location.hostname : '';
+            const isLocalhost = host === 'localhost' || host === '127.0.0.1';
             const endpoint = isLocalhost
                 ? `/api/upload?path=${encodeURIComponent(destinationPathDev)}`
                 : `/upload.php?path=${encodeURIComponent(destinationPathProd)}`;
@@ -130,25 +153,22 @@ export const getLocalFileUrl = (filePath) => {
     
     // If it's already a full URL, return as is
     if (filePath.startsWith('http')) return filePath;
-    
-    // If it's already a local path starting with /WBMedia/, return as is
-    if (filePath.startsWith('/WBMedia/')) return filePath;
+
+    const normalizedWBMediaPath = normalizeWBMediaPath(filePath);
+    if (normalizedWBMediaPath) return normalizedWBMediaPath;
     
     // If it's a Supabase path, prefer fetching a public URL (works in localhost and prod)
     if (filePath.includes('wb_evio')) {
-        try {
-            const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
-            return data?.publicUrl || filePath;
-        } catch (_) {
-            return filePath;
-        }
+        return getPublicStorageUrl(filePath);
+    }
+
+    if (filePath.startsWith('bounties/') || filePath.startsWith('news/')) {
+        return getPublicStorageUrl(filePath);
     }
     
     // Handle bounty report evidence paths - these come from uploadFileToLocal
     // and should be in WBMedia/bounties/delito/ format
     if (filePath.includes('bounties/delito') || filePath.includes('bounties/')) {
-        // If it's a relative path without leading slash, add it
-        if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
         // If it doesn't start with WBMedia, assume it's a filename and prepend the bounty path
         if (!filePath.startsWith('/')) return `/WBMedia/bounties/delito/${filePath}`;
         return filePath;
@@ -207,16 +227,18 @@ export const resolveImageUrl = (filePath) => {
     if (!filePath) return null;
     if (typeof filePath !== 'string') return null;
     if (filePath.startsWith('http')) return filePath;
+    const normalizedWBMediaPath = normalizeWBMediaPath(filePath);
+    if (normalizedWBMediaPath) return normalizedWBMediaPath;
     if (filePath.includes('wb_evio')) {
-        try {
-            const { data } = supabase.storage.from('wb_evio').getPublicUrl(filePath);
-            return data?.publicUrl || filePath;
-        } catch (_) {
-            return filePath;
-        }
+        return getPublicStorageUrl(filePath);
     }
-    if (filePath.startsWith('/WBMedia/')) return filePath;
-    if (filePath.startsWith('WBMedia/')) return `/${filePath}`;
+    if (filePath.startsWith('bounties/') || filePath.startsWith('news/')) {
+        return getPublicStorageUrl(filePath);
+    }
+    if (filePath.includes('bounties/delito') || filePath.includes('bounties/')) {
+        if (!filePath.startsWith('/')) return `/WBMedia/bounties/delito/${filePath}`;
+        return filePath;
+    }
     return `/WBMedia/${filePath}`;
 };
 

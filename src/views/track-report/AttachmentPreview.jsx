@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, Eye, File as FileIcon, Download } from 'lucide-react';
 import { sanitizeFilename } from '@/lib/utils';
-import { getLocalFileUrl } from '@/lib/fileUtils';
+import { resolveMediaUrl } from '@/lib/mediaUtils';
 
 const AttachmentPreview = ({ path }) => {
-  const { toast } = useToast();
   const [url, setUrl] = useState(null);
+  const [actionError, setActionError] = useState('');
   const [loading, setLoading] = useState(false);
   const rawFileName = path.split('/').pop();
   const fileName = rawFileName ? sanitizeFilename(rawFileName.substring(rawFileName.indexOf('-') + 1)) : 'attachment';
@@ -20,13 +20,14 @@ const AttachmentPreview = ({ path }) => {
 
   const generateUrl = async () => {
     setLoading(true);
+    setActionError('');
     try {
-      const localUrl = await getLocalFileUrl(path);
+      const localUrl = await resolveMediaUrl(path);
       setUrl(localUrl);
       return localUrl;
     } catch (e) {
       console.error("Error generating file URL:", e);
-      toast({ title: 'Error', description: 'Could not load preview.', variant: 'destructive' });
+      setActionError('Could not load preview.');
       return null;
     } finally {
       setLoading(false);
@@ -48,7 +49,7 @@ const AttachmentPreview = ({ path }) => {
       link.click();
       document.body.removeChild(link);
     } else {
-      toast({ title: 'Download failed', description: 'Could not create a secure download link.', variant: 'destructive' });
+      setActionError('Could not create a secure download link.');
     }
   };
 
@@ -75,6 +76,7 @@ const AttachmentPreview = ({ path }) => {
         <div className="flex items-center gap-2">
             <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0"/>
             <p className="text-sm truncate flex-grow">{fileName}</p>
+            <FieldError message={actionError} className="w-full mt-2" />
             <Dialog>
                 <DialogTrigger asChild>
                     <Button size="sm" variant="outline" onClick={() => !url && generateUrl()}>

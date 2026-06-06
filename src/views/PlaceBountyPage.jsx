@@ -1,141 +1,190 @@
+'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { FieldError } from '@/components/ui/form-feedback';
 import { hashPassword } from '@/lib/cryptoUtils';
-import { Award } from 'lucide-react';
-
-import BountyForm from './submit-report/BountyForm';
+import { createTrackedBounty } from '@/lib/trackApi';
 import SubmissionSuccess from './submit-report/SubmissionSuccess';
-import { sanitizeFilename } from '@/lib/utils';
 import { uploadFileToLocal } from '@/lib/fileUtils';
+import { formatDateForInput } from '@/components/submit-report/reportFormUtils';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import SubmitReportStepHero from '@/components/submit-report/SubmitReportStepHero';
+import BountyFormWizard from '@/components/place-bounty/BountyFormWizard';
+import { PLACE_BOUNTY_STEPS } from '@/components/place-bounty/placeBountyStepMeta';
+import { validateAllPlaceBountySteps } from '@/lib/placeBountyValidation';
+import { useBountyFormLocation } from '@/components/place-bounty/useBountyFormLocation';
+
+const initialFormData = {
+  title: '',
+  description: '',
+  typeOfCrime: '',
+  state: '',
+  fullAddress: '',
+  lga: '',
+  dateOfIncident: null,
+  bountyAmount: '',
+  password: '',
+  confirmPassword: '',
+  agreeTerms: false,
+  evidenceFiles: [],
+};
 
 const PlaceBountyPage = () => {
-    const { toast } = useToast();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [submissionData, setSubmissionData] = useState({ id: '', password: '', type: 'bounty' });
-    const [uploadProgress, setUploadProgress] = useState({});
+  const [formData, setFormData] = useState(initialFormData);
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submissionData, setSubmissionData] = useState({ id: '', password: '', type: 'bounty' });
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [wizardHeader, setWizardHeader] = useState(() => ({
+    currentStep: 1,
+    direction: 1,
+    stepMeta: PLACE_BOUNTY_STEPS[0],
+  }));
 
-    const generateBountyId = () => `WBB${String(Math.floor(Math.random() * 1000000000)).padStart(9, '0')}`;
+  const handleInputChange = useCallback((field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }, []);
 
-    const handleBountySubmit = async (bountyData) => {
-        setIsSubmitting(true);
-        setUploadProgress({});
+  const { hasLgasForState } = useBountyFormLocation(formData, handleInputChange);
 
-        try {
-            const bountyId = generateBountyId();
-            const { hash: passwordHash, salt } = await hashPassword(bountyData.password);
+  const validationContext = useMemo(
+    () => ({ formData, hasLgasForState }),
+    [formData, hasLgasForState]
+  );
 
-            let evidencePaths = [];
-            if (bountyData.evidenceFiles.length > 0) {
-                const uploadPromises = bountyData.evidenceFiles.map(async (file, index) => {
-                    try {
-                        // Update progress
-                        setUploadProgress(prev => ({ ...prev, [index]: 50 }));
-                        
-                        // Upload to local storage (use generic folder name to hide bounty ID)
-                        const filePath = await uploadFileToLocal(file, 'bounties', 'delito');
-                        
-                        // Complete progress
-                        setUploadProgress(prev => ({ ...prev, [index]: 100 }));
-                        
-                        return filePath;
-                    } catch (error) {
-                        throw new Error(`Failed to upload ${file.name}: ${error.message}`);
-                    }
-                });
-                evidencePaths = await Promise.all(uploadPromises);
-            }
+  useEffect(() => {
+    document.body.classList.add('submit-report-flow');
+    return () => document.body.classList.remove('submit-report-flow');
+  }, []);
 
-            const { data, error } = await supabase
-                .from('bounties')
-                .insert({
-                    bounty_id: bountyId,
-                    title: bountyData.title,
-                    description: bountyData.description,
-                    type_of_crime: bountyData.typeOfCrime,
-                    state: bountyData.state,
-                    location: bountyData.lga,
-                    full_address: bountyData.fullAddress || null,
-                    bounty_amount: bountyData.bountyAmount || null,
-                    password: `${passwordHash}:${salt}`, // Store hash:salt as a single field for now
-                    status: 'pending_review',
-                    evidence: evidencePaths,
-                })
-                .select('bounty_id')
-                .single();
-
-            if (error) throw error;
-
-            setSubmissionData({ id: data.bounty_id, password: bountyData.password, type: 'bounty' });
-            setIsSubmitted(true);
-
-        } catch (error) {
-            toast({ title: "Bounty Submission Failed", description: error.message, variant: "destructive" });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
+  useEffect(() => {
     if (isSubmitted) {
-        return <SubmissionSuccess 
-            id={submissionData.id} 
-            password={submissionData.password} 
-            type={submissionData.type} 
-        />;
+      document.body.classList.remove('submit-report-flow');
     }
-  
-    // Generate SEO metadata
-    const seoMeta = generateSEOMeta({
-        ...DEFAULT_SEO_PAGES.placeBounty,
-        url: '/place-bounty',
-        type: 'website'
-    });
+  }, [isSubmitted]);
 
-    // Generate structured data
-    const structuredData = [
-        {
-            '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: 'Place a Public Bounty - WhistleBlower.ng',
-            description: 'Place public bounties for specific information or missing persons. Reward citizens for providing valuable intelligence.',
-            mainEntity: {
-                '@type': 'Service',
-                name: 'Public Bounty Placement',
-                description: 'Secure platform for placing public bounties and rewarding information'
-            }
-        }
-    ];
+  const generateBountyId = () =>
+    `WBB${String(Math.floor(Math.random() * 1000000000)).padStart(9, '0')}`;
 
+  const handleBountySubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError('');
+
+    const validation = validateAllPlaceBountySteps(validationContext, PLACE_BOUNTY_STEPS);
+    if (!validation.valid) {
+      setSubmitError(
+        [validation.title, validation.description].filter(Boolean).join(': ')
+      );
+      if (validation.focusId) {
+        document.getElementById(validation.focusId)?.focus();
+      }
+      return;
+    }
+
+    setIsSubmitting(true);
+    setUploadProgress({});
+
+    try {
+      const bountyId = generateBountyId();
+      const { hash: passwordHash, salt } = await hashPassword(formData.password);
+
+      let evidencePaths = [];
+      if (formData.evidenceFiles.length > 0) {
+        const uploadPromises = formData.evidenceFiles.map(async (file, index) => {
+          setUploadProgress((prev) => ({ ...prev, [index]: 50 }));
+          const filePath = await uploadFileToLocal(file, 'bounties', 'delito');
+          setUploadProgress((prev) => ({ ...prev, [index]: 100 }));
+          return filePath;
+        });
+        evidencePaths = await Promise.all(uploadPromises);
+      }
+
+      const { bountyId: createdBountyId } = await createTrackedBounty({
+        bountyId,
+        title: formData.title,
+        description: formData.description,
+        typeOfCrime: formData.typeOfCrime,
+        state: formData.state,
+        location: formData.lga,
+        fullAddress: formData.fullAddress || null,
+        incidentDate: formData.dateOfIncident
+          ? formatDateForInput(formData.dateOfIncident)
+          : null,
+        bountyAmount: formData.bountyAmount.replace(/,/g, '') || null,
+        passwordHash: `${passwordHash}:${salt}`,
+        evidencePaths,
+      });
+
+      setSubmissionData({ id: createdBountyId, password: formData.password, type: 'bounty' });
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(error.message || 'Bounty submission failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isSubmitted) {
     return (
-      <>
-        <SEOHead
-            {...seoMeta}
-            structuredData={structuredData}
-        />
-        <div className="py-20">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-12">
-              <Award className="h-16 w-16 text-primary mx-auto mb-6" />
-              <h1 className="text-3xl md:text-4xl font-bold mb-6">Place a <span className="gradient-text">Bounty</span></h1>
-              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Offer a reward for information leading to the resolution of a case. Your identity is protected.
-              </p>
-            </motion.div>
-            
-            <BountyForm 
-                onSubmit={handleBountySubmit} 
-                isSubmitting={isSubmitting}
-                uploadProgress={uploadProgress}
-            />
-          </div>
-        </div>
-      </>
+      <SubmissionSuccess
+        id={submissionData.id}
+        password={submissionData.password}
+        type={submissionData.type}
+      />
     );
+  }
+
+  const seoMeta = generateSEOMeta({
+    ...DEFAULT_SEO_PAGES.placeBounty,
+    url: '/place-bounty',
+    type: 'website',
+  });
+
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Place a Public Bounty - WhistleBlower.ng',
+      description:
+        'Place public bounties for specific information or missing persons. Reward citizens for providing valuable intelligence.',
+      mainEntity: {
+        '@type': 'Service',
+        name: 'Public Bounty Placement',
+        description: 'Secure platform for placing public bounties and rewarding information',
+      },
+    },
+  ];
+
+  return (
+    <>
+      <SEOHead {...seoMeta} structuredData={structuredData} />
+      <div className="submit-report-page flex-1 flex flex-col min-h-0 py-20 bg-muted/30 max-md:pb-0">
+        <div className="submit-report-shell flex-1 flex flex-col min-h-0 max-w-[var(--submit-report-card-width,56rem)] mx-auto px-[var(--submit-report-gutter,1rem)] w-full">
+          <SubmitReportStepHero
+            stepMeta={wizardHeader.stepMeta}
+            direction={wizardHeader.direction}
+          />
+          <motion.form
+            id="place-bounty-form"
+            onSubmit={handleBountySubmit}
+            className="submit-report-card glass-effect border rounded-xl overflow-hidden w-full max-w-full min-w-0"
+          >
+            <FieldError message={submitError} className="mx-4 md:mx-8 mt-4" />
+            <BountyFormWizard
+              formData={formData}
+              handleInputChange={handleInputChange}
+              isSubmitting={isSubmitting}
+              uploadProgress={uploadProgress}
+              onHeaderChange={setWizardHeader}
+            />
+          </motion.form>
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default PlaceBountyPage;

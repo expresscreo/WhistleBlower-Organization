@@ -1,18 +1,21 @@
 import { useRouter } from 'next/navigation';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Loader2, LogOut } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { verifyPassword } from '@/lib/cryptoUtils';
-import { useToast } from '@/components/ui/use-toast';
+import {
+  authenticateTrackedReport,
+  fetchTrackedReportUpdates,
+  sendTrackedReportMessage,
+  updateTrackedReport,
+} from '@/lib/trackApi';
 import ReportSummary from '@/views/track-report/ReportSummary';
 import Chat from '@/components/Chat';
 import RewardSection from '@/views/track-report/RewardSection';
 import UpdateReportDialog from '@/views/track-report/UpdateReportDialog';
 import SEOHead from '@/components/SEOHead';
-import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
 const TrackReportPage = ({ reportId, password }) => {
   const [loading, setLoading] = useState(true);
@@ -23,8 +26,9 @@ const TrackReportPage = ({ reportId, password }) => {
   const [updateMessage, setUpdateMessage] = useState('');
   const [newEvidenceFiles, setNewEvidenceFiles] = useState([]);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
-  const { toast } = useToast();
+  const [updateFeedback, setUpdateFeedback] = useState({ error: '', success: '' });
   const router = useRouter();
 
   const markMessagesAsRead = useCallback(async (reportId) => {
@@ -41,11 +45,13 @@ const TrackReportPage = ({ reportId, password }) => {
       return;
     }
     
-    const { data, error } = await supabase.from('report_updates').select('*').eq('report_id', currentReportData.id).order('created_at', { ascending: true });
-    if (!error) {
-      setUpdates(data);
+    try {
+      const { updates: nextUpdates } = await fetchTrackedReportUpdates(reportId, password);
+      setUpdates(nextUpdates || []);
+    } catch (error) {
+      console.error('Error fetching report updates:', error);
     }
-  }, []);
+  }, [reportId, password]);
 
   // Debounced version to prevent rapid successive calls
   const debouncedFetchUpdates = useCallback(() => {
@@ -59,11 +65,13 @@ const TrackReportPage = ({ reportId, password }) => {
     return () => clearTimeout(timeoutId);
   }, [reportData, fetchUpdates]);
 
-  const setAuthenticatedState = useCallback(async (report) => {
+  const setAuthenticatedState = useCallback(async (report, shouldFetchUpdates = true) => {
     setReportData(report);
     setAuthenticated(true);
     await markMessagesAsRead(report.id);
-    await fetchUpdates(report, true);
+    if (shouldFetchUpdates) {
+      await fetchUpdates(report, true);
+    }
   }, [markMessagesAsRead, fetchUpdates]);
 
   const handleLogout = useCallback(() => {
@@ -74,37 +82,18 @@ const TrackReportPage = ({ reportId, password }) => {
 
   const handleAuthentication = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('reports').select('*').eq('report_id', reportId).single();
-
-    if (error || !data) {
-        toast({ variant: 'destructive', title: 'Report Not Found', description: 'Please check the Report ID and try again.' });
+    try {
+        const { report, updates: initialUpdates } = await authenticateTrackedReport(reportId, password);
+        setUpdates(initialUpdates || []);
+        await setAuthenticatedState(report, false);
+    } catch (error) {
+        sessionStorage.setItem('trackAuthError', error.message || 'Please check the Report ID and password.');
         setLoading(false);
         router.push('/track');
         return;
     }
-
-    if (data.is_feedback) {
-        await setAuthenticatedState(data);
-        setLoading(false);
-        return;
-    }
-
-    // Verify password using Web Crypto API
-    // The verifyPassword function handles all format detection internally
-    const isValidPassword = await verifyPassword(password, data.anonymous_password_hash, '');
-
-    if (!isValidPassword) {
-        toast({ variant: 'destructive', title: 'Authentication Failed', description: 'The password you entered is incorrect.' });
-        setLoading(false);
-        router.push('/track');
-        return;
-    }
-
-    await supabase.from('reports').update({ reporter_has_viewed: true }).eq('id', data.id);
-    const fullReportData = { ...data, reporter_has_viewed: true };
-    await setAuthenticatedState(fullReportData);
     setLoading(false);
-  }, [reportId, password, router, toast, setAuthenticatedState]);
+  }, [reportId, password, router, setAuthenticatedState]);
 
   useEffect(() => {
     handleAuthentication();
@@ -120,8 +109,14 @@ const TrackReportPage = ({ reportId, password }) => {
                     await markMessagesAsRead(reportData.id);
                 }
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reports', filter: `id=eq.${reportData.id}` }, (payload) => {
-                setReportData(prev => ({...prev, ...payload.new}));
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reports', filter: `id=eq.${reportData.id}` }, async () => {
+                try {
+                  const { report, updates: nextUpdates } = await authenticateTrackedReport(reportId, password);
+                  setReportData(report);
+                  setUpdates(nextUpdates || []);
+                } catch (error) {
+                  console.error('Error refreshing report after realtime update:', error);
+                }
             })
             .subscribe();
 
@@ -140,12 +135,13 @@ const TrackReportPage = ({ reportId, password }) => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }
-  }, [reportData, fetchUpdates, markMessagesAsRead]);
+  }, [reportData, fetchUpdates, markMessagesAsRead, debouncedFetchUpdates, reportId, password]);
 
 
   const handleUpdateReport = async () => {
+    setUpdateFeedback({ error: '', success: '' });
     if (!updateMessage.trim() && newEvidenceFiles.length === 0) {
-      toast({ variant: "destructive", title: "Nothing to update", description: "Please add a message or files." });
+      setUpdateFeedback({ error: 'Please add a message or files.', success: '' });
       return;
     }
     setIsUpdating(true);
@@ -157,7 +153,7 @@ const TrackReportPage = ({ reportId, password }) => {
         const filePath = `reports/${reportUUID}/${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage.from('wb_evio').upload(filePath, file, { cacheControl: '3600', upsert: false });
         if (uploadError) {
-          toast({ variant: 'destructive', title: 'Upload Failed', description: `Could not upload ${file.name}.` });
+          setUpdateFeedback({ error: `Could not upload ${file.name}.`, success: '' });
           setIsUpdating(false);
           return;
         }
@@ -165,47 +161,46 @@ const TrackReportPage = ({ reportId, password }) => {
       }
     }
     
-    // Update the report description with the new message
-    const timestamp = new Date().toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-    const updateIdentifier = `\n\n--- UPDATE (${timestamp}) ---\n${updateMessage}`;
-    const updatedDescription = reportData.description + updateIdentifier;
-    const updatedEvidence = [...(reportData.evidence_path || []), ...newPaths];
-    
-    const { data: updatedReportData, error: reportUpdateError } = await supabase.from('reports').update({ 
-      description: updatedDescription,
-      evidence_path: updatedEvidence, 
-      admin_has_viewed: false 
-    }).eq('id', reportData.id).select().single();
-    
-    if (reportUpdateError) {
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update your report.' });
-    } else {
-      // Also add a chat message for the update
-      const { error: updateError } = await supabase.from('report_updates').insert({ 
-        report_id: reportData.id, 
-        message: `Report updated: ${updateMessage}${newPaths.length > 0 ? `\n\nAdded ${newPaths.length} new file(s).` : ''}`.trim(), 
-        updated_by: null 
+    try {
+      const { report: updatedReportData, update } = await updateTrackedReport({
+        reportId,
+        password,
+        message: updateMessage,
+        evidencePaths: newPaths,
       });
-      
-      if (updateError) {
-        console.error('Failed to add chat message:', updateError);
-        // Don't fail the whole update if chat message fails
-      }
-      
+
       setReportData(updatedReportData);
-      toast({ title: "Success", description: "Your report has been updated." });
+      if (update) {
+        setUpdates(prev => {
+          const exists = prev.find(u => u.id === update.id);
+          return exists ? prev : [...prev, update];
+        });
+      }
+      setUpdateFeedback({ error: '', success: 'Your report has been updated.' });
       setUpdateModalOpen(false);
       setUpdateMessage('');
       setNewEvidenceFiles([]);
+    } catch (error) {
+      console.error('Report update failed:', error);
+      setUpdateFeedback({ error: 'Could not update your report.', success: '' });
     }
     setIsUpdating(false);
+  };
+
+  const handleSendMessage = async ({ message, replyToMessageId }) => {
+    setIsSendingMessage(true);
+    try {
+      const { update } = await sendTrackedReportMessage({
+        reportId,
+        password,
+        message,
+        replyToMessageId,
+      });
+
+      return update;
+    } finally {
+      setIsSendingMessage(false);
+    }
   };
 
   if (loading) {
@@ -254,6 +249,8 @@ const TrackReportPage = ({ reportId, password }) => {
                     <Chat 
                       report={reportData}
                       updates={updates}
+                      onSendMessage={handleSendMessage}
+                      isSending={isSendingMessage}
                       onNewMessage={(newUpdate) => {
                         console.log('Reporter TrackReportPage received new message:', newUpdate);
                         // Add the new message to updates immediately
@@ -281,7 +278,7 @@ const TrackReportPage = ({ reportId, password }) => {
         </div>
       </div>
       {reportData && (
-        <UpdateReportDialog isOpen={isUpdateModalOpen} onOpenChange={setUpdateModalOpen} onUpdate={handleUpdateReport} updateMessage={updateMessage} setUpdateMessage={setUpdateMessage} newEvidenceFiles={newEvidenceFiles} setNewEvidenceFiles={setNewEvidenceFiles} isUpdating={isUpdating} uploadProgress={uploadProgress} />
+        <UpdateReportDialog isOpen={isUpdateModalOpen} onOpenChange={setUpdateModalOpen} onUpdate={handleUpdateReport} updateMessage={updateMessage} setUpdateMessage={setUpdateMessage} newEvidenceFiles={newEvidenceFiles} setNewEvidenceFiles={setNewEvidenceFiles} isUpdating={isUpdating} uploadProgress={uploadProgress} updateError={updateFeedback.error} updateSuccess={updateFeedback.success} />
       )}
     </>
   );

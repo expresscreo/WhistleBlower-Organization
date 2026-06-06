@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, MessageCircle, Wifi, WifiOff, ArrowDown, Reply, X } from 'lucide-react';
 
-const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
+const Chat = ({ report, updates, onNewMessage, onRefreshUpdates, onSendMessage, isSending = false }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
@@ -13,7 +13,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
-  const { toast } = useToast();
+  const [messageError, setMessageError] = useState('');
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -44,11 +44,6 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
           if (newUpdate.message && newUpdate.updated_by) {
             // This is a new admin message
             setNewMessageCount(prev => prev + 1);
-            toast({
-              title: 'New message received',
-              description: 'You have a new message from admin',
-              duration: 3000,
-            });
           }
           if (onNewMessage) onNewMessage(newUpdate);
         }
@@ -149,6 +144,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !report) return;
+    setMessageError('');
     
     // Prepare message with quote if replying
     let finalMessage = newMessage.trim();
@@ -157,29 +153,21 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
       finalMessage = replyPrefix + finalMessage;
     }
     
-    // Simple message data - use old schema for speed
-    const messageData = {
-      report_id: report.id,
-      message: finalMessage,
-      updated_by: null, // Reporter messages have null updated_by
-      is_read: false
-    };
-    
-    const { data, error } = await supabase
-      .from('report_updates')
-      .insert(messageData)
-      .select()
-      .single();
-      
-    if (error) {
-      toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
-    } else {
+    try {
+      if (!onSendMessage) {
+        throw new Error('Secure message sender is not configured.');
+      }
+
+      const data = await onSendMessage({
+        message: finalMessage,
+        replyToMessageId: replyingTo?.id,
+      });
+
       if (onNewMessage) onNewMessage(data);
       setNewMessage('');
       setReplyingTo(null);
-      
-      // Update report to show admin has new messages
-      await supabase.from('reports').update({ admin_has_viewed: false }).eq('id', report.id);
+    } catch (error) {
+      setMessageError(error.message || 'Could not send your message.');
     }
   };
 
@@ -374,7 +362,8 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
           onKeyDown={handleChatKeyDown}
           rows={2} 
         />
-        <Button onClick={handleSendMessage} className="w-full uppercase">
+        <FieldError message={messageError} />
+        <Button onClick={handleSendMessage} loading={isSending} disabled={isSending || !newMessage.trim()} className="w-full uppercase">
           {replyingTo ? 'SEND REPLY' : 'SEND'}
         </Button>
       </div>

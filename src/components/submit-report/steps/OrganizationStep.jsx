@@ -1,14 +1,35 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import AsyncSelect from 'react-select/async';
+import AsyncCreatableSelect from 'react-select/async-creatable';
 import { supabase } from '@/lib/customSupabaseClient';
 import { reactSelectStyles } from '@/lib/reactSelectStyles';
+import { FieldError } from '@/components/ui/form-feedback';
+
+const UNMATCHED_VALUE = '__unmatched__';
+
+export function buildUnmatchedOrganization(label) {
+  const trimmed = label.trim();
+  return {
+    value: UNMATCHED_VALUE,
+    label: trimmed,
+    isUnmatched: true,
+  };
+}
+
+export function buildMatchedOrganization(id, name) {
+  return {
+    value: id,
+    label: name,
+    isUnmatched: false,
+  };
+}
 
 export default function OrganizationStep({
   formData,
   onOrganizationChange,
   isOrganizationLocked,
+  fieldError = '',
 }) {
   const [mounted, setMounted] = useState(false);
   const [menuPortalTarget, setMenuPortalTarget] = useState(null);
@@ -19,16 +40,34 @@ export default function OrganizationStep({
   }, []);
 
   const loadOptions = useCallback(async (inputValue) => {
-    if (!inputValue || inputValue.length < 3) return [];
+    if (!inputValue || inputValue.trim().length < 3) return [];
     const { data, error } = await supabase
       .from('organizations')
       .select('id, name')
-      .ilike('name', `%${inputValue}%`)
+      .ilike('name', `%${inputValue.trim()}%`)
       .eq('status', 'active')
       .limit(8);
     if (error) return [];
-    return (data || []).map((org) => ({ value: org.id, label: org.name }));
+    return (data || []).map((org) => buildMatchedOrganization(org.id, org.name));
   }, []);
+
+  const handleChange = (option) => {
+    if (!option) {
+      onOrganizationChange(null);
+      return;
+    }
+    if (option.isUnmatched) {
+      onOrganizationChange(option);
+      return;
+    }
+    onOrganizationChange(buildMatchedOrganization(option.value, option.label));
+  };
+
+  const handleCreate = (inputValue) => {
+    const trimmed = inputValue.trim();
+    if (trimmed.length < 3) return;
+    onOrganizationChange(buildUnmatchedOrganization(trimmed));
+  };
 
   if (!mounted) {
     return (
@@ -40,15 +79,16 @@ export default function OrganizationStep({
   }
 
   return (
-    <div className="submit-report-org-field">
-      <AsyncSelect
+    <div className="submit-report-org-field space-y-2">
+      <AsyncCreatableSelect
         instanceId="submit-report-org-select"
         inputId="companyName"
         aria-label="Organization name"
         placeholder="Type your organization's name..."
         isDisabled={isOrganizationLocked}
         value={formData.organization}
-        onChange={(option) => onOrganizationChange(option)}
+        onChange={handleChange}
+        onCreateOption={handleCreate}
         loadOptions={loadOptions}
         defaultOptions={false}
         cacheOptions
@@ -58,12 +98,30 @@ export default function OrganizationStep({
         menuShouldScrollIntoView={false}
         closeMenuOnScroll={false}
         blurInputOnSelect
+        isClearable={!isOrganizationLocked}
+        formatCreateLabel={(inputValue) =>
+          `Use "${inputValue.trim()}" (not in our list yet)`
+        }
+        isValidNewOption={(inputValue, _selectValue, options) => {
+          const trimmed = inputValue.trim();
+          if (trimmed.length < 3) return false;
+          const lower = trimmed.toLowerCase();
+          return !options.some(
+            (opt) => opt.label?.trim().toLowerCase() === lower
+          );
+        }}
         noOptionsMessage={({ inputValue }) =>
-          inputValue.length < 3
+          inputValue.trim().length < 3
             ? 'Type at least 3 characters to search'
-            : 'No organizations found'
+            : 'No matches — press Enter or choose the option below to continue'
         }
       />
+      <FieldError message={fieldError} />
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Start typing to see suggestions from our database. If your organization
+        isn&apos;t listed, choose the option to use your typed name — we&apos;ll
+        review and match it on our end.
+      </p>
     </div>
   );
 }

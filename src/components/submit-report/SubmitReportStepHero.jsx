@@ -20,7 +20,7 @@ export default function SubmitReportStepHero({ stepMeta, direction = 1 }) {
           {Icon && (
             <Icon className="h-10 w-10 md:h-12 md:w-12 text-primary mx-auto" aria-hidden />
           )}
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight break-words">
             {stepMeta?.title}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">

@@ -2,9 +2,8 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { setNavigationState } from '@/lib/navigation-state';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +25,22 @@ import {
 } from '@/components/ui/alert-dialog';
 import ReportStatusCard from '@/components/admin/report-details/ReportStatusCard';
 import BountyStatusCard from '@/components/admin/bounty-details/BountyStatusCard';
+import BountyHunterReportsPanel from '@/components/admin/bounty-details/BountyHunterReportsPanel';
 import { getLocalFileUrl } from '@/lib/fileUtils';
+import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGallery';
+import { isImagePath } from '@/lib/mediaUtils';
+import { FieldError } from '@/components/ui/form-feedback';
+import {
+  countHunterSubmissionsForBounty,
+  fetchHunterReportsForBounty,
+  isValidAdminBountyStatusTransition,
+} from '@/lib/bountyStatus';
+
+const formatSupabaseError = (error, fallback = 'Update failed.') => {
+    if (!error) return fallback;
+    const message = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+    return message || fallback;
+};
 
 // Voice Note Player Component
 const VoiceNotePlayer = ({ voiceNotePath }) => {
@@ -131,7 +145,6 @@ const BountyDetails = () => {
     const { id } = useParams();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { toast } = useToast();
     const { user } = useAuth();
     const { invalidateCache } = useAdminData();
     const [bounty, setBounty] = useState(null);
@@ -142,22 +155,63 @@ const BountyDetails = () => {
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeletingBounty, setIsDeletingBounty] = useState(false);
+    const [statusFeedback, setStatusFeedback] = useState({ error: '', success: '' });
+    const [hunterReportCount, setHunterReportCount] = useState(0);
+    const [hunterReports, setHunterReports] = useState([]);
+    const [loadingHunterReports, setLoadingHunterReports] = useState(false);
+
+    const refreshHunterSubmissions = useCallback(async (bountyId) => {
+        setLoadingHunterReports(true);
+        try {
+            const [count, reports] = await Promise.all([
+                countHunterSubmissionsForBounty(supabase, bountyId),
+                fetchHunterReportsForBounty(supabase, bountyId),
+            ]);
+            setHunterReportCount(count);
+            setHunterReports(reports);
+        } catch (error) {
+            const message = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ');
+            console.error('Failed to load hunter submissions:', message || error);
+        } finally {
+            setLoadingHunterReports(false);
+        }
+    }, []);
 
     const fetchBounty = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase.from('bounties').select('*').eq('id', id).single();
         if (error || !data || data.is_trashed) {
-            toast({ variant: 'destructive', title: 'Bounty not found', description: 'This bounty may have been deleted or does not exist.' });
             router.push('/admin/bounties');
-        } else {
-            setBounty(data);
+            setLoading(false);
+            return;
         }
+
+        setBounty(data);
+        await refreshHunterSubmissions(data.id);
         setLoading(false);
-    }, [id, toast, router]);
+    }, [id, router, refreshHunterSubmissions]);
 
     useEffect(() => {
         fetchBounty();
     }, [fetchBounty]);
+
+    useEffect(() => {
+        if (!id) return;
+
+        const channel = supabase
+            .channel(`bounty-hunter-submissions-${id}`)
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'bounty_reports', filter: `bounty_id=eq.${id}` },
+                () => refreshHunterSubmissions(id)
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [id, refreshHunterSubmissions]);
 
     // Fetch a specific bounty report if a reportId query param is present
     useEffect(() => {
@@ -175,23 +229,47 @@ const BountyDetails = () => {
                 .maybeSingle();
             if (error) {
                 setSelectedReport(null);
-                // Non-blocking toast; we still show bounty details
-                toast({ variant: 'destructive', title: 'Failed to load bounty report', description: error.message });
             } else {
                 setSelectedReport(data || null);
             }
             setLoadingReport(false);
         };
         fetchReport();
-    }, [searchParams, toast]);
+    }, [searchParams]);
 
     const handleUpdateStatus = async (status) => {
+        setStatusFeedback({ error: '', success: '' });
+
+        if (!isValidAdminBountyStatusTransition(bounty?.status, status, hunterReportCount)) {
+            setStatusFeedback({
+                error:
+                    'Report Received is only available after a hunter submits a report and you confirm it is legitimate.',
+                success: '',
+            });
+            return;
+        }
+
         const { data, error } = await supabase.from('bounties').update({ status }).eq('id', id).select().single();
         if (error) {
-            toast({ variant: 'destructive', title: 'Failed to update status', description: error.message });
+            const isMissingEnumValue = /invalid input value for enum bounty_status/i.test(
+                `${error.message || ''} ${error.details || ''}`
+            );
+            const isMissingHunterReports = /bounty_status_report_received_requires_hunter_reports/i.test(
+                `${error.message || ''} ${error.details || ''} ${error.hint || ''}`
+            );
+            let message = formatSupabaseError(error, 'Could not update bounty status.');
+            if (isMissingEnumValue) {
+                message =
+                    'Report Received is not available in Supabase yet. Run database_migrations/fix_bounty_report_received_status.sql, then reload the API schema.';
+            } else if (isMissingHunterReports) {
+                message =
+                    'Report Received requires at least one linked hunter report. Review submissions before confirming.';
+            }
+            console.error('Failed to update bounty status:', message, error);
+            setStatusFeedback({ error: message, success: '' });
         } else {
-            toast({ title: 'Bounty status updated!' });
             setBounty(data);
+            setStatusFeedback({ error: '', success: 'Bounty status updated.' });
             invalidateCache('bounties');
         }
     };
@@ -200,30 +278,32 @@ const BountyDetails = () => {
         if (!selectedReport) return;
         const { error } = await supabase.from('reports').update({ status }).eq('id', selectedReport.id);
         if (error) {
-            toast({ variant: 'destructive', title: 'Failed to update report status', description: error.message });
+            console.error('Failed to update report status:', error);
         } else {
-            toast({ title: 'Report status updated!' });
-            setSelectedReport(prev => ({ ...prev, status }));
+            setSelectedReport((prev) => ({ ...prev, status }));
+            setHunterReports((prev) =>
+                prev.map((report) =>
+                    report.id === selectedReport.id ? { ...report, status } : report
+                )
+            );
             invalidateCache('bounties');
         }
     };
 
     const handleSendToEditor = async () => {
-        if (bounty.status !== 'approved') {
-            toast({ variant: 'destructive', title: 'Action Not Allowed', description: 'Only approved bounties can be sent to the editor.' });
-            return;
-        }
+        if (bounty.status !== 'approved') return;
 
         const { data: existingNews, error: checkError } = await supabase.from('news').select('id').eq('bounty_id', bounty.id).maybeSingle();
         if (checkError) {
-            toast({ variant: 'destructive', title: 'Error checking for existing news item', description: checkError.message });
+            console.error('Error checking for existing news item:', checkError);
             return;
         }
         if (existingNews) {
-            toast({ title: 'Already Sent', description: 'This bounty has already been sent to the News Editor.' });
             router.push('/admin/news-editor');
             return;
         }
+
+        const firstImage = Array.isArray(bounty.evidence) ? bounty.evidence.find(isImagePath) : null;
 
         const { data: createdNews, error: newsError } = await supabase.from('news').insert({
             title: bounty.title,
@@ -231,14 +311,12 @@ const BountyDetails = () => {
             category: 'bounty',
             status: 'draft',
             bounty_id: bounty.id,
-            featured_image: Array.isArray(bounty.evidence) && bounty.evidence.length > 0 ? bounty.evidence[0] : null
+            featured_image: firstImage || null
         }).select('id').single();
 
         if (newsError) {
-            toast({ variant: 'destructive', title: 'Failed to create news draft', description: newsError.message });
+            console.error('Failed to create news draft:', newsError);
         } else {
-            toast({ title: 'Success!', description: 'Bounty sent to News Editor as a draft.' });
-            // Navigate directly to the editor for the new draft and prefill bounty amount
             if (createdNews?.id) {
                 setNavigationState({
                   prefillBountyAmount: bounty.bounty_amount || '',
@@ -251,27 +329,36 @@ const BountyDetails = () => {
     };
 
     const handleDeleteBounty = async () => {
-        const { error } = await supabase.from('bounties').update({ is_trashed: true, trashed_at: new Date().toISOString() }).eq('id', id);
-        if (error) {
-            toast({ variant: 'destructive', title: 'Failed to delete bounty', description: error.message });
-        } else {
-            toast({ title: 'Bounty moved to trash.' });
-            router.push('/admin/bounties');
+        setIsDeletingBounty(true);
+        try {
+            const { error } = await supabase.from('bounties').update({ is_trashed: true, trashed_at: new Date().toISOString() }).eq('id', id);
+            if (error) {
+                console.error('Failed to delete bounty:', error);
+            } else {
+                router.push('/admin/bounties');
+            }
+            setIsDeleteDialogOpen(false);
+        } finally {
+            setIsDeletingBounty(false);
         }
-        setIsDeleteDialogOpen(false);
     };
 
     const handleSendMessage = () => {
-        toast({
-            title: '🚧 Feature Not Implemented',
-            description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀",
-        });
+        // Messaging not implemented yet
+    };
+
+    const handleSelectHunterReport = (reportUuid) => {
+        router.push(`/admin/bounties/${id}?reportId=${reportUuid}`);
+    };
+
+    const handleClearHunterReportSelection = () => {
+        router.push(`/admin/bounties/${id}`);
     };
 
     if (loading) {
         return (
             <>
-                <Helmet><title>Loading Bounty Details - WhistleBlower.ng</title></Helmet>
+                <PageHead title="Loading Bounty Details - WhistleBlower.ng" />
                 <NavbarLoader />
                 <div className="space-y-6">
                     <div>
@@ -287,7 +374,7 @@ const BountyDetails = () => {
     const bountyAsReport = {
         ...bounty,
         report_id: bounty.bounty_id,
-        incident_date: bounty.created_at,
+        incident_date: bounty.incident_date || bounty.created_at,
         category: bounty.type_of_crime,
         // Normalize fields for ReportInfoCard expectations
         lga: bounty.location,
@@ -298,10 +385,12 @@ const BountyDetails = () => {
         is_voice_note: false,
         organizations: { name: 'Public Bounty' }
     };
+    const bountyEvidencePaths = Array.isArray(bounty.evidence) ? bounty.evidence : [];
+    const hasBountyImages = bountyEvidencePaths.some(isImagePath);
 
     return (
         <>
-            <Helmet><title>Bounty Details - {bounty.bounty_id}</title></Helmet>
+            <PageHead title={`Bounty Details - ${bounty.bounty_id}`} />
             <div className="space-y-8">
                 <Link href="/admin/bounties" className="flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-2 h-4 w-4" />Back to Bounties</Link>
                 
@@ -309,7 +398,16 @@ const BountyDetails = () => {
                     <div>
                         <h1 className="text-3xl md:text-4xl font-bold">Bounty Details</h1>
                         <p className="text-muted-foreground mt-1">
-                            {selectedReport ? `Report ID - ${selectedReport.report_id}` : `Bounty ID - ${bounty.bounty_id}`}
+                            {selectedReport ? (
+                                <>
+                                    Reviewing hunter submission{' '}
+                                    <span className="font-mono font-medium text-foreground">{selectedReport.report_id}</span>
+                                    {' · '}
+                                    <span className="font-mono">{bounty.bounty_id}</span>
+                                </>
+                            ) : (
+                                <>Bounty ID · <span className="font-mono font-medium text-foreground">{bounty.bounty_id}</span></>
+                            )}
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -321,6 +419,8 @@ const BountyDetails = () => {
                         </Button>
                     </div>
                 </div>
+
+                <FieldError message={statusFeedback.error} />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
@@ -330,9 +430,31 @@ const BountyDetails = () => {
                         )}
                         
                         <Card>
-                            <CardHeader><CardTitle className="text-2xl">{selectedReport ? selectedReport.title : bounty.title}</CardTitle></CardHeader>
-                            <CardContent><p className="whitespace-pre-wrap">{selectedReport ? selectedReport.description : bounty.description}</p></CardContent>
+                            <CardHeader>
+                                <CardTitle className="text-2xl">
+                                    {selectedReport ? selectedReport.title || 'Hunter submission' : bounty.title}
+                                </CardTitle>
+                                {selectedReport && (
+                                    <p className="text-sm text-muted-foreground pt-1">
+                                        Submission details for this bounty
+                                    </p>
+                                )}
+                            </CardHeader>
+                            <CardContent>
+                                <p className="whitespace-pre-wrap leading-relaxed">
+                                    {selectedReport ? selectedReport.description : bounty.description}
+                                </p>
+                            </CardContent>
                         </Card>
+
+                        <BountyHunterReportsPanel
+                            reports={hunterReports}
+                            selectedReportId={selectedReport?.id ?? null}
+                            onSelectReport={handleSelectHunterReport}
+                            onClearSelection={selectedReport ? handleClearHunterReportSelection : undefined}
+                            loading={loadingHunterReports}
+                        />
+
                         <ReportChat updates={updates} user={user} newMessage={newMessage} setNewMessage={setNewMessage} onSendMessage={handleSendMessage} isSending={isSending} />
                     </div>
                     <div className="space-y-8">
@@ -340,7 +462,25 @@ const BountyDetails = () => {
                         {selectedReport ? (
                             <ReportStatusCard status={selectedReport.status} onStatusUpdate={handleReportStatusUpdate} />
                         ) : (
-                            <BountyStatusCard status={bounty.status} onStatusUpdate={handleUpdateStatus} />
+                            <BountyStatusCard
+                                status={bounty.status}
+                                onStatusUpdate={handleUpdateStatus}
+                                hunterReportCount={hunterReportCount}
+                            />
+                        )}
+                        {!selectedReport && hasBountyImages && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Bounty Image Thumbnails</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <EvidenceThumbnailGallery
+                                        paths={bountyEvidencePaths}
+                                        title=""
+                                        showOtherAttachments={false}
+                                    />
+                                </CardContent>
+                            </Card>
                         )}
                         <ReportAttachmentsCard 
                             evidencePath={(selectedReport && selectedReport.evidence_path) || bounty.evidence} 
@@ -360,7 +500,7 @@ const BountyDetails = () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteBounty} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogAction onClick={handleDeleteBounty} loading={isDeletingBounty} className="bg-destructive hover:bg-destructive/90">
                             Move to Trash
                         </AlertDialogAction>
                     </AlertDialogFooter>

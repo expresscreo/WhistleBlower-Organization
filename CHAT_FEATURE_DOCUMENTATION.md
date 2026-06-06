@@ -157,13 +157,8 @@ useEffect(() => {
       (payload) => {
         const newUpdate = payload.new;
         if (newUpdate.message && newUpdate.updated_by) {
-          // This is a new admin message
+          // This is a new admin message — increment badge count (no toast)
           setNewMessageCount(prev => prev + 1);
-          toast({
-            title: 'New message received',
-            description: 'You have a new message from admin',
-            duration: 3000,
-          });
         }
         onNewMessage(newUpdate);
       }
@@ -190,7 +185,7 @@ useEffect(() => {
   return () => {
     supabase.removeChannel(channel);
   };
-}, [report, onNewMessage, onRefreshUpdates, toast]);
+}, [report, onNewMessage, onRefreshUpdates]);
 ```
 
 ### Connection Status Management
@@ -259,7 +254,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
       .single();
       
     if (error) {
-      toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+      setMessageError(error.message);
     } else {
       onNewMessage(data);
       setNewMessage('');
@@ -400,7 +395,7 @@ const handleSendMessage = async () => {
     .single();
     
   if (error) {
-    toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+    setMessageError(error.message);
   } else {
     setUpdates(prev => [...prev, data]);
     setNewMessage('');
@@ -658,7 +653,7 @@ import Chat from '@/components/track-report/Chat';
 ```jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, MessageCircle, Wifi, WifiOff, ArrowDown, Reply, X } from 'lucide-react';
@@ -671,7 +666,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
-  const { toast } = useToast();
+  const [messageError, setMessageError] = useState('');
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -698,11 +693,6 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
           const newUpdate = payload.new;
           if (newUpdate.message && newUpdate.updated_by) {
             setNewMessageCount(prev => prev + 1);
-            toast({
-              title: 'New message received',
-              description: 'You have a new message from admin',
-              duration: 3000,
-            });
           }
           onNewMessage(newUpdate);
         }
@@ -728,7 +718,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [report, onNewMessage, onRefreshUpdates, toast]);
+  }, [report, onNewMessage, onRefreshUpdates]);
 
   // Reset new message count when user scrolls to bottom
   useEffect(() => {
@@ -783,7 +773,7 @@ const Chat = ({ report, updates, onNewMessage, onRefreshUpdates }) => {
       .single();
       
     if (error) {
-      toast({ title: 'Failed to send message', description: error.message, variant: 'destructive' });
+      setMessageError(error.message);
     } else {
       onNewMessage(data);
       setNewMessage('');

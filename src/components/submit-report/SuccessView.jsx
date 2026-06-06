@@ -9,33 +9,41 @@ import { useState } from 'react';
 import jsPDF from 'jspdf';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 
 export default function SuccessView({
   reportId,
   password,
   isFeedbackMode = false,
+  isBountyMode = false,
   processedAudioUrl = null,
 }) {
-  const { toast } = useToast();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  const [copiedField, setCopiedField] = useState('');
   const containerRef = useRef(null);
 
   useEffect(() => {
     containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const copy = (text, label) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: 'Copied', description: `${label} copied to clipboard.` });
+  const copy = async (text, label) => {
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(label);
+      setTimeout(() => setCopiedField(''), 2000);
+    } catch {
+      setCopyError('Could not copy to clipboard.');
+    }
   };
 
   const trackReport = () => {
-    if (password) {
-      sessionStorage.setItem('trackId', reportId);
-      sessionStorage.setItem('trackPassword', password);
-    }
+    const type = reportId.startsWith('WBB') ? 'bounty' : 'report';
+    sessionStorage.setItem('trackId', reportId);
+    sessionStorage.setItem('trackPassword', password || '');
+    sessionStorage.setItem('trackType', type);
     router.push('/track');
   };
 
@@ -63,12 +71,18 @@ export default function SuccessView({
         <CheckCircle className="h-14 w-14 text-green-500 mx-auto" />
         <div>
           <h1 className="text-2xl font-bold mb-2">
-            {isFeedbackMode ? 'Feedback submitted' : 'Report submitted securely'}
+            {isBountyMode
+              ? 'Tip submitted securely'
+              : isFeedbackMode
+                ? 'Feedback submitted'
+                : 'Report submitted securely'}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isFeedbackMode
-              ? 'Thank you. Save your report ID to follow up if needed.'
-              : 'Save these credentials now — they cannot be recovered later.'}
+            {isBountyMode
+              ? 'Thank you for your tip. Save these credentials to track updates on your submission.'
+              : isFeedbackMode
+                ? 'Thank you. Save your report ID to follow up if needed.'
+                : 'Save these credentials now — they cannot be recovered later.'}
           </p>
         </div>
 
@@ -77,7 +91,13 @@ export default function SuccessView({
             <label className="text-xs text-muted-foreground">Report ID</label>
             <div className="flex gap-2 mt-1">
               <Input value={reportId} readOnly aria-label="Report ID" />
-              <Button type="button" variant="outline" size="icon" onClick={() => copy(reportId, 'Report ID')}>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => copy(reportId, 'Report ID')}
+                aria-label={copiedField === 'Report ID' ? 'Copied' : 'Copy report ID'}
+              >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -103,20 +123,33 @@ export default function SuccessView({
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button type="button" variant="outline" size="icon" onClick={() => copy(password, 'Password')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copy(password, 'Password')}
+                  aria-label={copiedField === 'Password' ? 'Copied' : 'Copy password'}
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
         </div>
+        <FieldError message={copyError} />
 
         {processedAudioUrl && (
           <audio controls src={processedAudioUrl} className="w-full" aria-label="Processed voice preview" />
         )}
 
         <div className="flex flex-col gap-3">
-          <Button onClick={trackReport}>Track your {isFeedbackMode ? 'feedback' : 'report'}</Button>
+          <Button onClick={trackReport}>
+            {isBountyMode
+              ? 'View Tip Details'
+              : isFeedbackMode
+                ? 'View feedback details'
+                : 'View report details'}
+          </Button>
           <Button variant="outline" onClick={downloadPdf}>
             <Download className="mr-2 h-4 w-4" />
             Download details

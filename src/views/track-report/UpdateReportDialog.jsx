@@ -5,19 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
+import { FieldError, FieldSuccess } from '@/components/ui/form-feedback';
+import { useState } from 'react';
 
-const UpdateReportDialog = ({ isOpen, onOpenChange, onUpdate, updateMessage, setUpdateMessage, newEvidenceFiles, setNewEvidenceFiles, isUpdating, uploadProgress }) => {
-    
+const UpdateReportDialog = ({ isOpen, onOpenChange, onUpdate, updateMessage, setUpdateMessage, newEvidenceFiles, setNewEvidenceFiles, isUpdating, uploadProgress, updateError = '', updateSuccess = '' }) => {
+    const [uploadError, setUploadError] = useState('');
+
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
             const oversizedFiles = newFiles.filter(file => file.size > 25 * 1024 * 1024);
             if (oversizedFiles.length > 0) {
-                // This should be a toast notification in a real app
-                console.error('File(s) too large');
+                setUploadError('Please ensure all files are smaller than 25MB.');
                 return;
             }
+            setUploadError('');
             setNewEvidenceFiles(prev => [...prev, ...newFiles]);
         }
     };
@@ -65,10 +68,13 @@ const UpdateReportDialog = ({ isOpen, onOpenChange, onUpdate, updateMessage, set
                             </div>
                         )}
                     </div>
+                    <FieldError message={uploadError} className="mt-2" />
                 </div>
+                <FieldError message={updateError} />
+                <FieldSuccess message={updateSuccess} />
                 <DialogFooter>
-                    <Button onClick={onUpdate} disabled={isUpdating}>
-                        {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Submit Update
+                    <Button onClick={onUpdate} loading={isUpdating}>
+                        Submit Update
                     </Button>
                 </DialogFooter>
             </DialogContent>

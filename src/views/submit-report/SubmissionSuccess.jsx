@@ -5,14 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { CheckCircle, Copy, Download, Eye, EyeOff } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 const SubmissionSuccess = ({ id, password, type = 'report' }) => {
-    const { toast } = useToast();
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
+    const [copyError, setCopyError] = useState('');
 
     const isBounty = type === 'bounty';
     const idLabel = isBounty ? 'Bounty ID' : 'Report ID';
@@ -21,12 +21,13 @@ const SubmissionSuccess = ({ id, password, type = 'report' }) => {
         ? 'Your bounty has been submitted for review. Please save the following details to track its status.'
         : 'Your report has been submitted securely. Please save the following details to track its progress.';
 
-    const copyToClipboard = (text, fieldName) => {
-        navigator.clipboard.writeText(text);
-        toast({
-            title: "Copied to clipboard!",
-            description: `${fieldName} has been copied.`,
-        });
+    const copyToClipboard = async (text) => {
+        setCopyError('');
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            setCopyError('Could not copy to clipboard.');
+        }
     };
 
     const handleTrackSubmission = () => {
@@ -91,7 +92,7 @@ const SubmissionSuccess = ({ id, password, type = 'report' }) => {
                         <Label htmlFor="submissionId">Your Unique {idLabel}</Label>
                         <div className="flex items-center space-x-2">
                             <Input id="submissionId" value={id} readOnly />
-                            <Button variant="outline" size="icon" onClick={() => copyToClipboard(id, idLabel)}>
+                            <Button variant="outline" size="icon" onClick={() => copyToClipboard(id)} aria-label="Copy ID">
                                 <Copy className="h-4 w-4" />
                             </Button>
                         </div>
@@ -106,13 +107,14 @@ const SubmissionSuccess = ({ id, password, type = 'report' }) => {
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>
                                 </div>
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(password, 'Password')}>
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(password)} aria-label="Copy password">
                                     <Copy className="h-4 w-4" />
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">This password is not stored and cannot be recovered. Please save it now.</p>
                         </div>
                     )}
+                    <FieldError message={copyError} />
                     <div className="flex flex-col sm:flex-row gap-4">
                         <Button className="w-full" onClick={downloadDetails}><Download className="mr-2 h-4 w-4"/>Download Details (PDF)</Button>
                         <Button className="w-full" variant="secondary" onClick={handleTrackSubmission}>Track Your {isBounty ? 'Bounty' : 'Report'}</Button>

@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { Loader2, Check, X, ArrowRight, Building, ChevronsUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import PageHeader from '@/components/admin/PageHeader';
 import { cn } from '@/lib/utils';
+import FormattedReportDescription from '@/components/report/FormattedReportDescription';
 
 const TriagePage = () => {
   const [unassignedReports, setUnassignedReports] = useState([]);
@@ -19,20 +20,20 @@ const TriagePage = () => {
   const [currentReportIndex, setCurrentReportIndex] = useState(0);
   const [selectedOrg, setSelectedOrg] = useState('');
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
+  const [fetchError, setFetchError] = useState('');
+  const [actionFeedback, setActionFeedback] = useState({ error: '', success: '' });
   const { fetchTriageData, loading } = useAdminData();
 
 
   const loadTriageData = useCallback(async () => {
+    setFetchError('');
     try {
-      // Get unassigned reports
       const triageData = await fetchTriageData();
       const unassigned = triageData.filter(report => 
         report.status === 'Under Review' && !report.organization_id
       );
       setUnassignedReports(unassigned);
 
-      // Get organizations
       const { data: orgsData, error: orgsError } = await supabase
         .from('organizations')
         .select('id, name')
@@ -42,17 +43,19 @@ const TriagePage = () => {
 
     } catch (error) {
       console.error('Failed to load triage data:', error);
-      toast({ variant: 'destructive', title: 'Failed to load data', description: error.message });
+      setFetchError(error.message);
     }
-  }, [fetchTriageData, toast]);
+  }, [fetchTriageData]);
 
   useEffect(() => {
     loadTriageData();
   }, [loadTriageData]);
 
   const handleAssign = async () => {
+    setActionFeedback({ error: '', success: '' });
+
     if (!selectedOrg) {
-      toast({ variant: 'destructive', title: 'Please select an organization.' });
+      setActionFeedback({ error: 'Please select an organization.', success: '' });
       return;
     }
     const report = unassignedReports[currentReportIndex];
@@ -62,15 +65,17 @@ const TriagePage = () => {
       .eq('id', report.id);
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Failed to assign report', description: error.message });
+      setActionFeedback({ error: error.message, success: '' });
     } else {
-      toast({ title: `Report ${report.report_id} assigned successfully!` });
+      setActionFeedback({ error: '', success: `Report ${report.report_id} assigned successfully!` });
       handleNext();
     }
     setSelectedOrg('');
   };
 
   const handleDismiss = async () => {
+    setActionFeedback({ error: '', success: '' });
+
     const report = unassignedReports[currentReportIndex];
     const { error } = await supabase
       .from('reports')
@@ -78,19 +83,21 @@ const TriagePage = () => {
       .eq('id', report.id);
     
     if (error) {
-      toast({ variant: 'destructive', title: 'Failed to dismiss report', description: error.message });
+      setActionFeedback({ error: error.message, success: '' });
     } else {
-      toast({ title: `Report ${report.report_id} dismissed.` });
+      setActionFeedback({ error: '', success: `Report ${report.report_id} dismissed.` });
       handleNext();
     }
   };
 
   const handleNext = () => {
+    setActionFeedback({ error: '', success: '' });
+
     if (currentReportIndex < unassignedReports.length - 1) {
       setCurrentReportIndex(currentReportIndex + 1);
     } else {
-      toast({ title: "All reports triaged!" });
-      fetchData();
+      setActionFeedback({ error: '', success: 'All reports triaged!' });
+      loadTriageData();
       setCurrentReportIndex(0);
     }
   };
@@ -99,13 +106,15 @@ const TriagePage = () => {
 
   return (
     <>
-      <Helmet><title>Triage Reports - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Triage Reports - WhistleBlower.ng" />
       <PageContentWrapper loading={loading.triage} loadingText="Loading reports for triage...">
         <div className="space-y-8">
           <PageHeader 
             title="Report Triage" 
             description="Assign unmatched reports to the appropriate organizations."
           />
+
+          <PageErrorBanner error={fetchError} title="Could not load triage data" />
           
           <div className="max-w-4xl mx-auto px-4 sm:px-0">
             {loading.triage ? <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div> :
@@ -123,7 +132,7 @@ const TriagePage = () => {
                      )}
                    </CardHeader>
                    <CardContent>
-                     <p className="whitespace-pre-wrap">{currentReport.description}</p>
+                    <FormattedReportDescription text={currentReport.description} />
                    </CardContent>
                  </Card>
                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-end">
@@ -175,6 +184,8 @@ const TriagePage = () => {
                    </div>
                    <Button onClick={handleAssign} disabled={!selectedOrg} className="uppercase"><Check className="mr-2 h-4 w-4" />Assign Report</Button>
                  </div>
+                 <FieldError message={actionFeedback.error} />
+                 <FieldSuccess message={actionFeedback.success} />
                  <div className="flex justify-between items-center pt-4 border-t">
                    <Button variant="destructive" onClick={handleDismiss} className="uppercase"><X className="mr-2 h-4 w-4" />Dismiss Report</Button>
                    <Button variant="outline" onClick={handleNext} className="group uppercase">Skip for now<ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" /></Button>

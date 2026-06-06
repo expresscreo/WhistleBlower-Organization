@@ -3,14 +3,17 @@
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useToast } from '@/components/ui/use-toast';
+import { FieldError } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
 import { hashPassword } from '@/lib/cryptoUtils';
 import { sanitizeFilename } from '@/lib/utils';
 import { validateAllSteps } from '@/lib/submitReportValidation';
+import { buildCreateReportRpcParams } from '@/lib/submitReportRpc';
+import { linkHunterReportToBounty } from '@/lib/bountyStatus';
 import { formatDateForInput } from '@/components/submit-report/reportFormUtils';
 import { getSubmitReportSteps } from '@/components/submit-report/submitReportStepMeta';
 import { useReportFormLocation } from '@/components/submit-report/useReportFormLocation';
+import { buildMatchedOrganization } from '@/components/submit-report/steps/OrganizationStep';
 import SubmitReportStepHero from '@/components/submit-report/SubmitReportStepHero';
 import ReportFormWizard from '@/components/submit-report/ReportFormWizard';
 import SuccessView from '@/components/submit-report/SuccessView';
@@ -26,6 +29,10 @@ const initialFormData = {
   lga: '',
   incidentAddress: '',
   dateOfIncident: null,
+  timeSeen: '',
+  mostWantedIdentifiers: [],
+  mostWantedDirection: '',
+  mostWantedObservedDetails: '',
   reporterType: 'anonymous',
   anonymousPassword: '',
   confirmPassword: '',
@@ -34,9 +41,8 @@ const initialFormData = {
 
 export default function SubmitReportPage() {
   const searchParams = useSearchParams();
-  const { toast } = useToast();
-
   const [formData, setFormData] = useState(initialFormData);
+  const [submitError, setSubmitError] = useState('');
   const [files, setFiles] = useState([]);
   const [descriptionMode, setDescriptionMode] = useState('text');
   const [voiceNoteFile, setVoiceNoteFile] = useState(null);
@@ -46,17 +52,30 @@ export default function SubmitReportPage() {
   const [reportId, setReportId] = useState('');
   const [successPassword, setSuccessPassword] = useState('');
   const [voiceSubmitProgress, setVoiceSubmitProgress] = useState(null);
-  const [wizardHeader, setWizardHeader] = useState({
+  const [mostWantedContext, setMostWantedContext] = useState({ reportId: '', title: '', sex: '' });
+  const [wizardHeader, setWizardHeader] = useState(() => ({
     currentStep: 1,
     direction: 1,
-    stepMeta: getSubmitReportSteps()[0],
-  });
+    stepMeta: getSubmitReportSteps({ isBountyMode: false, isMostWantedMode: false })[0],
+  }));
 
   const isFeedbackMode = searchParams.get('feedback') === 'true';
   const isBountyMode = searchParams.has('bounty_id');
+  const isMostWantedMode =
+    searchParams.get('category') === 'most_wanted' && searchParams.has('news_id');
+  const isLinkedTipMode = isBountyMode || isMostWantedMode;
+  const bountyIdFromUrl = searchParams.get('bounty_id');
+  const newsIdFromUrl = searchParams.get('news_id');
   const orgIdFromUrl =
     searchParams.get('organization_id') ||
     searchParams.get('company_id');
+
+  const wizardSteps = useMemo(
+    () => getSubmitReportSteps({ isFeedbackMode, isBountyMode, isMostWantedMode }),
+    [isFeedbackMode, isBountyMode, isMostWantedMode]
+  );
+
+  const [bountyTitle, setBountyTitle] = useState('');
 
   const handleSelectChange = useCallback((field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -76,28 +95,85 @@ export default function SubmitReportPage() {
   }, [isSubmitted]);
 
   useEffect(() => {
-    const bountyTitle = searchParams.get('bounty_title');
+    const bountyTitleParam = searchParams.get('bounty_title');
     const categoryParam = searchParams.get('category');
-    if (isBountyMode) {
+
+    if (!isBountyMode && !isMostWantedMode) {
+      setMostWantedContext({ reportId: '', title: '', sex: '' });
+      return;
+    }
+
+    if (bountyTitleParam) {
+      setBountyTitle(bountyTitleParam);
+    }
+
+    const loadContext = async () => {
+      let title = bountyTitleParam || '';
+      let state = '';
+      let location = '';
+      let description = '';
+
+      if (isMostWantedMode && newsIdFromUrl) {
+        const { data } = await supabase
+          .from('news')
+          .select('title, most_wanted_details, content')
+          .eq('id', newsIdFromUrl)
+          .maybeSingle();
+
+        if (data) {
+          title = title || data.title || '';
+          const details = data.most_wanted_details || {};
+          setMostWantedContext({
+            reportId: details.case_reference || '',
+            title: data.title || '',
+            sex: details.sex || '',
+          });
+          state = details.crime_state || '';
+          location = '';
+          description = '';
+        }
+      } else if (bountyIdFromUrl) {
+        const { data } = await supabase
+          .from('bounties')
+          .select('title, state, location')
+          .eq('id', bountyIdFromUrl)
+          .maybeSingle();
+
+        if (data) {
+          title = title || data.title || '';
+          state = data.state || '';
+          location = data.location || '';
+        }
+      }
+
+      setBountyTitle(title);
       setFormData((prev) => ({
         ...prev,
-        title: bountyTitle || prev.title,
-        category: categoryParam === 'most_wanted' ? 'Most Wanted' : 'Bounty',
+        title,
+        category:
+          categoryParam === 'most_wanted' || isMostWantedMode ? 'Most Wanted' : 'Bounty',
+        description: isMostWantedMode ? '' : description || prev.description,
+        stateOfIncident: state || prev.stateOfIncident,
+        incidentAddress: isMostWantedMode ? '' : location || prev.incidentAddress,
       }));
       setDescriptionMode('text');
-    }
-    if (isFeedbackMode) {
-      const autoPwd = Math.random().toString(36).slice(-12);
-      setFormData((prev) => ({
-        ...prev,
-        anonymousPassword: autoPwd,
-        confirmPassword: autoPwd,
-      }));
-    }
-  }, [searchParams, isBountyMode, isFeedbackMode]);
+    };
+
+    loadContext();
+  }, [searchParams, isBountyMode, isMostWantedMode, bountyIdFromUrl, newsIdFromUrl]);
 
   useEffect(() => {
-    if (!orgIdFromUrl) return;
+    if (!isFeedbackMode) return;
+    const autoPwd = Math.random().toString(36).slice(-12);
+    setFormData((prev) => ({
+      ...prev,
+      anonymousPassword: autoPwd,
+      confirmPassword: autoPwd,
+    }));
+  }, [isFeedbackMode]);
+
+  useEffect(() => {
+    if (!orgIdFromUrl || isLinkedTipMode) return;
     const loadOrg = async () => {
       const { data, error } = await supabase
         .from('organizations')
@@ -105,21 +181,17 @@ export default function SubmitReportPage() {
         .eq('id', orgIdFromUrl)
         .single();
       if (error || !data) {
-        toast({
-          title: 'Invalid organization',
-          description: 'The organization link is not valid.',
-          variant: 'destructive',
-        });
+        setSubmitError('The organization link is not valid.');
         return;
       }
       setFormData((prev) => ({
         ...prev,
-        organization: { value: data.id, label: data.name },
+        organization: buildMatchedOrganization(data.id, data.name),
       }));
       setIsOrganizationLocked(true);
     };
     loadOrg();
-  }, [orgIdFromUrl, toast]);
+  }, [orgIdFromUrl, isLinkedTipMode]);
 
   const validationContext = useMemo(
     () => ({
@@ -128,23 +200,42 @@ export default function SubmitReportPage() {
       voiceNoteFile,
       isFeedbackMode,
       isBountyMode,
+      isMostWantedMode,
       hasLgasForState,
     }),
-    [formData, descriptionMode, voiceNoteFile, isFeedbackMode, isBountyMode, hasLgasForState]
+    [formData, descriptionMode, voiceNoteFile, isFeedbackMode, isBountyMode, isMostWantedMode, hasLgasForState]
   );
+
+  const buildMostWantedDescription = useCallback(() => {
+    const lines = [
+      formData.description?.trim(),
+      '',
+      '--- Most Wanted Sighting Details ---',
+      `Alert: ${bountyTitle || formData.title || 'Most Wanted tip'}`,
+      newsIdFromUrl ? `Alert ID: ${newsIdFromUrl}` : '',
+      mostWantedContext.reportId ? `Report ID: ${mostWantedContext.reportId}` : '',
+      formData.timeSeen ? `Time seen: ${formData.timeSeen}` : '',
+      Array.isArray(formData.mostWantedIdentifiers) && formData.mostWantedIdentifiers.length
+        ? `Matched identifiers: ${formData.mostWantedIdentifiers.join(', ')}`
+        : '',
+      formData.mostWantedDirection ? `Direction/movement: ${formData.mostWantedDirection}` : '',
+      formData.mostWantedObservedDetails ? `Observed details: ${formData.mostWantedObservedDetails}` : '',
+    ].filter((line) => line !== null && line !== undefined);
+
+    return lines.join('\n').trim();
+  }, [formData, bountyTitle, mostWantedContext.reportId]);
 
   const generateReportId = () =>
     'WB' + String(Math.floor(Math.random() * 10000000)).padStart(7, '0');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validation = validateAllSteps(validationContext);
+    setSubmitError('');
+    const validation = validateAllSteps(validationContext, wizardSteps);
     if (!validation.valid) {
-      toast({
-        title: validation.title,
-        description: validation.description,
-        variant: 'destructive',
-      });
+      setSubmitError(
+        [validation.title, validation.description].filter(Boolean).join(': ')
+      );
       if (validation.focusId) {
         document.getElementById(validation.focusId)?.focus();
       }
@@ -206,45 +297,66 @@ export default function SubmitReportPage() {
         ? formatDateForInput(formData.dateOfIncident)
         : null;
 
-      const { error: rpcError } = await supabase.rpc('create_report_with_evidence', {
-        report_id_param: newReportId,
-        organization_id_param: formData.organization?.value ?? null,
-        organization_name_param: formData.organization?.value
+      const org = formData.organization;
+      const isUnmatchedOrg = org?.isUnmatched === true;
+
+      const rpcParams = buildCreateReportRpcParams({
+        reportId: newReportId,
+        organizationId: isLinkedTipMode
           ? null
-          : formData.organization?.label,
-        title_param:
+          : isUnmatchedOrg
+            ? null
+            : org?.value ?? null,
+        organizationName: isLinkedTipMode
+          ? null
+          : isUnmatchedOrg
+            ? org?.label ?? null
+            : null,
+        title:
           descriptionMode === 'voice'
             ? 'Voice Note Report'
-            : formData.title || 'Report',
-        description_param:
+            : formData.title ||
+              (isMostWantedMode ? 'Most Wanted Tip' : isBountyMode ? 'Bounty Tip' : 'Report'),
+        description:
           descriptionMode === 'voice'
             ? 'This report was submitted via an anonymized voice note.'
-            : formData.description,
-        category_param: formData.category,
-        state_param: formData.stateOfIncident,
-        lga_param: formData.lga,
-        incident_address_param: formData.incidentAddress || null,
-        incident_date_param: incidentDate || null,
-        is_anonymous_param: formData.reporterType !== 'reward',
-        anonymous_password_hash_param: passwordHash,
-        anonymous_password_salt_param: passwordSalt,
-        evidence_paths_param: evidencePaths.length > 0 ? evidencePaths : null,
-        report_type_param: descriptionMode === 'voice' ? 'voice' : 'text',
-        is_voice_note_param: descriptionMode === 'voice',
-        is_feedback_param: isFeedbackMode,
+            : isMostWantedMode
+              ? buildMostWantedDescription()
+              : formData.description,
+        category:
+          formData.category ||
+          (isMostWantedMode ? 'Most Wanted' : isBountyMode ? 'Bounty' : ''),
+        state: formData.stateOfIncident,
+        lga: formData.lga,
+        incidentAddress: formData.incidentAddress || null,
+        incidentDate: incidentDate || null,
+        isAnonymous: formData.reporterType !== 'reward',
+        passwordHash,
+        passwordSalt,
+        evidencePaths,
+        reportType: descriptionMode === 'voice' ? 'voice' : 'text',
+        isVoiceNote: descriptionMode === 'voice',
+        isFeedback: isFeedbackMode,
       });
+
+      const { data: createdReportId, error: rpcError } = await supabase.rpc(
+        'create_report_with_evidence',
+        rpcParams
+      );
 
       if (rpcError) throw rpcError;
 
       if (isBountyMode) {
         const bountyId = searchParams.get('bounty_id');
         if (bountyId) {
-          await supabase
-            .from('bounty_reports')
-            .insert({ bounty_id: Number(bountyId), report_id: newReportId })
-            .then(({ error }) => {
-              if (error) console.error('Bounty link failed:', error);
+          try {
+            await linkHunterReportToBounty(supabase, bountyId, {
+              reportRowId: createdReportId,
+              publicReportId: newReportId,
             });
+          } catch (bountyLinkError) {
+            console.error('Bounty link failed:', bountyLinkError);
+          }
         }
       }
 
@@ -253,11 +365,7 @@ export default function SubmitReportPage() {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Submission error:', error);
-      toast({
-        title: 'Submission failed',
-        description: error.message || 'Please try again.',
-        variant: 'destructive',
-      });
+      setSubmitError(error.message || 'Please try again.');
     } finally {
       setIsSubmitting(false);
       setVoiceSubmitProgress(null);
@@ -270,6 +378,7 @@ export default function SubmitReportPage() {
         reportId={reportId}
         password={successPassword || null}
         isFeedbackMode={isFeedbackMode}
+        isBountyMode={isLinkedTipMode}
       />
     );
   }
@@ -283,8 +392,8 @@ export default function SubmitReportPage() {
   return (
     <>
       <SEOHead {...seoMeta} />
-      <div className="submit-report-page py-20 bg-muted/30 max-md:flex-1 max-md:flex max-md:flex-col max-md:min-h-0 max-md:pb-0">
-        <div className="submit-report-shell max-w-[var(--submit-report-card-width,56rem)] mx-auto px-[var(--submit-report-gutter,1rem)] max-md:flex-1 max-md:flex max-md:flex-col max-md:min-h-0 w-full">
+      <div className="submit-report-page flex-1 flex flex-col min-h-0 py-20 bg-muted/30 max-md:pb-0">
+        <div className="submit-report-shell flex-1 flex flex-col min-h-0 max-w-[var(--submit-report-card-width,56rem)] mx-auto px-[var(--submit-report-gutter,1rem)] w-full">
           <SubmitReportStepHero
             stepMeta={wizardHeader.stepMeta}
             direction={wizardHeader.direction}
@@ -292,8 +401,9 @@ export default function SubmitReportPage() {
           <motion.form
             id="submit-report-form"
             onSubmit={handleSubmit}
-            className="submit-report-card glass-effect border rounded-xl overflow-hidden"
+            className="submit-report-card glass-effect border rounded-xl overflow-hidden w-full max-w-full min-w-0"
           >
+            <FieldError message={submitError} className="mx-4 md:mx-8 mt-4" />
             <ReportFormWizard
               formData={formData}
               handleSelectChange={handleSelectChange}
@@ -308,6 +418,9 @@ export default function SubmitReportPage() {
               onFilesChange={setFiles}
               isFeedbackMode={isFeedbackMode}
               isBountyMode={isBountyMode}
+              isMostWantedMode={isMostWantedMode}
+              bountyTitle={bountyTitle}
+              mostWantedContext={mostWantedContext}
               isSubmitting={isSubmitting}
               voiceSubmitProgress={voiceSubmitProgress}
               onHeaderChange={setWizardHeader}

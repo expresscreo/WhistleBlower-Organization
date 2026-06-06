@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
@@ -8,9 +8,7 @@ import PageHeader from '@/components/admin/PageHeader';
 const Reward = () => {
   return (
     <>
-      <Helmet>
-        <title>Reward Management - WhistleBlower.ng</title>
-      </Helmet>
+      <PageHead title="Reward Management - WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Reward Management"

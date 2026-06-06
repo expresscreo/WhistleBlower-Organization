@@ -1,19 +1,19 @@
 import { useRouter } from 'next/navigation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
-import { Loader2, MessageSquare, Building, Calendar, Paperclip, ChevronLeft, ChevronRight, FileUp, Mic, FileText } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, MessageSquare, ChevronLeft, ChevronRight, FileText, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
+import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
 
 const REPORTS_PER_PAGE = 18;
 
@@ -100,7 +100,7 @@ const Reports = () => {
 
   return (
     <>
-      <Helmet><title>Reports - WhistleBlower.ng</title></Helmet>
+      <PageHead title="Reports - WhistleBlower.ng" />
       <PageContentWrapper loading={loading.reports} loadingText="Loading reports...">
         <div className="space-y-8">
           <PageHeader 
@@ -181,14 +181,12 @@ const Reports = () => {
                                  <h3 className="text-lg font-bold line-clamp-1">{report.title}</h3>
                                  <p className="text-sm text-muted-foreground line-clamp-2">{report.description}</p>
                              </CardContent>
-                             <div className="p-4 pt-2 border-t mt-2">
-                                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                                     <div className="flex items-center gap-2"><Building className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground line-clamp-1">{report.organization_name}</span></div>
-                                     <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground">{report.incident_date ? format(new Date(report.incident_date), 'MM/dd/yyyy') : 'N/A'}</span></div>
-                                     <div className="flex items-center gap-2"><FileUp className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground">{report.created_at ? format(new Date(report.created_at), 'MM/dd/yyyy') : 'N/A'}</span></div>
-                                     <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-primary"/><span className="font-semibold text-muted-foreground">{report.attachment_count} attachment(s)</span></div>
-                                 </div>
-                             </div>
+                             <ReportCardMetaFooter
+                                 company={report.organization_name}
+                                 urgency={report.urgency}
+                                 incidentDate={report.incident_date}
+                                 attachmentCount={report.attachment_count}
+                             />
                           </Card>
                       )
                   })}

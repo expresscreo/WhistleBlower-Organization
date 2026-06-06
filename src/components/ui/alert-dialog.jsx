@@ -3,6 +3,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { LoadingDots } from "@/components/ui/loading-dots"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -73,8 +74,29 @@ const AlertDialogDescription = React.forwardRef(({ className, ...props }, ref) =
 ))
 AlertDialogDescription.displayName = AlertDialogPrimitive.Description.displayName
 
-const AlertDialogAction = React.forwardRef(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Action ref={ref} className={cn(buttonVariants(), className)} {...props} />
+const AlertDialogAction = React.forwardRef(({
+  className,
+  loading = false,
+  loadingClassName,
+  disabled,
+  children,
+  ...props
+}, ref) => (
+  <AlertDialogPrimitive.Action
+    ref={ref}
+    className={cn(buttonVariants(), className, loading && 'cursor-wait')}
+    disabled={disabled || loading}
+    aria-busy={loading || undefined}
+    {...props}
+  >
+    {loading ? (
+      <span className="inline-flex min-h-[1.25em] items-center justify-center">
+        <LoadingDots className={cn('text-white/90', loadingClassName)} />
+      </span>
+    ) : (
+      children
+    )}
+  </AlertDialogPrimitive.Action>
 ))
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
 

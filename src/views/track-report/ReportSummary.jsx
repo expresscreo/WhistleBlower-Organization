@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Paperclip, Clock, Edit, LogOut } from 'lucide-react';
 import AttachmentPreview from './AttachmentPreview';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import FormattedReportDescription from '@/components/report/FormattedReportDescription';
 
 const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
     const statusConfig = {
@@ -25,18 +25,22 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
         <div className="bg-card p-6 md:p-8 border">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                 <h2 className="text-lg sm:text-xl font-bold">REPORT ID — {report.report_id}</h2>
-                <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
-                    <Button variant="outline" onClick={onUpdateReport} className="flex-1 sm:flex-initial">
-                        <Edit className="mr-2 h-4 w-4" />
-                        <span className="hidden xs:inline">Update Report</span>
-                        <span className="xs:hidden">Update</span>
-                    </Button>
-                    <Button 
-                        onClick={onLogout}
-                        className="bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 flex-1 sm:flex-initial"
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                        variant="default"
+                        onClick={onUpdateReport}
+                        className="flex h-10 flex-1 items-center justify-center gap-2 px-6 sm:flex-initial sm:border sm:border-input sm:bg-background sm:text-foreground sm:hover:bg-accent sm:hover:text-accent-foreground"
                     >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
+                        <Edit className="h-4 w-4" />
+                        Update Report
+                    </Button>
+                    <Button
+                        onClick={onLogout}
+                        aria-label="Logout"
+                        className="flex h-10 items-center justify-center gap-2 bg-red-500 px-6 text-white hover:bg-red-600 sm:flex-initial"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        <span className="hidden sm:inline">Logout</span>
                     </Button>
                 </div>
             </div>
@@ -53,7 +57,9 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
             {/* Report Title */}
             <div className="border-t pt-6 border-b pb-6">
                 <h3 className="text-xl sm:text-2xl font-bold mb-4">{report.title}</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{report.description}</p>
+                <div className="text-muted-foreground">
+                  <FormattedReportDescription text={report.description} />
+                </div>
             </div>
             
             {/* Report Info */}

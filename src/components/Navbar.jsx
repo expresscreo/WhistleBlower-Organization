@@ -45,13 +45,34 @@ const NavItem = ({ name, path, isActive, isExternal = false }) => {
 const DropdownNavItem = ({ name, items }) => {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const closeTimerRef = useRef(null);
     const isParentActive = items.some(item => pathname === item.path || pathname.startsWith(item.path + '/'));
+    const clearCloseTimer = () => {
+        if (closeTimerRef.current) {
+            clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+        }
+    };
+    const openDropdown = () => {
+        clearCloseTimer();
+        setIsOpen(true);
+    };
+    const closeDropdownWithDelay = () => {
+        clearCloseTimer();
+        closeTimerRef.current = setTimeout(() => {
+            setIsOpen(false);
+        }, 180);
+    };
+
+    useEffect(() => {
+        return () => clearCloseTimer();
+    }, []);
 
     return (
         <div 
             className="relative h-full flex items-center"
-            onMouseEnter={() => setIsOpen(true)}
-            onMouseLeave={() => setIsOpen(false)}
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdownWithDelay}
         >
             <button className={cn(
                 "group relative flex items-center h-full gap-1 px-1 text-xs font-medium tracking-[2px] uppercase transition-colors",
@@ -73,7 +94,9 @@ const DropdownNavItem = ({ name, items }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-background border rounded-md shadow-lg"
+                        className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-max bg-background border rounded-md shadow-lg"
+                        onMouseEnter={openDropdown}
+                        onMouseLeave={closeDropdownWithDelay}
                     >
                         <ul className="py-1">
                             {items.map(item => (
@@ -97,13 +120,34 @@ const DropdownNavItem = ({ name, items }) => {
 const NewsDropdownNavItem = ({ name, items }) => {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const closeTimerRef = useRef(null);
     const isParentActive = items.some(item => pathname === item.path || pathname.startsWith(item.path + '/'));
+    const clearCloseTimer = () => {
+        if (closeTimerRef.current) {
+            clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+        }
+    };
+    const openDropdown = () => {
+        clearCloseTimer();
+        setIsOpen(true);
+    };
+    const closeDropdownWithDelay = () => {
+        clearCloseTimer();
+        closeTimerRef.current = setTimeout(() => {
+            setIsOpen(false);
+        }, 180);
+    };
+
+    useEffect(() => {
+        return () => clearCloseTimer();
+    }, []);
 
     return (
         <div 
             className="relative h-full flex items-center"
-            onMouseEnter={() => setIsOpen(true)}
-            onMouseLeave={() => setIsOpen(false)}
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdownWithDelay}
         >
             <button className={cn(
                 "group relative flex items-center h-full gap-1 px-1 text-xs font-medium tracking-[2px] uppercase transition-colors",
@@ -125,8 +169,10 @@ const NewsDropdownNavItem = ({ name, items }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 right-0 mt-2 w-80 mx-auto bg-background backdrop-blur-xl border border-border z-50"
+                        className="absolute top-full left-0 right-0 mt-1 w-80 mx-auto bg-background backdrop-blur-xl border border-border z-50"
                         style={{ borderRadius: 0 }}
+                        onMouseEnter={openDropdown}
+                        onMouseLeave={closeDropdownWithDelay}
                     >
                         <div className="p-6 space-y-6">
                             {items.map(item => (
@@ -155,13 +201,34 @@ const NewsDropdownNavItem = ({ name, items }) => {
 const CompanyDropdownNavItem = ({ name, items }) => {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const closeTimerRef = useRef(null);
     const isParentActive = items.some(item => pathname === item.path || pathname.startsWith(item.path + '/'));
+    const clearCloseTimer = () => {
+        if (closeTimerRef.current) {
+            clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+        }
+    };
+    const openDropdown = () => {
+        clearCloseTimer();
+        setIsOpen(true);
+    };
+    const closeDropdownWithDelay = () => {
+        clearCloseTimer();
+        closeTimerRef.current = setTimeout(() => {
+            setIsOpen(false);
+        }, 180);
+    };
+
+    useEffect(() => {
+        return () => clearCloseTimer();
+    }, []);
 
     return (
         <div 
             className="relative h-full flex items-center"
-            onMouseEnter={() => setIsOpen(true)}
-            onMouseLeave={() => setIsOpen(false)}
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdownWithDelay}
         >
             <button className={cn(
                 "group relative flex items-center h-full gap-1 px-1 text-xs font-medium tracking-[2px] uppercase transition-colors",
@@ -183,8 +250,10 @@ const CompanyDropdownNavItem = ({ name, items }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 right-0 mt-2 w-80 mx-auto bg-background backdrop-blur-xl border border-border z-50"
+                        className="absolute top-full left-0 right-0 mt-1 w-80 mx-auto bg-background backdrop-blur-xl border border-border z-50"
                         style={{ borderRadius: 0 }}
+                        onMouseEnter={openDropdown}
+                        onMouseLeave={closeDropdownWithDelay}
                     >
                         <div className="p-6 space-y-6">
                             {items.map(item => (
@@ -248,12 +317,12 @@ const Navbar = () => {
       className="sticky top-0 z-[9999] bg-background/80 backdrop-blur-md border-b border-border relative overflow-visible"
     >
       <div className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch h-[80px] w-full">
-          <Link href="/" className="justify-self-start flex-shrink-0 flex items-center">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch h-16 w-full">
+          <Link href="/" className="justify-self-start flex items-center min-w-0 max-w-[calc(100vw-5.5rem)]">
             <img 
               src={theme === 'light' ? logoLight : logoDark}
               alt="WhistleBlower.ng Logo" 
-              style={{ width: '220.38px', height: '32px' }}
+              className="max-h-7 w-auto max-w-full object-contain"
             />
           </Link>
 

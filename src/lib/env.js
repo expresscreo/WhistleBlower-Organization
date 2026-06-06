@@ -60,6 +60,12 @@ export function resolveSupabaseAnonKey() {
   return fromEnv;
 }
 
+const defaultGaMeasurementId = 'G-THYVCE3LJQ';
+
+export function resolveGaMeasurementId() {
+  return readEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID') || defaultGaMeasurementId;
+}
+
 export const publicEnv = {
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
@@ -68,6 +74,7 @@ export const publicEnv = {
     'VITE_PAYSTACK_PUBLIC_KEY',
   ),
   appUrl: readEnv('NEXT_PUBLIC_APP_URL', 'VITE_APP_URL'),
+  gaMeasurementId: resolveGaMeasurementId(),
 };
 
 export function getPaystackPublicKey() {

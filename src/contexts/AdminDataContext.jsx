@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useToast } from '@/components/ui/use-toast';
 
 const AdminDataContext = createContext(null);
 
@@ -11,7 +10,6 @@ export const AdminDataProvider = ({ children }) => {
   const [cache, setCache] = useState({});
   const [loading, setLoading] = useState({});
   const { profile } = useAuth();
-  const { toast } = useToast();
   const loadingRefs = useRef({});
 
   const fetchData = useCallback(async (key, fetchFunction, dependencies = []) => {
@@ -48,17 +46,12 @@ export const AdminDataProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error(`Error fetching data for ${key}:`, error);
-      toast({
-        variant: 'destructive',
-        title: `Failed to load ${key}`,
-        description: error.message
-      });
       throw error;
     } finally {
       loadingRefs.current[key] = false;
       setLoading(prev => ({ ...prev, [key]: false }));
     }
-  }, [cache, loading, toast]);
+  }, [cache, loading]);
 
   const invalidateCache = useCallback((key) => {
     setCache(prev => {
@@ -104,41 +97,38 @@ export const AdminDataProvider = ({ children }) => {
         .select('*')
         .eq('is_trashed', false);
       
+      // Only hunter tips explicitly linked to a bounty (via bounty_reports).
       const { data: reports, error: reportsError } = await supabase
         .from('reports')
-        .select('*, bounty_reports(bounty_id)')
+        .select('*, bounty_reports!inner(bounty_id)')
         .eq('category', 'Bounty')
         .eq('is_trashed', false);
 
-      // Include direct submissions from bounty news (stored as bounty_updates)
-      const { data: bountyUpdates, error: updatesError } = await supabase
-        .from('bounty_updates')
-        .select('id, bounty_id, message, created_at')
-        .order('created_at', { ascending: false });
-
-      if (bountiesError || reportsError || updatesError) {
-        throw bountiesError || reportsError || updatesError;
+      if (bountiesError || reportsError) {
+        throw bountiesError || reportsError;
       }
 
-      const formattedBounties = bounties.map(b => ({ ...b, item_type: 'bounty' }));
-      const formattedReports = reports.map(r => ({ 
-        ...r, 
-        item_type: 'report', 
-        bounty_id: Array.isArray(r.bounty_reports) && r.bounty_reports.length > 0 ? r.bounty_reports[0]?.bounty_id : r.bounty_id
-      }));
-      const formattedBountyUpdates = (bountyUpdates || []).map(u => ({
-        id: u.id,
+      const formattedReports = (reports || []).map((r) => ({
+        ...r,
         item_type: 'report',
-        bounty_id: u.bounty_id,
-        title: 'New Bounty Information',
-        description: u.message,
-        status: 'Pending',
-        created_at: u.created_at,
-        submitted_at: u.created_at,
-        evidence_path: [],
+        bounty_id: r.bounty_reports?.[0]?.bounty_id ?? r.bounty_id,
       }));
-      
-      return [...formattedBounties, ...formattedReports, ...formattedBountyUpdates];
+
+      const linkedReportCountByBounty = formattedReports.reduce((counts, report) => {
+        const bountyId = report.bounty_id;
+        if (bountyId) {
+          counts[bountyId] = (counts[bountyId] || 0) + 1;
+        }
+        return counts;
+      }, {});
+
+      const formattedBounties = bounties.map((b) => ({
+        ...b,
+        item_type: 'bounty',
+        linked_report_count: linkedReportCountByBounty[b.id] || 0,
+      }));
+
+      return [...formattedBounties, ...formattedReports];
     }, []);
   }, [fetchData]);
 
