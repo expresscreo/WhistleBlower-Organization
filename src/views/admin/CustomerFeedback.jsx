@@ -160,7 +160,7 @@ const CustomerFeedback = () => {
 
   return (
     <>
-      <PageHead title="Customer Feedback - WhistleBlower.ng" />
+      <PageHead title="Customer Feedback — WhistleBlower.ng" />
       {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
         <PageHeader 

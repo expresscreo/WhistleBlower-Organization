@@ -1,4 +1,4 @@
-import { fetchPublishedNewsForSitemap } from '@/lib/newsServer';
+import { fetchPublishedNewsForFeed } from '@/lib/newsServer';
 import { getPublishedNewsPublicUrl } from '@/lib/newsUrls';
 import { SITE_CONFIG } from '@/lib/seoUtils';
 import { resolveSiteUrl } from '@/lib/siteUrl';
@@ -25,7 +25,7 @@ export async function GET() {
   let posts = [];
 
   try {
-    posts = await fetchPublishedNewsForSitemap();
+    posts = await fetchPublishedNewsForFeed();
   } catch (error) {
     console.error('[feed.xml] fetch error:', error);
   }

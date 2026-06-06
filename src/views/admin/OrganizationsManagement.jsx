@@ -221,7 +221,7 @@ const OrganizationsManagement = () => {
 
     return (
         <>
-            <PageHead title="Organizations Management - WhistleBlower.ng" />
+            <PageHead title="Organizations Management — WhistleBlower.ng" />
             <div className="space-y-8">
                 <PageHeader 
                     title="Organizations Management"

@@ -82,7 +82,7 @@ const UnmatchedOrganizations = () => {
 
   return (
     <>
-      <PageHead title="Unmatched Organizations - WhistleBlower.ng" />
+      <PageHead title="Unmatched Organizations — WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Unmatched Organizations"

@@ -287,7 +287,7 @@ const Overview = () => {
 
   return (
     <>
-      <PageHead title="Dashboard Overview - WhistleBlower.ng" />
+      <PageHead title="Dashboard Overview — WhistleBlower.ng" />
       <PageContentWrapper loading={isLoading} loadingText="Loading dashboard data...">
         <div className="space-y-8">
           <PageHeader

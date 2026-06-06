@@ -42,7 +42,7 @@ ${staticPages.map(page => `
 
     return (
         <>
-            <PageHead title="Sitemap - WhistleBlower.ng" robots="noindex" />
+            <PageHead title="Sitemap — WhistleBlower.ng" robots="noindex" />
             <div className="bg-background text-foreground min-h-screen p-4 md:p-8">
                 {renderSitemap()}
             </div>

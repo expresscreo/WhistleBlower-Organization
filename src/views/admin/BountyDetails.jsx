@@ -482,7 +482,7 @@ const BountyDetails = () => {
     if (loading) {
         return (
             <>
-                <PageHead title="Loading Bounty Details - WhistleBlower.ng" />
+                <PageHead title="Loading Bounty Details — WhistleBlower.ng" />
                 <NavbarLoader />
                 <div className="space-y-6">
                     <div>

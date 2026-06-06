@@ -132,7 +132,7 @@ const ComingSoonPage = () => {
   // Generate SEO metadata
   const seoMeta = generateSEOMeta({
     ...DEFAULT_SEO_PAGES.home,
-    title: 'Coming Soon - WhistleBlower.ng',
+    title: 'Coming Soon — WhistleBlower.ng',
     description: 'WhistleBlower.ng is getting even better. Stay tuned for our enhanced platform with improved security, faster processing, and better user experience.',
     url: '/',
     type: 'website'

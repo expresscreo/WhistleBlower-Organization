@@ -5,9 +5,12 @@
 
 import { resolveSiteUrl, absoluteUrl } from '@/lib/siteUrl';
 import { getNewsPostPath, getNewsPostUrl, getBountyPostPath } from '@/lib/newsUrls';
+import { resolveOgImageUrl } from '@/lib/ogImageUrl';
 import { slugify } from '@/lib/utils';
 
 const siteUrl = () => resolveSiteUrl();
+
+export const TITLE_SEPARATOR = ' — ';
 
 // Default site configuration
 export const SITE_CONFIG = {
@@ -36,11 +39,15 @@ export const SITE_CONFIG = {
   ],
 };
 
+export function formatPageTitle(title) {
+  const base = typeof title === 'string' ? title : String(title || '');
+  if (!base) return SITE_CONFIG.name;
+  if (base.includes(SITE_CONFIG.name)) return base;
+  return `${base}${TITLE_SEPARATOR}${SITE_CONFIG.name}`;
+}
+
 function resolveImageUrl(image) {
-  if (!image) return SITE_CONFIG.defaultImage;
-  const img = typeof image === 'string' ? image : String(image);
-  if (img.startsWith('http')) return img;
-  return absoluteUrl(img.startsWith('/') ? img : `/${img}`);
+  return resolveOgImageUrl(image) || SITE_CONFIG.defaultImage;
 }
 
 function stripHtml(html) {
@@ -62,10 +69,7 @@ export const generateSEOMeta = ({
   canonical = null,
   newsKeywords = null,
 }) => {
-  const baseTitle = typeof title === 'string' ? title : String(title || '');
-  const fullTitle = baseTitle.includes(SITE_CONFIG.name)
-    ? baseTitle
-    : `${baseTitle} - ${SITE_CONFIG.name}`;
+  const fullTitle = formatPageTitle(title);
   const fullUrl = url ? absoluteUrl(url) : SITE_CONFIG.url;
   const fullImage = resolveImageUrl(image);
 

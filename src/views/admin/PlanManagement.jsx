@@ -153,7 +153,7 @@ const PlanManagement = () => {
             </div>;
   }
   return <>
-            <PageHead title="Plan Permissions Management - WhistleBlower.ng" />
+            <PageHead title="Plan Permissions Management — WhistleBlower.ng" />
             <PageContentWrapper loading={loading.plans || profileLoading} loadingText="Loading plan management data...">
               <div className="space-y-8">
                 <PageHeader 

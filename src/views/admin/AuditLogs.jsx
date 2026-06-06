@@ -125,7 +125,7 @@ const AuditLogs = () => {
 
   return (
     <>
-      <PageHead title="Audit Logs - WhistleBlower.ng" />
+      <PageHead title="Audit Logs — WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Audit Logs"

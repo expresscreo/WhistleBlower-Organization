@@ -179,7 +179,7 @@ const TrackReportPage = ({ reportId, password }) => {
     {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
-      name: 'Track Your Report - WhistleBlower.ng',
+      name: 'Track Your Report — WhistleBlower.ng',
       description: 'Securely track the status of your submitted report using your unique Report ID.',
       mainEntity: {
         '@type': 'Service',

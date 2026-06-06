@@ -327,7 +327,7 @@ const TrackBountyPage = ({ bountyId, password }) => {
         {
             '@context': 'https://schema.org',
             '@type': 'WebPage',
-            name: 'Track Your Bounty - WhistleBlower.ng',
+            name: 'Track Your Bounty — WhistleBlower.ng',
             description: 'Securely track the status of your submitted bounty using your unique Bounty ID.',
             mainEntity: {
                 '@type': 'Service',

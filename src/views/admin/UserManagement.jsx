@@ -307,7 +307,7 @@ const UserManagement = () => {
 
   return (
     <>
-      <PageHead title="User Management - WhistleBlower.ng" />
+      <PageHead title="User Management — WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="User Management"

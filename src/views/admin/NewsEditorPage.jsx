@@ -1124,7 +1124,7 @@ const NewsEditorPage = () => {
 
     return (
         <>
-            <PageHead title={`${isEditing ? 'Edit' : 'Create'} News Post - WhistleBlower.ng`} />
+            <PageHead title={`${isEditing ? 'Edit' : 'Create'} News Post — WhistleBlower.ng`} />
             
             
                 <PageErrorBanner error={fetchError} title="Could not load news post" />

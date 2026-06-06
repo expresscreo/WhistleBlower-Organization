@@ -152,13 +152,13 @@ const NewsPage = () => {
     // Generate SEO metadata based on category
     const getPageTitle = (category) => {
         if (category === 'bounty') {
-            return 'Active Bounties - WhistleBlower.ng';
+            return 'Active Bounties — WhistleBlower.ng';
         } else if (category === 'most_wanted') {
-            return 'Most Wanted - WhistleBlower.ng';
+            return 'Most Wanted — WhistleBlower.ng';
         } else if (category === 'news') {
-            return 'Latest News - WhistleBlower.ng';
+            return 'Latest News — WhistleBlower.ng';
         }
-        return 'News & Updates - WhistleBlower.ng';
+        return 'News & Updates — WhistleBlower.ng';
     };
 
     const getPageDescription = (category) => {

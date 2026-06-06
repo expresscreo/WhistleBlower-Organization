@@ -95,7 +95,7 @@ const BountiesManagement = () => {
 
     return (
         <>
-            <PageHead title="Bounties Management - WhistleBlower.ng" />
+            <PageHead title="Bounties Management — WhistleBlower.ng" />
             <PageContentWrapper loading={loading.bounties} loadingText="Loading bounties and reports...">
                 <div className="space-y-8">
                     <PageHeader 

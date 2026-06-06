@@ -100,7 +100,7 @@ const Reports = () => {
 
   return (
     <>
-      <PageHead title="Reports - WhistleBlower.ng" />
+      <PageHead title="Reports — WhistleBlower.ng" />
       <PageContentWrapper loading={loading.reports} loadingText="Loading reports...">
         <div className="space-y-8">
           <PageHeader 

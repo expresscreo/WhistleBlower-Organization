@@ -8,7 +8,7 @@ import PageHeader from '@/components/admin/PageHeader';
 const Reward = () => {
   return (
     <>
-      <PageHead title="Reward Management - WhistleBlower.ng" />
+      <PageHead title="Reward Management — WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Reward Management"

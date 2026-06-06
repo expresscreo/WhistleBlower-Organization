@@ -147,7 +147,7 @@ const PlaceBountyPage = () => {
     {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
-      name: 'Place a Public Bounty - WhistleBlower.ng',
+      name: 'Place a Public Bounty — WhistleBlower.ng',
       description:
         'Place public bounties for specific information or missing persons. Reward citizens for providing valuable intelligence.',
       mainEntity: {

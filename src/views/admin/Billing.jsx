@@ -60,7 +60,7 @@ const Billing = () => {
     
     return (
         <>
-            <PageHead title="Billing - WhistleBlower.ng" />
+            <PageHead title="Billing — WhistleBlower.ng" />
             <div className="space-y-8">
                 <PageHeader 
                     title="Billing"

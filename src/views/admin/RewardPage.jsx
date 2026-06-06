@@ -184,7 +184,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
       if (loading && !data.wallet && !data.orgSummary.length) {
         return (
           <>
-            <PageHead title="Loading Reward Management - WhistleBlower.ng" />
+            <PageHead title="Loading Reward Management — WhistleBlower.ng" />
             <NavbarLoader />
             <div className="space-y-6">
               <div>
@@ -388,7 +388,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     
       return (
         <>
-          <PageHead title="Reward Management - WhistleBlower.ng" />
+          <PageHead title="Reward Management — WhistleBlower.ng" />
           <div className="space-y-8">
             <PageHeader 
               title="Reward Management"

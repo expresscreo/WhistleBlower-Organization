@@ -170,7 +170,7 @@ const Settings = () => {
   if(loading || profileLoading) {
     return (
       <>
-        <PageHead title="Loading Settings - WhistleBlower.ng" />
+        <PageHead title="Loading Settings — WhistleBlower.ng" />
         <NavbarLoader />
         <div className="space-y-8">
           <div className="flex justify-between items-center">
@@ -191,7 +191,7 @@ const Settings = () => {
 
   return (
     <>
-      <PageHead title="Settings - WhistleBlower.ng" />
+      <PageHead title="Settings — WhistleBlower.ng" />
       <div className="space-y-8 [&_*]:!transition-none [&_*]:!animate-none">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-3xl font-bold">Settings</h1>

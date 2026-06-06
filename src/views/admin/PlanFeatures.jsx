@@ -71,7 +71,7 @@ const PlanFeatures = () => {
 
   return (
     <>
-      <PageHead title="Plan Features - WhistleBlower.ng" />
+      <PageHead title="Plan Features — WhistleBlower.ng" />
       <div className="space-y-8">
         <PageHeader 
           title="Plan Features Management"

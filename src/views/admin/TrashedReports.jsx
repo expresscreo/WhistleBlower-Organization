@@ -167,7 +167,7 @@ const TrashedReports = () => {
 
   return (
     <>
-      <PageHead title="Trash - WhistleBlower.ng" />
+      <PageHead title="Trash — WhistleBlower.ng" />
       {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
         <PageHeader 

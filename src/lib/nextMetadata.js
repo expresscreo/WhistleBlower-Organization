@@ -1,14 +1,10 @@
 import {
   DEFAULT_SEO_PAGES,
   generateSEOMeta,
+  formatPageTitle,
   SITE_CONFIG,
 } from '@/lib/seoUtils';
 import { resolveSiteUrl } from '@/lib/siteUrl';
-
-function formatTitle(title) {
-  const base = typeof title === 'string' ? title : String(title || '');
-  return base.includes(SITE_CONFIG.name) ? base : `${base} - ${SITE_CONFIG.name}`;
-}
 
 /**
  * Convert seoUtils generateSEOMeta / generateNewsPostSEO output to Next.js Metadata.
@@ -21,7 +17,7 @@ export function seoMetaToNextMetadata(seoMeta, options = {}) {
     article,
   } = options;
 
-  const title = seoMeta?.title ? formatTitle(seoMeta.title) : SITE_CONFIG.name;
+  const title = seoMeta?.title ? formatPageTitle(seoMeta.title) : SITE_CONFIG.name;
   const description = seoMeta?.description || SITE_CONFIG.description;
   const canonical = seoMeta?.canonical || seoMeta?.url || resolveSiteUrl();
   const image = seoMeta?.image || SITE_CONFIG.defaultImage;
@@ -39,7 +35,15 @@ export function seoMetaToNextMetadata(seoMeta, options = {}) {
       description,
       url: seoMeta?.url || canonical,
       siteName: SITE_CONFIG.name,
-      images: [{ url: image, alt: title }],
+      images: [
+        {
+          url: image,
+          alt: title,
+          width: 1200,
+          height: 630,
+          type: 'image/jpeg',
+        },
+      ],
       locale: SITE_CONFIG.locale.replace('_', '-'),
       type: ogType,
     },

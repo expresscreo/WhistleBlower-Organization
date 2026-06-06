@@ -248,7 +248,7 @@ const BountyPostPage = () => {
     return (
         <>
             <PageHead
-                title={`${bounty.title} - WhistleBlower.ng`}
+                title={`${bounty.title} — WhistleBlower.ng`}
                 description={String(bounty.description || '').replace(/<[^>]*>/g, ' ').trim().substring(0, 160)}
             />
             <NewsPostHero

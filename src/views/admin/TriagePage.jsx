@@ -106,7 +106,7 @@ const TriagePage = () => {
 
   return (
     <>
-      <PageHead title="Triage Reports - WhistleBlower.ng" />
+      <PageHead title="Triage Reports — WhistleBlower.ng" />
       <PageContentWrapper loading={loading.triage} loadingText="Loading reports for triage...">
         <div className="space-y-8">
           <PageHeader 

@@ -240,7 +240,7 @@ export default function NewsPostPreviewPage() {
 
     return (
       <>
-        <PageHead title={`Preview: ${post.title} - WhistleBlower.ng`} />
+        <PageHead title={`Preview: ${post.title} — WhistleBlower.ng`} />
         <PreviewBanner />
         <NewsPostHero
           post={{
@@ -339,7 +339,7 @@ export default function NewsPostPreviewPage() {
 
   return (
     <>
-      <PageHead title={`Preview: ${post.title} - WhistleBlower.ng`} />
+      <PageHead title={`Preview: ${post.title} — WhistleBlower.ng`} />
       <PreviewBanner />
       <NewsPostHero post={{ ...post, created_at: heroDate }} />
       <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">

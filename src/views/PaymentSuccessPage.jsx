@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 const PaymentSuccessPage = () => {
   return (
     <>
-      <PageHead title="Payment Successful! - WhistleBlower.ng" description="Your payment was successful. Your account has been activated. Proceed to login." />
+      <PageHead title="Payment Successful! — WhistleBlower.ng" description="Your payment was successful. Your account has been activated. Proceed to login." />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

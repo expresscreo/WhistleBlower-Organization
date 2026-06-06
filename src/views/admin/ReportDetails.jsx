@@ -359,7 +359,7 @@ const ReportDetails = () => {
   if (loading || profileLoading) {
     return (
       <>
-        <PageHead title="Loading Report Details - WhistleBlower.ng" />
+        <PageHead title="Loading Report Details — WhistleBlower.ng" />
         <NavbarLoader />
         <div className="space-y-6">
           <div>
