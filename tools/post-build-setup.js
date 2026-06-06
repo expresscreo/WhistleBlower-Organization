@@ -16,6 +16,9 @@ console.log('🔧 Running post-build setup...');
 const htaccessContent = `# Enable mod_rewrite
 RewriteEngine On
 
+# Serve sitemap/feed XML files directly when present on disk
+RewriteRule ^(sitemap\\.xml|news-sitemap\\.xml|feed\\.xml|robots\\.txt)$ - [L]
+
 # Handle Angular and React Router (SPA fallback)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
