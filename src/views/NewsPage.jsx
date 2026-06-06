@@ -123,13 +123,13 @@ const categoryDetails = {
     }
 };
 
-const NewsPage = () => {
+const NewsPage = ({ initialNews = null }) => {
     const pathname = usePathname();
     const router = useRouter();
     const [fetchError, setFetchError] = useState('');
-    const [news, setNews] = useState([]);
+    const [news, setNews] = useState(initialNews ?? []);
     const [bountyLookup, setBountyLookup] = useState({});
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(initialNews == null);
     
     const [selectedState, setSelectedState] = useState('all');
     const [selectedLga, setSelectedLga] = useState('all');
@@ -172,8 +172,10 @@ const NewsPage = () => {
         return 'Stay updated with the latest news, published bounties, and most wanted alerts from across the nation.';
     };
 
-    const fetchNews = useCallback(async () => {
-        setLoading(true);
+    const fetchNews = useCallback(async ({ background = false } = {}) => {
+        if (!background) {
+            setLoading(true);
+        }
         setFetchError('');
         try {
             let query = supabase.from('news').select(`*`).eq('status', 'published');
@@ -205,8 +207,8 @@ const NewsPage = () => {
     }, [category]);
 
     useEffect(() => {
-        fetchNews();
-    }, [fetchNews]);
+        fetchNews({ background: initialNews != null });
+    }, [fetchNews, initialNews]);
 
     useEffect(() => {
         setVisibleCount(NEWS_PER_PAGE);
@@ -332,6 +334,13 @@ const NewsPage = () => {
                     <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
                         {currentCategory.description}
                     </p>
+                    <p className="mx-auto mt-4 max-w-3xl text-base text-muted-foreground">
+                        {category === 'most_wanted'
+                            ? 'Published alerts include case details and anonymous tip links. WhistleBlower.ng helps citizens share information with law enforcement without exposing their identity.'
+                            : category === 'bounty'
+                              ? 'Each bounty includes reward details and a secure way to submit verified information.'
+                              : 'Read the latest published updates from WhistleBlower.ng across Nigeria.'}
+                    </p>
                 </div>
 
                 <PageErrorBanner error={fetchError} title="Could not load news" className="mb-8" />
@@ -431,8 +440,28 @@ const NewsPage = () => {
                         )}
                     </>
                 ) : (
-                    <div className="text-center py-16">
-                        <p className="text-xl text-muted-foreground">No articles found for the selected filters.</p>
+                    <div className="mx-auto max-w-2xl space-y-4 py-16 text-center">
+                        <p className="text-xl font-medium text-foreground">
+                            {selectedState !== 'all' || selectedLga !== 'all'
+                                ? `No ${currentCategory.title.toLowerCase()} match your location filters.`
+                                : `No ${currentCategory.title.toLowerCase()} alerts are published right now.`}
+                        </p>
+                        <p className="text-muted-foreground">
+                            WhistleBlower.ng publishes verified {currentCategory.title.toLowerCase()} updates as they
+                            become available. Browse{' '}
+                            <Link href="/news" className="text-primary hover:underline">
+                                all news
+                            </Link>
+                            , explore{' '}
+                            <Link href="/most-wanted" className="text-primary hover:underline">
+                                most wanted
+                            </Link>
+                            , or{' '}
+                            <Link href="/submit-report" className="text-primary hover:underline">
+                                submit a report
+                            </Link>{' '}
+                            anonymously.
+                        </p>
                     </div>
                 )}
             </div>

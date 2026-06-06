@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import { findPublishedNewsByRouteSlug } from '@/lib/postSlug';
 import { getServerSupabase } from '@/lib/serverSupabase';
 import { getPublishedNewsPublicPath } from '@/lib/newsUrls';
+import { resolveOgImageUrl } from '@/lib/ogImageUrl';
 
 /** Lightweight fields for slug index — excludes heavy HTML content. */
 const NEWS_INDEX_COLUMNS =
@@ -58,6 +59,31 @@ export async function fetchPublishedNewsBySlug(routeSlug) {
 
   const content = await fetchNewsContentById(match.id);
   return { ...match, content };
+}
+
+export function serializeNewsRowsForClient(rows) {
+  return (rows || []).map((row) => ({
+    ...row,
+    featured_image_url: row.featured_image ? resolveOgImageUrl(row.featured_image) : null,
+  }));
+}
+
+/**
+ * Published posts for a news listing category (server-rendered for crawlers).
+ */
+export async function fetchPublishedNewsByCategory(category = 'all', limit = 100) {
+  const index = await getPublishedNewsIndex();
+  let filtered = index;
+
+  if (category && category !== 'all') {
+    filtered = index.filter((row) => row.category === category);
+  }
+
+  const rows = filtered
+    .filter((row) => getPublishedNewsPublicPath(row))
+    .slice(0, limit);
+
+  return serializeNewsRowsForClient(rows);
 }
 
 /**

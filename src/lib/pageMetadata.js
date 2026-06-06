@@ -7,7 +7,11 @@ import {
   SITE_CONFIG,
 } from '@/lib/seoUtils';
 import { seoMetaToNextMetadata } from '@/lib/nextMetadata';
-import { fetchPublishedNewsBySlug } from '@/lib/newsServer';
+import {
+  fetchPublishedNewsBySlug,
+  fetchPublishedNewsByCategory,
+} from '@/lib/newsServer';
+import { getPublishedNewsPublicPath } from '@/lib/newsUrls';
 import { absoluteUrl } from '@/lib/siteUrl';
 
 const NEWS_CATEGORY_SEO = {
@@ -41,7 +45,37 @@ const NEWS_CATEGORY_SEO = {
   },
 };
 
-export function getNewsCategoryMetadata(category = 'all') {
+function buildCategoryCollectionSchema(config, items = []) {
+  const pageUrl = absoluteUrl(config.path);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: config.title,
+    description: config.description,
+    url: pageUrl,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_CONFIG.name,
+      url: SITE_CONFIG.url,
+    },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: items.length,
+      itemListElement: items.slice(0, 20).map((item, index) => {
+        const itemPath = getPublishedNewsPublicPath(item);
+        return {
+          '@type': 'ListItem',
+          position: index + 1,
+          name: item.title,
+          url: itemPath ? absoluteUrl(itemPath) : pageUrl,
+        };
+      }),
+    },
+  };
+}
+
+export function getNewsCategoryMetadata(category = 'all', items = []) {
   const config = NEWS_CATEGORY_SEO[category] || NEWS_CATEGORY_SEO.all;
   const seoMeta = generateSEOMeta({
     title: config.title,
@@ -58,9 +92,18 @@ export function getNewsCategoryMetadata(category = 'all') {
         { name: 'Home', url: absoluteUrl('/') },
         { name: config.title, url: absoluteUrl(config.path) },
       ]),
+      buildCategoryCollectionSchema(config, items),
     ],
   };
 }
+
+export const getNewsCategoryPageData = cache(async function getNewsCategoryPageData(
+  category = 'all'
+) {
+  const initialNews = await fetchPublishedNewsByCategory(category);
+  const { metadata, structuredData } = getNewsCategoryMetadata(category, initialNews);
+  return { initialNews, metadata, structuredData };
+});
 
 export const getNewsPostPageSeo = cache(async function getNewsPostPageSeo(slug) {
   const post = await fetchPublishedNewsBySlug(slug);

@@ -1,16 +1,21 @@
 import NewsPage from '@/views/NewsPage';
 import JsonLd from '@/components/JsonLd';
-import { getNewsCategoryMetadata } from '@/lib/pageMetadata';
+import { getNewsCategoryPageData } from '@/lib/pageMetadata';
 
-const { metadata: pageMetadata, structuredData } = getNewsCategoryMetadata('most_wanted');
+export const revalidate = 60;
 
-export const metadata = pageMetadata;
+export async function generateMetadata() {
+  const { metadata } = await getNewsCategoryPageData('most_wanted');
+  return metadata;
+}
 
-export default function Page() {
+export default async function Page() {
+  const { initialNews, structuredData } = await getNewsCategoryPageData('most_wanted');
+
   return (
     <>
       <JsonLd data={structuredData} />
-      <NewsPage />
+      <NewsPage initialNews={initialNews} />
     </>
   );
 }
