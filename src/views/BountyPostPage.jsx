@@ -13,7 +13,9 @@ import NewsPostHero from '@/components/news/NewsPostHero';
 import { Loader2, Info, MapPin, Calendar, Coins } from 'lucide-react';
 import SocialShare from '@/components/SocialShare';
 import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGallery';
+import MaximizableImage from '@/components/media/MaximizableImage';
 import RichTextMediaContent from '@/components/media/RichTextMediaContent';
+import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
 import { BOUNTY_STATUSES_WITH_PUBLIC_PAGE } from '@/lib/bountyPostUrl';
@@ -114,14 +116,44 @@ const BountyPostPage = () => {
         }
 
         let cancelled = false;
-        resolveMediaUrl(bounty.featured_image).then((url) => {
-            if (!cancelled) setFeaturedImageUrl(url);
-        });
+
+        const immediateSrc =
+            getLocalFileUrl(bounty.featured_image) ||
+            resolveImageUrl(bounty.featured_image);
+        if (immediateSrc) {
+            setFeaturedImageUrl(immediateSrc);
+        } else {
+            setFeaturedImageUrl(null);
+        }
+
+        const resolveWithRetry = async () => {
+            const resolved = await resolveMediaUrl(bounty.featured_image, {
+                preferredSrc: immediateSrc,
+            });
+
+            if (!cancelled && resolved) {
+                setFeaturedImageUrl(resolved);
+                return;
+            }
+
+            if (!cancelled) {
+                setTimeout(async () => {
+                    const retryResolved = await resolveMediaUrl(bounty.featured_image, {
+                        preferredSrc: immediateSrc,
+                    });
+                    if (!cancelled && retryResolved) {
+                        setFeaturedImageUrl(retryResolved);
+                    }
+                }, 250);
+            }
+        };
+
+        resolveWithRetry();
 
         return () => {
             cancelled = true;
         };
-    }, [bounty?.featured_image]);
+    }, [bounty?.id, bounty?.featured_image]);
 
     // Real-time subscription for bounty updates (when updated through news editor)
     useEffect(() => {
@@ -212,18 +244,12 @@ const BountyPostPage = () => {
             <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
                 <Card className="overflow-hidden border-border/70 shadow-sm">
                         {featuredImageUrl && (
-                            <div className="aspect-video w-full overflow-hidden">
-                                <img
-                                    src={featuredImageUrl}
-                                    alt={bounty.title}
-                                    className="h-full w-full object-cover"
-                                    onError={() => {
-                                        if (bounty.featured_image) {
-                                            resolveMediaUrl(bounty.featured_image).then(setFeaturedImageUrl);
-                                        }
-                                    }}
-                                />
-                            </div>
+                            <MaximizableImage
+                                src={featuredImageUrl}
+                                alt={bounty.title}
+                                wrapperClassName="aspect-video w-full"
+                                imageClassName="h-full w-full object-cover"
+                            />
                         )}
                         <CardContent className="space-y-8 p-6 md:p-8 lg:p-10">
                             <div className="text-center py-6 border-t border-b bg-primary/5 rounded-lg">
