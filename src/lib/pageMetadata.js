@@ -26,7 +26,7 @@ const NEWS_CATEGORY_SEO = {
     title: 'Latest News',
     description:
       'Stay informed with the latest news and security updates from across Nigeria. Important information for citizen safety.',
-    path: '/news/news',
+    path: '/news/latest-news',
     keywords: ['news', 'latest news', 'security updates', 'crime news', 'Nigeria news'],
   },
   bounty: {

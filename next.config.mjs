@@ -18,6 +18,11 @@ const nextConfig = {
         destination: '/most-wanted',
         permanent: true,
       },
+      {
+        source: '/news/news',
+        destination: '/news/latest-news',
+        permanent: true,
+      },
     ];
   },
   env: {

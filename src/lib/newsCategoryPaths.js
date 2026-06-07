@@ -1,11 +1,18 @@
 export const MOST_WANTED_PATH = '/most-wanted';
+export const LATEST_NEWS_PATH = '/news/latest-news';
 
-/** Public URL paths for news listing categories (DB value → path). */
+/** DB category value → public URL path */
 export const NEWS_CATEGORY_PATHS = {
   all: '/news',
-  news: '/news/news',
+  news: LATEST_NEWS_PATH,
   bounty: '/news/bounty',
   most_wanted: MOST_WANTED_PATH,
+};
+
+/** URL segment (under /news/) → DB category value */
+export const NEWS_ROUTE_SEGMENT_TO_CATEGORY = {
+  'latest-news': 'news',
+  bounty: 'bounty',
 };
 
 export function getNewsCategoryPath(category) {
@@ -24,9 +31,15 @@ export function getNewsCategoryFromPathname(pathname) {
   if (segments[0] !== 'news') return 'all';
 
   const segment = segments[1];
-  if (segment && Object.prototype.hasOwnProperty.call(NEWS_CATEGORY_PATHS, segment)) {
-    return segment;
+  if (!segment) return 'all';
+
+  if (NEWS_ROUTE_SEGMENT_TO_CATEGORY[segment]) {
+    return NEWS_ROUTE_SEGMENT_TO_CATEGORY[segment];
   }
 
   return 'all';
+}
+
+export function getNewsCategoryFromRouteSegment(segment) {
+  return NEWS_ROUTE_SEGMENT_TO_CATEGORY[segment] || null;
 }

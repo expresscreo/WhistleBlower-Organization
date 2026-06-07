@@ -295,7 +295,7 @@ const Navbar = () => {
     ]},
     { name: 'NEWS', dropdown: true, isNewsDropdown: true, items: [
         { name: 'All News', path: '/news', description: 'Stay informed with all the latest whistleblower news and updates.' },
-        { name: 'Latest News', path: '/news/news', description: 'Get the most recent breaking news and investigative reports.' },
+        { name: 'Latest News', path: '/news/latest-news', description: 'Get the most recent breaking news and investigative reports.' },
         { name: 'Active Bounties', path: '/news/bounty', description: 'View current bounties and opportunities to earn rewards.' },
         { name: 'Most Wanted', path: '/most-wanted', description: 'Discover high-priority cases seeking whistleblower information.' }
     ]},

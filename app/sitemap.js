@@ -15,7 +15,7 @@ const STATIC_ROUTES = [
   { path: '/place-bounty', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/track', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/news', changeFrequency: 'hourly', priority: 0.9 },
-  { path: '/news/news', changeFrequency: 'hourly', priority: 0.85 },
+  { path: '/news/latest-news', changeFrequency: 'hourly', priority: 0.85 },
   { path: '/news/bounty', changeFrequency: 'hourly', priority: 0.85 },
   { path: '/most-wanted', changeFrequency: 'hourly', priority: 0.85 },
   { path: '/privacy-policy', changeFrequency: 'yearly', priority: 0.3 },

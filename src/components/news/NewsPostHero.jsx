@@ -5,26 +5,25 @@ import { format } from 'date-fns';
 import { AlertTriangle, ArrowLeft, Calendar, Megaphone, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const NEWS_POST_HERO_CLASS = 'bg-[#0f0f0f]';
+
 const CATEGORY_HERO_CONFIG = {
   most_wanted: {
     label: 'Most Wanted',
     backLabel: 'Back to Most Wanted',
     backHref: '/most-wanted',
-    heroClass: 'bg-red-600',
     icon: AlertTriangle,
   },
   bounty: {
     label: 'Active Bounty',
     backLabel: 'Back to Bounties',
     backHref: '/news/bounty',
-    heroClass: 'bg-primary',
     icon: Target,
   },
   news: {
     label: 'News',
     backLabel: 'Back to News',
-    backHref: '/news/news',
-    heroClass: 'bg-slate-800',
+    backHref: '/news/latest-news',
     icon: Megaphone,
   },
 };
@@ -33,7 +32,6 @@ const DEFAULT_CONFIG = {
   label: 'Article',
   backLabel: 'Back to All News',
   backHref: '/news',
-  heroClass: 'bg-slate-800',
   icon: Megaphone,
 };
 
@@ -54,7 +52,7 @@ export default function NewsPostHero({ post }) {
 
   return (
     <section
-      className={cn('relative', config.heroClass)}
+      className={cn('relative', NEWS_POST_HERO_CLASS)}
       aria-labelledby="news-post-title"
     >
       <div className="container relative mx-auto max-w-4xl px-4 py-8 md:py-12">
