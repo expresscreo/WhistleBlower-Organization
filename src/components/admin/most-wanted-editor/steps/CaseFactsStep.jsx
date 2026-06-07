@@ -13,24 +13,38 @@ import {
 import { FieldError } from '@/components/ui/form-feedback';
 import {
   CRIME_TYPE_OPTIONS,
+  DEFAULT_MOST_WANTED_COUNTRY,
   LAW_ENFORCEMENT_OPTIONS,
+  MOST_WANTED_COUNTRY_OPTIONS,
   MOST_WANTED_INACTIVE_INPUT_CLASS,
   generateMostWantedReportReference,
+  resolveMostWantedCountry,
 } from '@/lib/mostWantedUtils';
 import { useMostWantedFormLocation } from '../useMostWantedFormLocation';
 
 export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
   const set = (key, value) => onChange({ ...details, [key]: value });
-  const { states, lgas, hasLgasForState, handleStateChange } = useMostWantedFormLocation(
-    details,
-    onChange
-  );
+  const {
+    states,
+    lgas,
+    hasLgasForState,
+    handleStateChange,
+    handleCountryChange,
+    isNigeria,
+  } = useMostWantedFormLocation(details, onChange);
 
   useEffect(() => {
+    const updates = {};
     if (!details.case_reference?.trim()) {
-      onChange({ ...details, case_reference: generateMostWantedReportReference() });
+      updates.case_reference = generateMostWantedReportReference();
     }
-    // Only assign an ID when missing (e.g. new alert)
+    if (!resolveMostWantedCountry(details.crime_country)) {
+      updates.crime_country = DEFAULT_MOST_WANTED_COUNTRY;
+    }
+    if (Object.keys(updates).length > 0) {
+      onChange({ ...details, ...updates });
+    }
+    // Only assign defaults when missing (e.g. new alert)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -69,47 +83,82 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="mw-crime-state">State</Label>
-        <Select value={details.crime_state || ''} onValueChange={handleStateChange}>
-          <SelectTrigger id="mw-crime-state">
-            <SelectValue placeholder="Select state" />
+        <Label htmlFor="mw-crime-country">Country</Label>
+        <Select
+          value={resolveMostWantedCountry(details.crime_country)}
+          onValueChange={handleCountryChange}
+        >
+          <SelectTrigger id="mw-crime-country">
+            <SelectValue placeholder="Select country" />
           </SelectTrigger>
           <SelectContent>
-            {states.map((state) => (
-              <SelectItem key={state} value={state}>
-                {state}
+            {MOST_WANTED_COUNTRY_OPTIONS.map((country) => (
+              <SelectItem key={country} value={country}>
+                {country}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <FieldError message={fieldErrors.crime_state} />
+        <FieldError message={fieldErrors.crime_country} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="mw-crime-lga">Local government area (LGA)</Label>
-        <Select
-          value={details.crime_lga || ''}
-          onValueChange={(v) => set('crime_lga', v)}
-          disabled={!details.crime_state}
-        >
-          <SelectTrigger id="mw-crime-lga">
-            <SelectValue placeholder="Select LGA" />
-          </SelectTrigger>
-          <SelectContent>
-            {lgas.map((lga) => (
-              <SelectItem key={lga} value={lga}>
-                {lga}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <FieldError message={fieldErrors.crime_lga} />
+        <Label htmlFor="mw-crime-state">{isNigeria ? 'State' : 'State / region'}</Label>
+        {isNigeria ? (
+          <Select value={details.crime_state || ''} onValueChange={handleStateChange}>
+            <SelectTrigger id="mw-crime-state">
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((state) => (
+                <SelectItem key={state} value={state}>
+                  {state}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            id="mw-crime-state"
+            placeholder="e.g., Greater Accra"
+            value={details.crime_state || ''}
+            onChange={(e) => set('crime_state', e.target.value)}
+          />
+        )}
+        <FieldError message={fieldErrors.crime_state} />
       </div>
 
-      {details.crime_state && !hasLgasForState && (
-        <p className="text-sm text-amber-600 dark:text-amber-400">
-          No LGA list available for this state — you may continue without selecting an LGA.
-        </p>
+      {isNigeria && (
+        <div className="space-y-2">
+          <Label htmlFor="mw-crime-lga">Local government area (LGA) (optional)</Label>
+          <Select
+            value={details.crime_lga || ''}
+            onValueChange={(v) => set('crime_lga', v)}
+            disabled={!details.crime_state || !hasLgasForState}
+          >
+            <SelectTrigger id="mw-crime-lga">
+              <SelectValue placeholder="Select LGA (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {lgas.map((lga) => (
+                <SelectItem key={lga} value={lga}>
+                  {lga}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldError message={fieldErrors.crime_lga} />
+          {details.crime_state && !hasLgasForState && (
+            <p className="text-xs text-muted-foreground">
+              No LGA list is available for this state. Leave blank and the public page will show state only.
+            </p>
+          )}
+          {details.crime_state && hasLgasForState && (
+            <p className="text-xs text-muted-foreground">
+              Optional — if left blank, LGA will not appear on the public alert.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="space-y-2">

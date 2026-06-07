@@ -22,6 +22,20 @@ export const HAIR_COLOUR_OPTIONS = [
   'Other',
 ];
 
+export const DEFAULT_MOST_WANTED_COUNTRY = 'Nigeria';
+
+export const MOST_WANTED_COUNTRY_OPTIONS = [
+  'Nigeria',
+  'Ghana',
+  'Benin',
+  'Cameroon',
+  'Niger',
+  'Chad',
+  'Togo',
+  'United Kingdom',
+  'United States',
+];
+
 export const CRIME_TYPE_OPTIONS = [
   'Theft',
   'Fraud',
@@ -42,6 +56,7 @@ export const MOST_WANTED_INACTIVE_INPUT_CLASS =
 
 export const EMPTY_MOST_WANTED_DETAILS = {
   crime_type: '',
+  crime_country: DEFAULT_MOST_WANTED_COUNTRY,
   crime_state: '',
   crime_lga: '',
   crime_address: '',
@@ -84,9 +99,17 @@ export const buildMostWantedHeadline = (details) => {
   return '';
 };
 
+export const resolveMostWantedCountry = (country) => {
+  const value = String(country ?? '').trim();
+  return value || DEFAULT_MOST_WANTED_COUNTRY;
+};
+
+export const isNigeriaMostWantedCountry = (country) =>
+  resolveMostWantedCountry(country).toLowerCase() === DEFAULT_MOST_WANTED_COUNTRY.toLowerCase();
+
 export const formatCrimeLocation = (details) => {
   const d = normalizeMostWantedDetails(details);
-  return [d.crime_state, d.crime_lga, d.crime_address].filter(Boolean).join(', ');
+  return [d.crime_state, d.crime_lga, d.crime_address, d.crime_country].filter(Boolean).join(', ');
 };
 
 export const normalizeMostWantedDetails = (value) => {
@@ -100,6 +123,8 @@ export const normalizeMostWantedDetails = (value) => {
       normalized[key] = String(raw[key]).trim();
     }
   }
+  normalized.crime_country = resolveMostWantedCountry(normalized.crime_country);
+
   // Legacy posts stored a single crime_location string
   if (!normalized.crime_state && !normalized.crime_lga && raw.crime_location) {
     normalized.crime_address = String(raw.crime_location).trim();

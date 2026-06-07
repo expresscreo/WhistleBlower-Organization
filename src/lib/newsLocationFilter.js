@@ -1,4 +1,4 @@
-import { normalizeMostWantedDetails } from '@/lib/mostWantedUtils';
+import { isNigeriaMostWantedCountry, normalizeMostWantedDetails } from '@/lib/mostWantedUtils';
 
 /**
  * Resolve normalized state/LGA for a published news row.
@@ -8,6 +8,9 @@ import { normalizeMostWantedDetails } from '@/lib/mostWantedUtils';
 export function resolveNewsItemLocation(item, bountyLookup = {}) {
   if (item?.category === 'most_wanted') {
     const details = normalizeMostWantedDetails(item.most_wanted_details);
+    if (!isNigeriaMostWantedCountry(details.crime_country)) {
+      return { state: '', lga: '' };
+    }
     return {
       state: details.crime_state?.trim() || '',
       lga: details.crime_lga?.trim() || '',

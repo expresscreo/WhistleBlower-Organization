@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
+import { isNigeriaMostWantedCountry } from '@/lib/mostWantedUtils';
 
 export function useMostWantedFormLocation(details, onChange) {
   const [lgas, setLgas] = useState([]);
@@ -30,10 +31,25 @@ export function useMostWantedFormLocation(details, onChange) {
     setLgas(selected?.lgas ?? []);
   };
 
+  const handleCountryChange = (value) => {
+    const nextIsNigeria = isNigeriaMostWantedCountry(value);
+    onChange({
+      ...details,
+      crime_country: value,
+      crime_state: nextIsNigeria ? details.crime_state : '',
+      crime_lga: nextIsNigeria ? details.crime_lga : '',
+    });
+    if (!nextIsNigeria) {
+      setLgas([]);
+    }
+  };
+
   return {
     states,
     lgas,
     hasLgasForState,
     handleStateChange,
+    handleCountryChange,
+    isNigeria: isNigeriaMostWantedCountry(details.crime_country),
   };
 }

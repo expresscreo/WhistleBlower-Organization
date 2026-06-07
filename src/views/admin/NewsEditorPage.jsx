@@ -71,6 +71,7 @@ const NewsEditorPage = () => {
     const [bountyEvidence, setBountyEvidence] = useState([]);
     const [publishedEvidencePaths, setPublishedEvidencePaths] = useState([]);
     const [bountyAmountVerified, setBountyAmountVerified] = useState(false);
+    const [wasPublishedOnLoad, setWasPublishedOnLoad] = useState(false);
     
     // Undo/Redo state management
     const [history, setHistory] = useState([]);
@@ -124,6 +125,7 @@ const NewsEditorPage = () => {
                 category: data?.category || 'bounty',
                 most_wanted_details: normalizeMostWantedDetails(data?.most_wanted_details),
             });
+            setWasPublishedOnLoad(data?.status === 'published');
             setMostWantedPendingGalleryFiles([]);
 
             setBountyAmountVerified(Boolean(prefill));
@@ -847,6 +849,12 @@ const NewsEditorPage = () => {
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [historyIndex, history]);
+
+    const getSaveButtonLabel = () => {
+        if (currentItem.status === 'draft') return 'Save draft';
+        if (isEditing && wasPublishedOnLoad) return 'Update';
+        return 'Publish';
+    };
 
     const handleCategoryChange = (value) => {
         setCurrentItem((prev) => ({
@@ -1615,7 +1623,7 @@ const NewsEditorPage = () => {
                                         className="flex-1"
                                     >
                                         <Save className="mr-2 h-4 w-4" />
-                                        {currentItem.status === 'published' ? 'Publish' : 'Save draft'}
+                                        {getSaveButtonLabel()}
                                     </Button>
                                 </div>
 

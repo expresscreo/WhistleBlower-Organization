@@ -1,17 +1,8 @@
-import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { buildMostWantedHeadline, normalizeMostWantedDetails } from '@/lib/mostWantedUtils';
 
-const resolveHasLgasForState = (state, hasLgasForState) => {
-  if (typeof hasLgasForState === 'boolean') return hasLgasForState;
-  if (!state?.trim()) return false;
-  const selected = nigerianStatesAndLgas.find((s) => s.state === state);
-  return (selected?.lgas?.length ?? 0) > 0;
-};
-
 export function validateMostWantedStep(stepId, context) {
-  const { details, title, hasFeaturedImage, hasLgasForState } = context;
+  const { details, title, hasFeaturedImage } = context;
   const d = normalizeMostWantedDetails(details);
-  const lgaRequired = resolveHasLgasForState(d.crime_state, hasLgasForState);
 
   switch (stepId) {
     case 'case_facts': {
@@ -29,14 +20,6 @@ export function validateMostWantedStep(stepId, context) {
           title: 'State required',
           description: 'Select the state where the crime occurred.',
           focusId: 'mw-crime-state',
-        };
-      }
-      if (lgaRequired && !d.crime_lga?.trim()) {
-        return {
-          valid: false,
-          title: 'LGA required',
-          description: 'Select the local government area.',
-          focusId: 'mw-crime-lga',
         };
       }
       if (!d.law_enforcement?.trim()) {

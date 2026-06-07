@@ -13,8 +13,6 @@ import IdentityStep from './steps/IdentityStep';
 import PhysicalDescriptionStep from './steps/PhysicalDescriptionStep';
 import NarrativeStep from './steps/NarrativeStep';
 import MediaStep from './steps/MediaStep';
-import { useMostWantedFormLocation } from './useMostWantedFormLocation';
-
 export default function MostWantedEditorWizard({
   title,
   onTitleChange,
@@ -38,11 +36,9 @@ export default function MostWantedEditorWizard({
   const stepMeta = steps[currentStep - 1];
   const progress = (currentStep / totalSteps) * 100;
   const hasFeaturedImage = Boolean(featuredImageUrl);
-  const { hasLgasForState } = useMostWantedFormLocation(details, onDetailsChange);
-
   const validationContext = useMemo(
-    () => ({ details, title, hasFeaturedImage, hasLgasForState }),
-    [details, title, hasFeaturedImage, hasLgasForState]
+    () => ({ details, title, hasFeaturedImage }),
+    [details, title, hasFeaturedImage]
   );
 
   const errorFor = (focusId) =>
