@@ -11,9 +11,18 @@ export default function FormStepIndicator({
   totalSteps,
   progress,
   onStepClick,
+  isStepComplete: isStepCompleteProp,
+  isStepClickable: isStepClickableProp,
 }) {
   const currentMeta = steps[currentStep - 1];
   const percent = Math.round(progress);
+  const isStepComplete = (stepNum) =>
+    isStepCompleteProp ? isStepCompleteProp(stepNum) : stepNum < currentStep;
+  const isStepClickable = (stepNum) => {
+    if (!onStepClick || stepNum === currentStep) return false;
+    if (isStepClickableProp) return isStepClickableProp(stepNum);
+    return stepNum < currentStep;
+  };
 
   return (
     <div className="submit-report-wizard-section box-border w-full max-w-full min-w-0 px-4 md:px-8 pt-6 md:pt-8 pb-4 border-b border-border/60 space-y-4">
@@ -38,9 +47,9 @@ export default function FormStepIndicator({
       >
         {steps.map((step, index) => {
           const stepNum = index + 1;
-          const isComplete = stepNum < currentStep;
+          const isComplete = isStepComplete(stepNum);
           const isCurrent = stepNum === currentStep;
-          const isClickable = isComplete && onStepClick;
+          const isClickable = isStepClickable(stepNum);
           const Icon = step.icon;
 
           return (
@@ -60,8 +69,13 @@ export default function FormStepIndicator({
                     'flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors',
                     isComplete && 'border-primary bg-primary/10 text-primary',
                     isCurrent && 'border-primary bg-primary text-primary-foreground',
+                    isClickable &&
+                      !isComplete &&
+                      !isCurrent &&
+                      'border-primary/50 text-primary/80',
                     !isComplete &&
                       !isCurrent &&
+                      !isClickable &&
                       'border-muted-foreground/30 text-muted-foreground'
                   )}
                 >
@@ -84,7 +98,7 @@ export default function FormStepIndicator({
                 <div
                   className={cn(
                     'h-0.5 flex-1 min-w-[1rem] max-w-[3rem] -mt-6 transition-colors',
-                    stepNum < currentStep ? 'bg-primary' : 'bg-muted-foreground/20'
+                    isComplete ? 'bg-primary' : 'bg-muted-foreground/20'
                   )}
                   aria-hidden
                 />
@@ -101,17 +115,23 @@ export default function FormStepIndicator({
       >
         {steps.map((step, index) => {
           const stepNum = index + 1;
-          const isComplete = stepNum < currentStep;
+          const isComplete = isStepComplete(stepNum);
           const isCurrent = stepNum === currentStep;
+          const isClickable = isStepClickable(stepNum);
           return (
-            <span
+            <button
               key={step.id}
+              type="button"
+              disabled={!isClickable}
+              onClick={() => isClickable && onStepClick(stepNum)}
               aria-current={isCurrent ? 'step' : undefined}
+              aria-label={step.shortLabel}
               className={cn(
                 'h-2 rounded-full transition-all',
                 isCurrent ? 'w-6 bg-primary' : 'w-2',
                 isComplete && !isCurrent && 'bg-primary/60',
-                !isComplete && !isCurrent && 'bg-muted-foreground/30'
+                !isComplete && !isCurrent && 'bg-muted-foreground/30',
+                isClickable ? 'cursor-pointer' : 'cursor-default'
               )}
             />
           );

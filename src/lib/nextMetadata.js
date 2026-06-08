@@ -21,6 +21,10 @@ export function seoMetaToNextMetadata(seoMeta, options = {}) {
   const description = seoMeta?.description || SITE_CONFIG.description;
   const canonical = seoMeta?.canonical || seoMeta?.url || resolveSiteUrl();
   const image = seoMeta?.image || SITE_CONFIG.defaultImage;
+  const imageType = seoMeta?.imageType || 'image/jpeg';
+  const imageWidth = seoMeta?.imageWidth || 1200;
+  const imageHeight = seoMeta?.imageHeight || 630;
+  const imageAlt = seoMeta?.imageAlt || title;
   const ogType = seoMeta?.type || 'website';
 
   const metadata = {
@@ -38,10 +42,10 @@ export function seoMetaToNextMetadata(seoMeta, options = {}) {
       images: [
         {
           url: image,
-          alt: title,
-          width: 1200,
-          height: 630,
-          type: 'image/jpeg',
+          alt: imageAlt,
+          width: imageWidth,
+          height: imageHeight,
+          type: imageType,
         },
       ],
       locale: SITE_CONFIG.locale.replace('_', '-'),
@@ -53,7 +57,13 @@ export function seoMetaToNextMetadata(seoMeta, options = {}) {
       creator: SITE_CONFIG.twitterHandle,
       title,
       description,
-      images: [image],
+      images: {
+        url: image,
+        alt: imageAlt,
+        width: imageWidth,
+        height: imageHeight,
+        type: imageType,
+      },
     },
     robots: robots ?? {
       index: !noindex,

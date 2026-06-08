@@ -2,6 +2,28 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
   <url>
+    <loc>https://whistleblower.ng/news/post/adeleke-gabriel-kolawole-wanted-for-murder</loc>
+    <news:news>
+      <news:publication>
+        <news:name>WhistleBlower.ng</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2026-06-07T23:47:08.955Z</news:publication_date>
+      <news:title>Adeleke Gabriel Kolawole wanted for Murder</news:title>
+    </news:news>
+  </url>
+  <url>
+    <loc>https://whistleblower.ng/news/post/emeka-johnson-iheanacho-wanted-for-fraud</loc>
+    <news:news>
+      <news:publication>
+        <news:name>WhistleBlower.ng</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2026-06-07T19:43:03.813Z</news:publication_date>
+      <news:title>Emeka Johnson Iheanacho wanted for Fraud</news:title>
+    </news:news>
+  </url>
+  <url>
     <loc>https://whistleblower.ng/news/post/bank-md-blessing-gozi-anyaokei-accused-of-diverting-investment-funds-worth-millions</loc>
     <news:news>
       <news:publication>

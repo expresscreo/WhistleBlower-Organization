@@ -28,22 +28,25 @@ const getPublishedNewsIndex = unstable_cache(
   { revalidate: 60, tags: ['news'] }
 );
 
-async function fetchNewsContentById(id) {
-  if (!id) return '';
+const NEWS_SEO_DETAIL_COLUMNS =
+  'id, title, content, category, status, featured_image, bounty_id, created_at, updated_at, most_wanted_details, published_evidence';
+
+async function fetchNewsSeoRowById(id) {
+  if (!id) return null;
 
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from('news')
-    .select('content')
+    .select(NEWS_SEO_DETAIL_COLUMNS)
     .eq('id', id)
     .maybeSingle();
 
   if (error) {
-    console.error('[newsServer] fetchNewsContentById:', error.message);
-    return '';
+    console.error('[newsServer] fetchNewsSeoRowById:', error.message);
+    return null;
   }
 
-  return data?.content || '';
+  return data;
 }
 
 /**
@@ -57,8 +60,8 @@ export async function fetchPublishedNewsBySlug(routeSlug) {
   const match = findPublishedNewsByRouteSlug(index, routeSlug);
   if (!match) return null;
 
-  const content = await fetchNewsContentById(match.id);
-  return { ...match, content };
+  const row = await fetchNewsSeoRowById(match.id);
+  return row || match;
 }
 
 export function serializeNewsRowsForClient(rows) {

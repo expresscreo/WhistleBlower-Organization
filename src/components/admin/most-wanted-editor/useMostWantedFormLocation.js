@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { isNigeriaMostWantedCountry } from '@/lib/mostWantedUtils';
 
+export const MOST_WANTED_CLEAR_SELECT_VALUE = '__mw_clear_selection__';
+
 export function useMostWantedFormLocation(details, onChange) {
   const [lgas, setLgas] = useState([]);
 
@@ -21,7 +23,20 @@ export function useMostWantedFormLocation(details, onChange) {
     }
   }, [details.crime_state]);
 
-  const handleStateChange = (value) => {
+  const clearState = () => {
+    onChange({
+      ...details,
+      crime_state: '',
+      crime_lga: '',
+    });
+    setLgas([]);
+  };
+
+  const handleStateSelect = (value) => {
+    if (value === MOST_WANTED_CLEAR_SELECT_VALUE) {
+      clearState();
+      return;
+    }
     onChange({
       ...details,
       crime_state: value,
@@ -29,6 +44,14 @@ export function useMostWantedFormLocation(details, onChange) {
     });
     const selected = nigerianStatesAndLgas.find((s) => s.state === value);
     setLgas(selected?.lgas ?? []);
+  };
+
+  const handleLgaSelect = (value) => {
+    if (value === MOST_WANTED_CLEAR_SELECT_VALUE) {
+      onChange({ ...details, crime_lga: '' });
+      return;
+    }
+    onChange({ ...details, crime_lga: value });
   };
 
   const handleCountryChange = (value) => {
@@ -48,7 +71,8 @@ export function useMostWantedFormLocation(details, onChange) {
     states,
     lgas,
     hasLgasForState,
-    handleStateChange,
+    handleStateSelect,
+    handleLgaSelect,
     handleCountryChange,
     isNigeria: isNigeriaMostWantedCountry(details.crime_country),
   };

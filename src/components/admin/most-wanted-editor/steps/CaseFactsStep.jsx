@@ -20,7 +20,10 @@ import {
   generateMostWantedReportReference,
   resolveMostWantedCountry,
 } from '@/lib/mostWantedUtils';
-import { useMostWantedFormLocation } from '../useMostWantedFormLocation';
+import {
+  MOST_WANTED_CLEAR_SELECT_VALUE,
+  useMostWantedFormLocation,
+} from '../useMostWantedFormLocation';
 
 export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
   const set = (key, value) => onChange({ ...details, [key]: value });
@@ -28,7 +31,8 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
     states,
     lgas,
     hasLgasForState,
-    handleStateChange,
+    handleStateSelect,
+    handleLgaSelect,
     handleCountryChange,
     isNigeria,
   } = useMostWantedFormLocation(details, onChange);
@@ -103,13 +107,23 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="mw-crime-state">{isNigeria ? 'State' : 'State / region'}</Label>
+        <Label htmlFor="mw-crime-state">
+          {isNigeria ? 'State (optional)' : 'State / region (optional)'}
+        </Label>
         {isNigeria ? (
-          <Select value={details.crime_state || ''} onValueChange={handleStateChange}>
+          <Select
+            value={details.crime_state || undefined}
+            onValueChange={handleStateSelect}
+          >
             <SelectTrigger id="mw-crime-state">
-              <SelectValue placeholder="Select state" />
+              <SelectValue placeholder="Select state (optional)" />
             </SelectTrigger>
             <SelectContent>
+              {details.crime_state && (
+                <SelectItem value={MOST_WANTED_CLEAR_SELECT_VALUE} className="text-muted-foreground">
+                  Clear selection
+                </SelectItem>
+              )}
               {states.map((state) => (
                 <SelectItem key={state} value={state}>
                   {state}
@@ -120,26 +134,34 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
         ) : (
           <Input
             id="mw-crime-state"
-            placeholder="e.g., Greater Accra"
+            placeholder="e.g., Greater Accra (optional)"
             value={details.crime_state || ''}
             onChange={(e) => set('crime_state', e.target.value)}
           />
         )}
         <FieldError message={fieldErrors.crime_state} />
+        <p className="text-xs text-muted-foreground">
+          Optional — if left blank, state will not appear on the public alert.
+        </p>
       </div>
 
       {isNigeria && (
         <div className="space-y-2">
           <Label htmlFor="mw-crime-lga">Local government area (LGA) (optional)</Label>
           <Select
-            value={details.crime_lga || ''}
-            onValueChange={(v) => set('crime_lga', v)}
+            value={details.crime_lga || undefined}
+            onValueChange={handleLgaSelect}
             disabled={!details.crime_state || !hasLgasForState}
           >
             <SelectTrigger id="mw-crime-lga">
               <SelectValue placeholder="Select LGA (optional)" />
             </SelectTrigger>
             <SelectContent>
+              {details.crime_lga && (
+                <SelectItem value={MOST_WANTED_CLEAR_SELECT_VALUE} className="text-muted-foreground">
+                  Clear selection
+                </SelectItem>
+              )}
               {lgas.map((lga) => (
                 <SelectItem key={lga} value={lga}>
                   {lga}
@@ -155,7 +177,7 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
           )}
           {details.crime_state && hasLgasForState && (
             <p className="text-xs text-muted-foreground">
-              Optional — if left blank, LGA will not appear on the public alert.
+              Optional — choose “Clear selection” or leave blank to omit LGA on the public alert.
             </p>
           )}
         </div>

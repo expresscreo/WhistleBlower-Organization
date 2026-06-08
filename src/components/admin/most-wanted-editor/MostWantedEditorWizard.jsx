@@ -58,7 +58,34 @@ export default function MostWantedEditorWizard({
     return true;
   };
 
+  const isStepValid = useCallback(
+    (stepNum) => {
+      const stepId = steps[stepNum - 1]?.id;
+      if (!stepId || stepId === 'review') {
+        for (let i = 1; i < stepNum; i++) {
+          const priorId = steps[i - 1]?.id;
+          if (!priorId || priorId === 'review') continue;
+          if (!validateMostWantedStep(priorId, validationContext).valid) return false;
+        }
+        return true;
+      }
+      return validateMostWantedStep(stepId, validationContext).valid;
+    },
+    [steps, validationContext]
+  );
+
+  const arePriorStepsValid = useCallback(
+    (targetStep) => {
+      for (let i = 1; i < targetStep; i++) {
+        if (!isStepValid(i)) return false;
+      }
+      return true;
+    },
+    [isStepValid]
+  );
+
   const goToStep = useCallback((step, dir = step > currentStep ? 1 : -1) => {
+    setFieldError({ message: '', focusId: null });
     setDirection(dir);
     setCurrentStep(step);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -74,8 +101,25 @@ export default function MostWantedEditorWizard({
   };
 
   const handleStepClick = (step) => {
-    if (step < currentStep) goToStep(step, -1);
+    if (step === currentStep) return;
+    if (step < currentStep || arePriorStepsValid(step)) {
+      goToStep(step, step > currentStep ? 1 : -1);
+    }
   };
+
+  const isStepComplete = useCallback(
+    (stepNum) => isStepValid(stepNum),
+    [isStepValid]
+  );
+
+  const isStepClickable = useCallback(
+    (stepNum) => {
+      if (stepNum === currentStep) return false;
+      if (stepNum < currentStep) return true;
+      return arePriorStepsValid(stepNum);
+    },
+    [currentStep, arePriorStepsValid]
+  );
 
   const renderStepContent = () => {
     switch (activeStepId) {
@@ -163,6 +207,8 @@ export default function MostWantedEditorWizard({
         totalSteps={totalSteps}
         progress={progress}
         onStepClick={handleStepClick}
+        isStepComplete={isStepComplete}
+        isStepClickable={isStepClickable}
       />
 
       <div className="min-w-0 pb-24 md:pb-6">

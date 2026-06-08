@@ -5,8 +5,13 @@
 
 import { resolveSiteUrl, absoluteUrl } from '@/lib/siteUrl';
 import { getNewsPostPath, getNewsPostUrl, getBountyPostPath } from '@/lib/newsUrls';
-import { resolveOgImageUrl } from '@/lib/ogImageUrl';
+import { resolvePostSocialShareImage } from '@/lib/ogImageUrl';
+import {
+  getMostWantedCardExcerpt,
+  normalizeMostWantedDetails,
+} from '@/lib/mostWantedUtils';
 import { slugify } from '@/lib/utils';
+import { MOST_WANTED_PATH } from '@/lib/newsCategoryPaths';
 
 const siteUrl = () => resolveSiteUrl();
 
@@ -46,8 +51,15 @@ export function formatPageTitle(title) {
   return `${base}${TITLE_SEPARATOR}${SITE_CONFIG.name}`;
 }
 
-function resolveImageUrl(image) {
-  return resolveOgImageUrl(image) || SITE_CONFIG.defaultImage;
+function applySocialImageToMeta(seoMeta, socialImage) {
+  return {
+    ...seoMeta,
+    image: socialImage.url,
+    imageType: socialImage.type,
+    imageWidth: socialImage.width,
+    imageHeight: socialImage.height,
+    imageAlt: socialImage.alt,
+  };
 }
 
 function stripHtml(html) {
@@ -62,6 +74,10 @@ export const generateSEOMeta = ({
   title,
   description,
   image = SITE_CONFIG.defaultImage,
+  imageType = 'image/jpeg',
+  imageWidth = 1200,
+  imageHeight = 630,
+  imageAlt,
   url,
   type = SITE_CONFIG.type,
   keywords = [],
@@ -71,12 +87,15 @@ export const generateSEOMeta = ({
 }) => {
   const fullTitle = formatPageTitle(title);
   const fullUrl = url ? absoluteUrl(url) : SITE_CONFIG.url;
-  const fullImage = resolveImageUrl(image);
 
   return {
     title: fullTitle,
     description,
-    image: fullImage,
+    image,
+    imageType,
+    imageWidth,
+    imageHeight,
+    imageAlt: imageAlt || fullTitle,
     url: fullUrl,
     type,
     keywords:
@@ -422,25 +441,118 @@ export const DEFAULT_SEO_PAGES = {
   },
 };
 
+function buildPostKeywords(post, extra = []) {
+  const categoryKeywords = {
+    bounty: ['bounty', 'reward', 'information', 'case', 'investigation'],
+    most_wanted: ['most wanted', 'fugitive', 'criminal', 'wanted person', 'law enforcement'],
+    news: ['news', 'update', 'security', 'crime', 'alert'],
+  };
+
+  return [
+    ...SITE_CONFIG.keywords,
+    ...(categoryKeywords[post.category] || []),
+    ...extra,
+    post.category,
+  ];
+}
+
+function buildMostWantedDescription(post) {
+  const details = normalizeMostWantedDetails(post.most_wanted_details);
+  const summary = details.summary?.trim();
+  if (summary) return summary.length > 160 ? `${summary.slice(0, 157)}...` : summary;
+
+  const excerpt = getMostWantedCardExcerpt(post);
+  if (excerpt) return excerpt;
+
+  const plainContent = stripHtml(post.content);
+  if (plainContent) return plainContent.substring(0, 160);
+
+  const suspect = details.suspect_name?.trim();
+  const crime = details.crime_type?.trim();
+  if (suspect && crime) {
+    return `${suspect} is wanted for ${crime.toLowerCase()} in Nigeria. View the alert and submit anonymous tips on WhistleBlower.ng.`;
+  }
+
+  return `Most wanted alert: ${post.title}. Help law enforcement with anonymous tips on WhistleBlower.ng.`;
+}
+
+/**
+ * Generate SEO metadata for most wanted posts (X/Twitter, Google News, Open Graph).
+ */
+export const generateMostWantedPostSEO = (post) => {
+  const title = post.title;
+  const description = buildMostWantedDescription(post);
+  const socialImage = resolvePostSocialShareImage(post);
+  const postPath = getNewsPostPath(post) || `/news/post/${slugify(title)}`;
+  const postUrl = getNewsPostUrl(post);
+  const details = normalizeMostWantedDetails(post.most_wanted_details);
+
+  const keywords = buildPostKeywords(post, [
+    details.suspect_name,
+    details.crime_type,
+    details.crime_state,
+    'anonymous tips',
+  ].filter(Boolean));
+
+  const seoMeta = applySocialImageToMeta(
+    generateSEOMeta({
+      title,
+      description,
+      url: postPath,
+      type: 'article',
+      keywords,
+      newsKeywords: keywords.slice(0, 10).join(', '),
+      article: {
+        publishedTime: post.created_at,
+        modifiedTime: post.updated_at || post.created_at,
+        section: 'Most Wanted',
+        tags: ['most wanted', 'whistleblower', 'Nigeria', details.crime_type].filter(Boolean),
+      },
+    }),
+    socialImage
+  );
+
+  const articleData = {
+    title,
+    description,
+    image: socialImage.url,
+    publishedDate: post.created_at,
+    modifiedDate: post.updated_at || post.created_at,
+    url: postUrl,
+    section: 'Most Wanted',
+    keywords: keywords.join(', '),
+  };
+
+  return {
+    ...seoMeta,
+    structuredData: [
+      STRUCTURED_DATA_TEMPLATES.newsArticle(articleData),
+      STRUCTURED_DATA_TEMPLATES.breadcrumbList([
+        { name: 'Home', url: SITE_CONFIG.url },
+        { name: 'Most Wanted', url: absoluteUrl(MOST_WANTED_PATH) },
+        { name: title, url: postUrl },
+      ]),
+    ],
+  };
+};
+
 /**
  * Generate SEO metadata for news posts
  */
 export const generateNewsPostSEO = (post) => {
+  if (post?.category === 'most_wanted') {
+    return generateMostWantedPostSEO(post);
+  }
+
   const title = post.title;
   const plainContent = stripHtml(post.content);
   const description = plainContent
     ? plainContent.substring(0, 160)
     : `Read about ${post.title} on WhistleBlower.ng`;
 
-  const image = resolveImageUrl(post.featured_image);
+  const socialImage = resolvePostSocialShareImage(post);
   const postPath = getNewsPostPath(post) || `/news/post/${slugify(title)}`;
   const postUrl = getNewsPostUrl(post);
-
-  const categoryKeywords = {
-    bounty: ['bounty', 'reward', 'information', 'case', 'investigation'],
-    most_wanted: ['most wanted', 'fugitive', 'criminal', 'wanted person', 'law enforcement'],
-    news: ['news', 'update', 'security', 'crime', 'alert'],
-  };
 
   const sectionLabels = {
     bounty: 'Bounties',
@@ -448,32 +560,30 @@ export const generateNewsPostSEO = (post) => {
     news: 'News',
   };
 
-  const keywords = [
-    ...SITE_CONFIG.keywords,
-    ...(categoryKeywords[post.category] || []),
-    post.category,
-  ];
+  const keywords = buildPostKeywords(post);
 
-  const seoMeta = generateSEOMeta({
-    title,
-    description,
-    image,
-    url: postPath,
-    type: 'article',
-    keywords,
-    newsKeywords: keywords.slice(0, 10).join(', '),
-    article: {
-      publishedTime: post.created_at,
-      modifiedTime: post.updated_at || post.created_at,
-      section: sectionLabels[post.category] || 'News',
-      tags: [post.category, 'whistleblower', 'Nigeria'],
-    },
-  });
+  const seoMeta = applySocialImageToMeta(
+    generateSEOMeta({
+      title,
+      description,
+      url: postPath,
+      type: 'article',
+      keywords,
+      newsKeywords: keywords.slice(0, 10).join(', '),
+      article: {
+        publishedTime: post.created_at,
+        modifiedTime: post.updated_at || post.created_at,
+        section: sectionLabels[post.category] || 'News',
+        tags: [post.category, 'whistleblower', 'Nigeria'],
+      },
+    }),
+    socialImage
+  );
 
   const articleData = {
     title,
     description,
-    image,
+    image: socialImage.url,
     publishedDate: post.created_at,
     modifiedDate: post.updated_at || post.created_at,
     url: postUrl,
@@ -504,13 +614,13 @@ export const generateBountyPostSEO = (post) => {
     ? plainContent.substring(0, 160)
     : `View bounty information for ${post.title} on WhistleBlower.ng`;
 
-  const image = resolveImageUrl(post.featured_image);
+  const socialImage = resolvePostSocialShareImage(post);
   const bountyPath = getBountyPostPath(post) || `/bounties/${slugify(title)}`;
 
-  return generateSEOMeta({
+  return applySocialImageToMeta(
+    generateSEOMeta({
     title: `Bounty: ${title}`,
     description,
-    image,
     url: bountyPath,
     type: 'article',
     keywords: ['bounty', 'reward', 'information', 'Nigeria', 'whistleblower', post.category],
@@ -520,5 +630,7 @@ export const generateBountyPostSEO = (post) => {
       section: 'Bounty',
       tags: ['bounty', 'reward', post.category, 'whistleblower', 'Nigeria'],
     },
-  });
+  }),
+    socialImage
+  );
 };

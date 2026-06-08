@@ -25,12 +25,14 @@ export async function fetchPublishedBountyPostPath(supabase, bounty) {
     return null;
   }
 
-  const { data: newsRow } = await supabase
+  const { data: newsRow, error } = await supabase
     .from('news')
-    .select('slug, title')
+    .select('title')
     .eq('bounty_id', bounty.id)
     .eq('status', 'published')
     .maybeSingle();
+
+  if (error) return null;
 
   const slug = getBountyPostSlug(newsRow, bounty.title);
   return getBountyPostPath(slug);

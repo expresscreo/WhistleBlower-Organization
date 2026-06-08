@@ -14,14 +14,6 @@ export function validateMostWantedStep(stepId, context) {
           focusId: 'mw-crime-type',
         };
       }
-      if (!d.crime_state?.trim()) {
-        return {
-          valid: false,
-          title: 'State required',
-          description: 'Select the state where the crime occurred.',
-          focusId: 'mw-crime-state',
-        };
-      }
       if (!d.law_enforcement?.trim()) {
         return {
           valid: false,

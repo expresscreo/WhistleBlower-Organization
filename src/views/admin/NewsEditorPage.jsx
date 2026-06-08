@@ -28,6 +28,8 @@ import {
   suggestMostWantedTitle,
 } from '@/lib/mostWantedUtils';
 import { validateMostWantedForSave } from '@/lib/mostWantedValidation';
+import { saveNewsPost } from '@/lib/newsAdminApi';
+import { formatSupabaseError } from '@/lib/supabaseErrors';
 import { buildNewsPreviewPayload, validateNewsPreviewPayload } from '@/lib/newsPreview';
 import {
   getNewsPreviewPath,
@@ -1012,28 +1014,6 @@ const NewsEditorPage = () => {
                 ? buildMostWantedContentSnippet(resolvedTitle, mostWantedDetails)
                 : finalContent;
 
-            // Generate slug from title
-            const baseSlug = slugify(resolvedTitle);
-            let finalSlug = baseSlug;
-
-            // Try to ensure unique slug if column exists by checking conflicts
-            try {
-                const { data: existing } = await supabase
-                    .from('news')
-                    .select('slug')
-                    .ilike('slug', `${baseSlug}%`);
-
-                if (Array.isArray(existing) && existing.length > 0) {
-                    const existingSlugs = new Set(existing.map(e => e.slug));
-                    let suffix = 2;
-                    while (existingSlugs.has(finalSlug)) {
-                        finalSlug = `${baseSlug}-${suffix++}`;
-                    }
-                }
-            } catch (_) {
-                // If the query fails (e.g., slug column doesn't exist), we'll fallback below
-            }
-
             const newsData = {
                 title: resolvedTitle,
                 content: resolvedContent,
@@ -1045,51 +1025,16 @@ const NewsEditorPage = () => {
                 published_evidence:
                     currentItem.category === 'bounty' || isMostWanted ? galleryEvidencePaths : [],
                 updated_at: new Date().toISOString(),
-                // Include slug optimistically; we'll retry without it if DB doesn't have the column
-                slug: finalSlug
             };
 
-            const saveWithData = async (payload, edit) => {
-                if (edit) {
-                    return supabase.from('news').update(payload).eq('id', id);
-                }
-                return supabase.from('news').insert([payload]);
-            };
+            const saveResult = await saveNewsPost({
+                id: isEditing ? id : undefined,
+                payload: newsData,
+            });
 
-            const saveNewsPayload = async (payload, edit) => {
-                let currentPayload = { ...payload };
-                let result = await saveWithData(currentPayload, edit);
-
-                if (result.error && /slug/i.test(result.error.message || '')) {
-                    const { slug, ...withoutSlug } = currentPayload;
-                    currentPayload = withoutSlug;
-                    result = await saveWithData(currentPayload, edit);
-                }
-
-                if (result.error && /published_evidence/i.test(result.error.message || '')) {
-                    const { published_evidence, ...withoutPublishedEvidence } = currentPayload;
-                    currentPayload = withoutPublishedEvidence;
-                    result = await saveWithData(currentPayload, edit);
-                    if (!result.error) {
-                        setSaveFeedback({ error: 'Evidence approvals not saved. Add the published_evidence column to the news table (see supabase/migrations) to persist approved photos.' });
-                    }
-                }
-
-                if (result.error && /most_wanted_details/i.test(result.error.message || '')) {
-                    const { most_wanted_details, ...withoutMostWanted } = currentPayload;
-                    currentPayload = withoutMostWanted;
-                    result = await saveWithData(currentPayload, edit);
-                    if (!result.error) {
-                        setSaveFeedback({ error: 'Most Wanted details not saved. Run the most_wanted_details migration on the news table.' });
-                    }
-                }
-
-                return result;
-            };
-
-            let result = await saveNewsPayload(newsData, isEditing);
-
-            if (result.error) throw result.error;
+            if (saveResult?.warnings?.length) {
+                setSaveFeedback({ error: saveResult.warnings.join(' ') });
+            }
 
             // If linked to a bounty, propagate changes
             if (currentItem.category === 'bounty' && currentItem.bounty_id) {
@@ -1122,7 +1067,7 @@ const NewsEditorPage = () => {
             router.push('/admin/news-editor');
         } catch (error) {
             console.error('Error saving news post:', error);
-            setSaveFeedback({ error: `Failed to save news post: ${error.message || error}` });
+            setSaveFeedback({ error: `Failed to save news post: ${formatSupabaseError(error)}` });
         } finally {
             setIsUploading(false);
         }
