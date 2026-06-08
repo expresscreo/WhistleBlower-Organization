@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
-const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'News Editor', 'Bounty Details'];
+const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'Most Wanted', 'Most Wanted Details', 'News Editor', 'Bounty Details'];
 const allRoles = [{
   key: 'super_admin',
   label: 'Super Admin'

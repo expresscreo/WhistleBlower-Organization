@@ -1,3 +1,5 @@
+import { generateUUID } from '@/lib/cryptoUtils';
+
 const PREVIEW_PREFIX = 'wb-news-preview:';
 const PREVIEW_LATEST_KEY = 'wb-news-preview-latest';
 const PREVIEW_MESSAGE_TYPE = 'wb-news-preview-data';
@@ -31,7 +33,7 @@ export function storeNewsPreviewPayload(payload) {
     throw new Error('Preview storage is only available in the browser.');
   }
 
-  const id = crypto.randomUUID();
+  const id = generateUUID();
   const record = {
     id,
     savedAt: Date.now(),

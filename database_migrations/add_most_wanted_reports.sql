@@ -1,0 +1,2 @@
+-- Link Most Wanted sighting tips to published alerts (mirrors bounty_reports).
+-- Prefer: supabase db push (uses supabase/migrations/20260608120000_add_most_wanted_reports.sql)

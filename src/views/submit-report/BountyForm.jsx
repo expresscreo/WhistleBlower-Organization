@@ -144,9 +144,9 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="bounty-lga" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />Local Government Area</Label>
-                    <Select value={formData.lga} onValueChange={(v) => handleInputChange('lga', v)} disabled={!formData.state} required>
-                        <SelectTrigger><SelectValue placeholder="Select LGA" /></SelectTrigger>
+                    <Label htmlFor="bounty-lga" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />Local Government Area <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                    <Select value={formData.lga} onValueChange={(v) => handleInputChange('lga', v)} disabled={!formData.state}>
+                        <SelectTrigger><SelectValue placeholder="Select LGA (optional)" /></SelectTrigger>
                         <SelectContent>{lgas.map(lga => <SelectItem key={lga} value={lga}>{lga}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>

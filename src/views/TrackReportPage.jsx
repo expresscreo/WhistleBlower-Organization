@@ -1,4 +1,5 @@
 import { useRouter } from 'next/navigation';
+import { generateUUID } from '@/lib/cryptoUtils';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -108,7 +109,7 @@ const TrackReportPage = ({ reportId, password }) => {
     setIsUpdating(true);
     let newPaths = [];
     if (newEvidenceFiles.length > 0) {
-      const reportUUID = reportData.id || crypto.randomUUID();
+      const reportUUID = reportData.id || generateUUID();
       for (let i = 0; i < newEvidenceFiles.length; i++) {
         const file = newEvidenceFiles[i];
         try {

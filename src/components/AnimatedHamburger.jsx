@@ -6,7 +6,7 @@ const AnimatedHamburger = ({ isOpen, onClick, className = "" }) => {
   return (
     <button
       onClick={onClick}
-      className={`relative z-[60] md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-[#212121cc] transition-colors ${className}`}
+      className={`relative z-[60] p-2 rounded-md hover:bg-gray-100 dark:hover:bg-[#212121cc] transition-colors ${className}`}
       aria-label={isOpen ? "Close menu" : "Open menu"}
       type="button"
     >

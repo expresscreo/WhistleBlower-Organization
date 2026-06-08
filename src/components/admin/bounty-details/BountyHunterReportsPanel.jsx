@@ -124,33 +124,41 @@ export default function BountyHunterReportsPanel({
   onSelectReport,
   onClearSelection,
   loading = false,
+  panelTitle = 'Hunter Submissions',
+  panelDescriptionEmpty = 'Tips from bounty hunters will appear here once linked to this bounty.',
+  panelDescriptionWithCount = (count) =>
+    `${count} anonymous tip${count === 1 ? '' : 's'} submitted for this bounty. Select one to review details, evidence, and status.`,
+  emptyStateTitle = 'No hunter reports yet',
+  emptyStateDescription = 'When someone submits a tip against this bounty, it will show up here for review.',
+  clearSelectionLabel = 'Back to bounty overview',
+  listAriaLabel = 'Hunter submissions',
+  headerToneClass = 'border-orange-200/70 bg-orange-50 dark:border-orange-900/50 dark:bg-orange-950/30',
+  badgeToneClass = 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300',
 }) {
   const count = reports.length;
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="border-b border-orange-200/70 bg-orange-50 pb-5 dark:border-orange-900/50 dark:bg-orange-950/30">
+      <CardHeader className={cn('border-b pb-5', headerToneClass)}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <CardTitle className="flex items-center gap-2 text-xl">
               <Users className="h-5 w-5 text-primary" aria-hidden />
-              Hunter Submissions
+              {panelTitle}
               {count > 0 && (
-                <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800 dark:bg-orange-950/50 dark:text-orange-300">
+                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', badgeToneClass)}>
                   {count}
                 </span>
               )}
             </CardTitle>
             <CardDescription>
-              {count === 0
-                ? 'Tips from bounty hunters will appear here once linked to this bounty.'
-                : `${count} anonymous tip${count === 1 ? '' : 's'} submitted for this bounty. Select one to review details, evidence, and status.`}
+              {count === 0 ? panelDescriptionEmpty : panelDescriptionWithCount(count)}
             </CardDescription>
           </div>
 
           {selectedReportId && onClearSelection && (
             <Button type="button" variant="outline" size="sm" onClick={onClearSelection} className="shrink-0">
-              Back to bounty overview
+              {clearSelectionLabel}
             </Button>
           )}
         </div>
@@ -167,13 +175,13 @@ export default function BountyHunterReportsPanel({
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <Inbox className="h-6 w-6 text-muted-foreground" aria-hidden />
             </div>
-            <p className="text-sm font-medium">No hunter reports yet</p>
+            <p className="text-sm font-medium">{emptyStateTitle}</p>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              When someone submits a tip against this bounty, it will show up here for review.
+              {emptyStateDescription}
             </p>
           </div>
         ) : (
-          <div className="space-y-3" role="list" aria-label="Hunter submissions">
+          <div className="space-y-3" role="list" aria-label={listAriaLabel}>
             {reports.map((report) => (
               <div key={report.id} role="listitem">
                 <HunterReportRow

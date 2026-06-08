@@ -3,12 +3,13 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { getLocalFileUrl } from '@/lib/fileUtils';
+import { isImagePath } from '@/lib/mediaUtils';
 import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/components/media/MaximizableThumbnailOverlay';
 
 const AttachmentItem = ({ file, onDownload }) => {
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(null);
-  const isImage = file.name?.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+  const isImage = isImagePath(file.path) || isImagePath(file.name);
 
   useEffect(() => {
     let isMounted = true;

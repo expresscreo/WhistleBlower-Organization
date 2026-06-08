@@ -5,12 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FieldError } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
-import { hashPassword } from '@/lib/cryptoUtils';
+import { generateUUID, hashPassword } from '@/lib/cryptoUtils';
 import { sanitizeFilename } from '@/lib/utils';
 import { uploadStorageFile } from '@/lib/supabaseStorageService';
 import { validateAllSteps } from '@/lib/submitReportValidation';
 import { buildCreateReportRpcParams } from '@/lib/submitReportRpc';
 import { linkHunterReportToBounty } from '@/lib/bountyStatus';
+import { linkSightingReportToMostWanted } from '@/lib/mostWantedStatus';
 import { formatDateForInput } from '@/components/submit-report/reportFormUtils';
 import { getSubmitReportSteps } from '@/components/submit-report/submitReportStepMeta';
 import { useReportFormLocation } from '@/components/submit-report/useReportFormLocation';
@@ -267,7 +268,7 @@ export default function SubmitReportPage() {
       }
 
       let evidencePaths = [];
-      const reportUUIDForPath = crypto.randomUUID();
+      const reportUUIDForPath = generateUUID();
 
       if (descriptionMode === 'voice' && voiceNoteFile?.blob) {
         setVoiceSubmitProgress(10);
@@ -359,6 +360,17 @@ export default function SubmitReportPage() {
           } catch (bountyLinkError) {
             console.error('Bounty link failed:', bountyLinkError);
           }
+        }
+      }
+
+      if (isMostWantedMode && newsIdFromUrl) {
+        try {
+          await linkSightingReportToMostWanted(supabase, newsIdFromUrl, {
+            reportRowId: createdReportId,
+            publicReportId: newReportId,
+          });
+        } catch (mostWantedLinkError) {
+          console.error('Most Wanted link failed:', mostWantedLinkError);
         }
       }
 

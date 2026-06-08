@@ -4,7 +4,7 @@ import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Award, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminData } from '@/contexts/AdminDataContext';
@@ -103,26 +103,29 @@ const BountiesManagement = () => {
                         description="Review placed bounties and incoming reports on them."
                     />
                     
-                    {/* Filters */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <Input className="flex-1 min-w-0" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
-                            <Select value={filters.type} onValueChange={(v) => setFilters(f => ({ ...f, type: v }))}>
-                                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Filter by Type" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Types</SelectItem>
-                                    <SelectItem value="bounty">Placed Bounty</SelectItem>
-                                    <SelectItem value="report">Bounty Report</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
-                                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Statuses</SelectItem>
-                                    {Object.keys(statusConfig).map(key => <SelectItem key={key} value={key}>{toTitleCase(key)}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <Tabs
+                            value={filters.type}
+                            onValueChange={(value) => {
+                                setFilters((f) => ({ ...f, type: value }));
+                                setCurrentPage(1);
+                            }}
+                            className="h-10 shrink-0"
+                        >
+                            <TabsList className="h-10 w-full sm:w-auto bg-secondary p-1 items-stretch">
+                                <TabsTrigger value="all" className="h-full px-3">All</TabsTrigger>
+                                <TabsTrigger value="bounty" className="h-full px-3">Placed Bounties</TabsTrigger>
+                                <TabsTrigger value="report" className="h-full px-3">Bounty Reports</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                        <Input className="h-10 flex-1 min-w-0" placeholder="Search by ID or title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
+                            <SelectTrigger className="h-10 w-full sm:w-[160px] shrink-0"><SelectValue placeholder="Filter by Status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                {Object.keys(statusConfig).map(key => <SelectItem key={key} value={key}>{toTitleCase(key)}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Bounties Grid */}

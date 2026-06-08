@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Mic, Text } from 'lucide-react';
 import { FieldError } from '@/components/ui/form-feedback';
 import { supabase } from '@/lib/customSupabaseClient';
-import { hashPassword } from '@/lib/cryptoUtils';
+import { generateUUID, hashPassword } from '@/lib/cryptoUtils';
 
 import OrganizationSearch from './OrganizationSearch';
 import ReportCategorization from './ReportCategorization';
@@ -24,7 +24,6 @@ import { Input } from '@/components/ui/input';
 import { uploadFileToLocal } from '@/lib/fileUtils';
 import { uploadStorageFile } from '@/lib/supabaseStorageService';
 import { generateReportId } from '@/lib/utils';
-import { hashPassword } from '@/lib/cryptoUtils';
 
 const SubmitReportPage = () => {
     const [submitError, setSubmitError] = useState('');
@@ -238,7 +237,7 @@ const SubmitReportPage = () => {
             const passwordForSuccess = formData.password;
 
             let evidencePaths = [];
-            const reportUUIDForPath = crypto.randomUUID();
+            const reportUUIDForPath = generateUUID();
 
             if (submissionType === 'voice' && voiceNote) {
                 const voiceNotePath = `reports/${reportUUIDForPath}/${Date.now()}-voice-report.wav`;

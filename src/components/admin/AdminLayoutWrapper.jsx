@@ -25,6 +25,7 @@ const AdminLayoutWrapper = ({ children }) => {
     '/admin/unmatched-organizations': 'Unmatched Organization',
     '/admin/reward': 'Reward',
     '/admin/bounties': 'Bounties',
+    '/admin/most-wanted': 'Most Wanted',
     '/admin/news-editor': 'News Editor',
     '/admin/billing': 'Billing',
     '/admin/plan-features': 'Plan Features',
@@ -55,6 +56,8 @@ const AdminLayoutWrapper = ({ children }) => {
             pageName = 'Report Details';
           } else if (pathname.startsWith('/admin/bounties/')) {
             pageName = 'Bounty Details';
+          } else if (pathname.startsWith('/admin/most-wanted/')) {
+            pageName = 'Most Wanted Details';
           }
         }
 

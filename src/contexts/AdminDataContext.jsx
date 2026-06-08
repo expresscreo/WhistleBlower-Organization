@@ -3,6 +3,10 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import {
+  buildMostWantedAdminItems,
+  fetchAllMostWantedLinks,
+} from '@/lib/mostWantedStatus';
 
 const AdminDataContext = createContext(null);
 
@@ -45,7 +49,10 @@ export const AdminDataProvider = ({ children }) => {
       setCache(prev => ({ ...prev, [cacheKey]: data }));
       return data;
     } catch (error) {
-      console.error(`Error fetching data for ${key}:`, error);
+      const errorMessage = [error?.message, error?.details, error?.hint, error?.code]
+        .filter(Boolean)
+        .join(' ');
+      console.error(`Error fetching data for ${key}:`, errorMessage || error);
       throw error;
     } finally {
       loadingRefs.current[key] = false;
@@ -84,8 +91,11 @@ export const AdminDataProvider = ({ children }) => {
       });
       
       if (error) throw error;
-      // Exclude bounty-category submissions from general Reports; they are handled in Bounties
-      const filtered = Array.isArray(data) ? data.filter(r => String(r.category || '').toLowerCase() !== 'bounty') : [];
+      // Exclude bounty and most-wanted tips; they have dedicated admin pages.
+      const excludedCategories = new Set(['bounty', 'most wanted']);
+      const filtered = Array.isArray(data)
+        ? data.filter((r) => !excludedCategories.has(String(r.category || '').toLowerCase()))
+        : [];
       return filtered;
     }, [profile?.id, profile?.user_type, profile?.organization_id]);
   }, [fetchData, profile]);
@@ -132,6 +142,37 @@ export const AdminDataProvider = ({ children }) => {
     }, []);
   }, [fetchData]);
 
+  const fetchMostWanted = useCallback(async () => {
+    return fetchData('mostWanted', async () => {
+      const [
+        { data: alerts, error: alertsError },
+        { data: reports, error: reportsError },
+        links,
+      ] = await Promise.all([
+        supabase
+          .from('news')
+          .select('*')
+          .eq('category', 'most_wanted')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('reports')
+          .select('*')
+          .eq('category', 'Most Wanted')
+          .eq('is_trashed', false),
+        fetchAllMostWantedLinks(supabase),
+      ]);
+
+      if (alertsError) throw alertsError;
+      if (reportsError) throw reportsError;
+
+      return buildMostWantedAdminItems({
+        alerts: alerts || [],
+        reports: reports || [],
+        links,
+      });
+    }, []);
+  }, [fetchData]);
+
   const fetchTriageData = useCallback(async () => {
     return fetchData('triage', async () => {
       const { data, error } = await supabase
@@ -169,6 +210,7 @@ export const AdminDataProvider = ({ children }) => {
     // Common data fetchers
     fetchReports,
     fetchBounties,
+    fetchMostWanted,
     fetchTriageData,
     fetchPlans,
     

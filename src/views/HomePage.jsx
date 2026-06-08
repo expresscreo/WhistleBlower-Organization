@@ -101,10 +101,62 @@ const StatCard = ({ stat, index }) => {
 };
 
 
-const HERO_VIDEO_SRC = '/WBMedia/general/Animated Globe.mp4';
+const HERO_VIDEO_SRC = '/WBMedia/general/Animated%20Globe.mp4';
 const SHOW_HERO_ANALYTICS = false;
 
 const HomePage = () => {
+  const heroVideoRef = useRef(null);
+  // Mobile browsers (especially iOS) often ignore autoPlay on fixed background videos.
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return undefined;
+
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute('muted', '');
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+
+    const tryPlay = () => video.play().catch(() => {});
+
+    tryPlay();
+
+    const unlock = () => {
+      tryPlay();
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
+    };
+
+    document.addEventListener('touchstart', unlock, { passive: true, once: true });
+    document.addEventListener('click', unlock, { once: true });
+
+    const resumeOnVisible = () => {
+      if (!document.hidden) tryPlay();
+    };
+
+    document.addEventListener('visibilitychange', resumeOnVisible);
+
+    const hero = document.getElementById('home-hero');
+    const heroObserver =
+      hero &&
+      new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) tryPlay();
+        },
+        { threshold: 0.01 }
+      );
+
+    if (heroObserver && hero) heroObserver.observe(hero);
+
+    return () => {
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
+      document.removeEventListener('visibilitychange', resumeOnVisible);
+      heroObserver?.disconnect();
+    };
+  }, []);
+
   const features = [
     { icon: Shield, title: '100% Secure & Anonymous', description: 'Your identity is completely protected with end-to-end encryption.', color: '#4285F4' },
     { icon: Gift, title: 'Reward-Backed Reporting', description: 'Get rewarded for verified reports through our secure PayCode system.', color: '#00C853' },
@@ -161,20 +213,30 @@ const HomePage = () => {
         {...seoMeta}
         structuredData={structuredData}
       />
-      <div className="fixed inset-0 z-0 pointer-events-none bg-black" aria-hidden>
+      <div className="fixed inset-0 z-0 pointer-events-none bg-black">
         <video
+          ref={heroVideoRef}
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
+          controls={false}
+          disablePictureInPicture
+          onLoadedData={(event) => {
+            event.currentTarget.play().catch(() => {});
+          }}
+          onCanPlayThrough={(event) => {
+            event.currentTarget.play().catch(() => {});
+          }}
           className="fixed inset-0 h-full w-full object-cover opacity-65"
         >
           <source src={HERO_VIDEO_SRC} type="video/mp4" />
         </video>
       </div>
 
-      <section 
+      <section
+        id="home-hero"
         className={`relative z-10 flex flex-col justify-center overflow-hidden ${
           SHOW_HERO_ANALYTICS ? 'min-h-screen' : 'min-h-[calc(100dvh-4rem)]'
         }`}

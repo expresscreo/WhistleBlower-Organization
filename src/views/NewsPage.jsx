@@ -343,13 +343,13 @@ const NewsPage = ({ initialNews = null }) => {
                     <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
                         {currentCategory.description}
                     </p>
-                    <p className="mx-auto mt-4 max-w-3xl text-base text-muted-foreground">
-                        {category === 'most_wanted'
-                            ? 'Published alerts include case details and anonymous tip links. WhistleBlower.ng helps citizens share information with law enforcement without exposing their identity.'
-                            : category === 'bounty'
-                              ? 'Each bounty includes reward details and a secure way to submit verified information.'
-                              : 'Read the latest published updates from WhistleBlower.ng across Nigeria.'}
-                    </p>
+                    {(category === 'most_wanted' || category === 'bounty') && (
+                        <p className="mx-auto mt-4 max-w-3xl text-base text-muted-foreground">
+                            {category === 'most_wanted'
+                                ? 'Published alerts include case details and anonymous tip links. WhistleBlower.ng helps citizens share information with law enforcement without exposing their identity.'
+                                : 'Each bounty includes reward details and a secure way to submit verified information.'}
+                        </p>
+                    )}
                 </div>
 
                 <PageErrorBanner error={fetchError} title="Could not load news" className="mb-8" />

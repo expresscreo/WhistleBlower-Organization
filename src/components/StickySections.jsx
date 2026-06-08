@@ -4,18 +4,24 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 
 const StickySections = () => {
   const containerRef = useRef(null);
+  const firstSectionRef = useRef(null);
   const secondSectionRef = useRef(null);
   const thirdSectionRef = useRef(null);
   const fourthSectionRef = useRef(null);
   const fifthSectionRef = useRef(null);
 
-  // Fade out the headline block in the first section as the second section scrolls into view
+  // Fade out the headline as the first sticky section reaches the top of the viewport
+  const { scrollYProgress: firstSectionScroll } = useScroll({
+    target: firstSectionRef,
+    offset: ['start end', 'start start'],
+  });
+  const headingOpacity = useTransform(firstSectionScroll, [0, 1], [1, 0]);
+
+  // Overlay opacities for each section as the NEXT section scrolls in
   const { scrollYProgress } = useScroll({
     target: secondSectionRef,
-    offset: ["start 90%", "start 50%"],
+    offset: ['start 90%', 'start 50%'],
   });
-  const headingOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-  // Overlay opacities for each section as the NEXT section scrolls in
   const overlay1 = useTransform(scrollYProgress, [0, 1], [0, 0.5]);
   const { scrollYProgress: p2 } = useScroll({ target: thirdSectionRef, offset: ["start 90%", "start 50%"] });
   const overlay2 = useTransform(p2, [0, 1], [0, 0.5]);
@@ -27,7 +33,10 @@ const StickySections = () => {
   return (
     <div ref={containerRef} className="relative">
       {/* First Section */}
-      <div className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-20 px-8 pt-4 lg:pt-4 relative">
+      <div
+        ref={firstSectionRef}
+        className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-20 px-8 pt-4 lg:pt-4 relative"
+      >
         {/* Fade overlay for first section as second approaches */}
         <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay1 }} />
         {/* Global headline inside first sticky section */}
@@ -49,14 +58,14 @@ const StickySections = () => {
               <span className="block text-[#171717] dark:text-white">WhistleBlower.ng</span>
             </h3>
           </motion.div>
-          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
               <img src="https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=640&h=640&fit=crop" alt="Anonymous Reporting" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#ff5100' }}>Anonymous Reporting</span>
             </div>
           </div>
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
+          <div className="w-full lg:w-1/2 text-center lg:text-left order-1 lg:order-2">
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#ff5100' }}>Anonymous Reporting</span>
             </div>
@@ -78,14 +87,14 @@ const StickySections = () => {
         {/* Fade overlay for second section as third approaches */}
         <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay2 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
-          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
               <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=640&h=640&fit=crop" alt="Real-time Tracking" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#00C853' }}>Real-time Tracking</span>
             </div>
           </div>
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
+          <div className="w-full lg:w-1/2 text-center lg:text-left order-1 lg:order-2">
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#00C853' }}>Real-time Tracking</span>
             </div>
@@ -107,14 +116,14 @@ const StickySections = () => {
         {/* Fade overlay for third section as fourth approaches */}
         <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay3 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
-          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
               <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=640&h=640&fit=crop" alt="Rewards & Payments" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FF0000' }}>Rewards & Payments</span>
             </div>
           </div>
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
+          <div className="w-full lg:w-1/2 text-center lg:text-left order-1 lg:order-2">
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FF0000' }}>Rewards & Payments</span>
             </div>
@@ -136,14 +145,14 @@ const StickySections = () => {
         {/* Fade overlay for fourth section as fifth approaches */}
         <motion.div className="absolute inset-0 bg-black pointer-events-none" style={{ opacity: overlay4 }} />
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
-          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
               <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=640&h=640&fit=crop" alt="Bounty System" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FFA000' }}>Bounty System</span>
             </div>
           </div>
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
+          <div className="w-full lg:w-1/2 text-center lg:text-left order-1 lg:order-2">
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FFA000' }}>Bounty System</span>
             </div>
@@ -163,14 +172,14 @@ const StickySections = () => {
       {/* Fifth Section (News & Updates) */}
       <div ref={fifthSectionRef} className="sticky top-0 h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#121212] z-50 px-8 pt-8 lg:pt-4 relative">
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
-          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start">
+          <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
               <img src="https://images.unsplash.com/photo-1504711331083-9c895941bf81?w=640&h=640&fit=crop" alt="News & Updates" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#4285F4' }}>News & Updates</span>
             </div>
           </div>
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
+          <div className="w-full lg:w-1/2 text-center lg:text-left order-1 lg:order-2">
             <div className="mb-6 hidden lg:block">
               <span className="inline-block px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#4285F4' }}>News & Updates</span>
             </div>

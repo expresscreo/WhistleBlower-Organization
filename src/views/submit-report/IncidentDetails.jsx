@@ -55,10 +55,10 @@ const IncidentDetails = ({ formData, onInputChange, categories, isBountyReportMo
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="lga" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />LGA</Label>
+                    <Label htmlFor="lga" className="flex items-center"><MapPin className="mr-2 h-4 w-4" />LGA <span className="font-normal text-muted-foreground">(optional)</span></Label>
                     <Select value={formData.lga} onValueChange={(v) => onInputChange('lga', v)} disabled={!formData.state}>
                         <SelectTrigger id="lga">
-                            <SelectValue placeholder="Select LGA" />
+                            <SelectValue placeholder="Select LGA (optional)" />
                         </SelectTrigger>
                         <SelectContent>
                             {lgas.map(lga => <SelectItem key={lga} value={lga}>{lga}</SelectItem>)}

@@ -13,6 +13,7 @@ import {
   PlusCircle,
   MessageSquare,
   Award,
+  ScanSearch,
   TrendingUp,
   Sparkles,
   Activity,
@@ -87,6 +88,7 @@ const Overview = () => {
     resolved: 0,
     reports: 0,
     bounties: 0,
+    mostWanted: 0,
     feedback: 0,
   });
   const [allItems, setAllItems] = useState([]);
@@ -98,7 +100,7 @@ const Overview = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const hasInitialData = useRef(false);
   const { profile, loading: profileLoading } = useAuth();
-  const { fetchReports, fetchBounties } = useAdminData();
+  const { fetchReports, fetchBounties, fetchMostWanted } = useAdminData();
   const profileId = profile?.id;
   const profileUserType = profile?.user_type;
   const profileOrganizationId = profile?.organization_id;
@@ -121,12 +123,17 @@ const Overview = () => {
     return data || [];
   }, [profileId, profileUserType, profileOrganizationId]);
 
-  const processReportData = useCallback((reportData, bountyData, feedbackData) => {
+  const processReportData = useCallback((reportData, bountyData, mostWantedData, feedbackData) => {
     const normalizedReports = (reportData || []).map((item) => ({ ...item, sourceType: 'report' }));
     const normalizedBounties = (bountyData || []).map((item) => ({
       ...item,
       sourceType: item.item_type === 'bounty' ? 'bounty' : 'report',
       category: item.item_type === 'bounty' ? 'Bounty' : item.category || 'Bounty Report',
+    }));
+    const normalizedMostWanted = (mostWantedData || []).map((item) => ({
+      ...item,
+      sourceType: 'most_wanted',
+      category: item.item_type === 'alert' ? 'Most Wanted Alert' : item.category || 'Most Wanted Tip',
     }));
     const normalizedFeedback = (feedbackData || []).map((item) => ({
       ...item,
@@ -134,7 +141,7 @@ const Overview = () => {
       category: item.category || 'Feedback',
     }));
 
-    const combined = [...normalizedReports, ...normalizedBounties, ...normalizedFeedback].sort(
+    const combined = [...normalizedReports, ...normalizedBounties, ...normalizedMostWanted, ...normalizedFeedback].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
     setAllItems(combined);
@@ -156,18 +163,21 @@ const Overview = () => {
       resolved,
       reports: normalizedReports.length,
       bounties: normalizedBounties.length,
+      mostWanted: normalizedMostWanted.length,
       feedback: normalizedFeedback.length,
     });
 
     const categoryCounts = combined.reduce((acc, item) => {
       const category = item.category || 'Uncategorized';
       if (!acc[category]) {
-        acc[category] = { name: category, reports: 0, bounties: 0, feedback: 0, total: 0 };
+        acc[category] = { name: category, reports: 0, bounties: 0, mostWanted: 0, feedback: 0, total: 0 };
       }
       if (item.sourceType === 'feedback') {
         acc[category].feedback += 1;
       } else if (item.sourceType === 'bounty') {
         acc[category].bounties += 1;
+      } else if (item.sourceType === 'most_wanted') {
+        acc[category].mostWanted += 1;
       } else {
         acc[category].reports += 1;
       }
@@ -197,12 +207,14 @@ const Overview = () => {
     const timeCounts = recentReports.reduce((acc, report) => {
       const date = format(new Date(report.created_at), 'MMM dd');
       if (!acc[date]) {
-        acc[date] = { report: 0, bounty: 0, feedback: 0 };
+        acc[date] = { report: 0, bounty: 0, mostWanted: 0, feedback: 0 };
       }
       if (report.sourceType === 'feedback') {
         acc[date].feedback += 1;
       } else if (report.sourceType === 'bounty') {
         acc[date].bounty += 1;
+      } else if (report.sourceType === 'most_wanted') {
+        acc[date].mostWanted += 1;
       } else {
         acc[date].report += 1;
       }
@@ -216,6 +228,7 @@ const Overview = () => {
         name: formattedDate,
         reports: timeCounts[formattedDate]?.report || 0,
         bounties: timeCounts[formattedDate]?.bounty || 0,
+        mostWanted: timeCounts[formattedDate]?.mostWanted || 0,
         feedback: timeCounts[formattedDate]?.feedback || 0,
       };
     }).reverse();
@@ -237,19 +250,20 @@ const Overview = () => {
     if (showLoading) setInitialLoading(true);
 
     try {
-      const [reportData, bountyData, feedbackData] = await Promise.all([
+      const [reportData, bountyData, mostWantedData, feedbackData] = await Promise.all([
         fetchReports(),
         fetchBounties(),
+        fetchMostWanted(),
         fetchFeedback(),
       ]);
-      processReportData(reportData, bountyData, feedbackData);
+      processReportData(reportData, bountyData, mostWantedData, feedbackData);
       hasInitialData.current = true;
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
       if (showLoading) setInitialLoading(false);
     }
-  }, [profileId, profileLoading, fetchReports, fetchBounties, fetchFeedback, processReportData]);
+  }, [profileId, profileLoading, fetchReports, fetchBounties, fetchMostWanted, fetchFeedback, processReportData]);
 
   useEffect(() => {
     if (!profileLoading && profileId && !hasInitialData.current) {
@@ -263,6 +277,7 @@ const Overview = () => {
   const typeDistributionData = [
     { name: 'Reports', value: stats.reports },
     { name: 'Bounties', value: stats.bounties },
+    { name: 'Most Wanted', value: stats.mostWanted },
     { name: 'Feedback', value: stats.feedback },
   ].filter((item) => item.value > 0);
 
@@ -270,6 +285,15 @@ const Overview = () => {
     if (item.sourceType === 'bounty' && item.item_type === 'bounty') return `/admin/bounties/${item.id}`;
     if (item.sourceType === 'bounty' && item.item_type === 'report' && item.bounty_id) {
       return `/admin/bounties/${item.bounty_id}?reportId=${item.id}`;
+    }
+    if (item.sourceType === 'most_wanted' && item.item_type === 'alert') {
+      return `/admin/most-wanted/${item.id}`;
+    }
+    if (item.sourceType === 'most_wanted' && item.item_type === 'report' && item.news_id) {
+      return `/admin/most-wanted/${item.news_id}?reportId=${item.id}`;
+    }
+    if (item.sourceType === 'most_wanted' && item.item_type === 'report') {
+      return `/admin/reports/${item.id}`;
     }
     if (item.sourceType === 'feedback') return `/admin/reports/${item.id}`;
     return `/admin/reports/${item.id}`;
@@ -282,6 +306,9 @@ const Overview = () => {
     if (item.sourceType === 'bounty') {
       return <span className="rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-xs font-medium text-fuchsia-600">Bounty</span>;
     }
+    if (item.sourceType === 'most_wanted') {
+      return <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-600">Most Wanted</span>;
+    }
     return <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Report</span>;
   };
 
@@ -292,7 +319,7 @@ const Overview = () => {
         <div className="space-y-8">
           <PageHeader
             title={`Welcome back, ${profile?.name || 'Admin'}!`}
-            description="Complete intelligence across reports, bounties, and customer feedback."
+            description="Complete intelligence across reports, bounties, Most Wanted, and customer feedback."
           />
 
           <Card className="overflow-hidden border-border/60">
@@ -308,13 +335,14 @@ const Overview = () => {
                     {stats.total} total submissions are in your pipeline
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Live snapshot from reports, bounty activity, and customer feedback.
+                    Live snapshot from reports, bounty activity, Most Wanted, and customer feedback.
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   {[
                     { label: 'Reports', value: stats.reports, icon: FileText },
                     { label: 'Bounties', value: stats.bounties, icon: Award },
+                    { label: 'Most Wanted', value: stats.mostWanted, icon: ScanSearch },
                     { label: 'Feedback', value: stats.feedback, icon: MessageSquare },
                   ].map((metric) => (
                     <div key={metric.label} className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
@@ -332,7 +360,7 @@ const Overview = () => {
             <StatCard
               title="Total Intake"
               value={stats.total}
-              subtitle="All reports, bounties and feedback"
+              subtitle="All reports, bounties, Most Wanted, and feedback"
               icon={<Activity className="h-4 w-4" />}
               link="/admin/reports"
             />
@@ -368,7 +396,7 @@ const Overview = () => {
                   <TrendingUp className="h-4 w-4 text-primary" />
                   Submission Flow (Last 30 Days)
                 </CardTitle>
-                <CardDescription>Daily intake split by reports, bounties, and feedback.</CardDescription>
+                <CardDescription>Daily intake split by reports, bounties, Most Wanted, and feedback.</CardDescription>
               </CardHeader>
               <CardContent className="pl-0 pr-4">
                 <ResponsiveContainer width="100%" height={320}>
@@ -379,7 +407,8 @@ const Overview = () => {
                     <Tooltip />
                     <Legend />
                     <Bar dataKey="reports" stackId="a" fill="#ff5100" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="bounties" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="bounties" stackId="a" fill="#8b5cf6" />
+                    <Bar dataKey="mostWanted" name="Most Wanted" stackId="a" fill="#ef4444" />
                     <Bar dataKey="feedback" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </ReBarChart>
                 </ResponsiveContainer>
@@ -431,6 +460,7 @@ const Overview = () => {
                       {[
                         { key: 'reports', label: 'Reports', color: '#ff5100' },
                         { key: 'bounties', label: 'Bounties', color: '#8b5cf6' },
+                        { key: 'mostWanted', label: 'Most Wanted', color: '#ef4444' },
                         { key: 'feedback', label: 'Feedback', color: '#3b82f6' },
                       ].map((item) => (
                         <span key={item.key} className="inline-flex items-center gap-1.5">
@@ -479,6 +509,7 @@ const Overview = () => {
                         />
                         <Bar dataKey="reports" name="Reports" stackId="mix" fill="#ff5100" radius={[0, 0, 0, 0]} />
                         <Bar dataKey="bounties" name="Bounties" stackId="mix" fill="#8b5cf6" />
+                        <Bar dataKey="mostWanted" name="Most Wanted" stackId="mix" fill="#ef4444" />
                         <Bar dataKey="feedback" name="Feedback" stackId="mix" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                       </ReBarChart>
                     </ResponsiveContainer>
@@ -537,7 +568,7 @@ const Overview = () => {
               <Card className="xl:col-span-8 border-border/60">
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest events across reports, bounties, and feedback.</CardDescription>
+                  <CardDescription>Latest events across reports, bounties, Most Wanted, and feedback.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -549,6 +580,8 @@ const Overview = () => {
                               <MessageSquare className="h-4 w-4 text-blue-600" />
                             ) : item.sourceType === 'bounty' ? (
                               <Award className="h-4 w-4 text-fuchsia-600" />
+                            ) : item.sourceType === 'most_wanted' ? (
+                              <ScanSearch className="h-4 w-4 text-red-600" />
                             ) : (
                               <FileText className="h-4 w-4 text-primary" />
                             )}
@@ -615,10 +648,11 @@ const Overview = () => {
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Jump directly to the admin workstream you need.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+            <CardContent className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5">
               {[
                 { title: 'Review Reports', href: '/admin/reports', icon: FileText, hint: 'Investigate active report submissions' },
                 { title: 'Manage Bounties', href: '/admin/bounties', icon: Award, hint: 'Track placed bounties and linked tips' },
+                { title: 'Most Wanted', href: '/admin/most-wanted', icon: ScanSearch, hint: 'Review alerts and linked sighting tips' },
                 { title: 'Customer Feedback', href: '/admin/customer-feedback', icon: MessageSquare, hint: 'Respond to user sentiment and issues' },
                 { title: 'Create News', href: '/admin/news-editor', icon: PlusCircle, hint: 'Publish updates to keep users informed' },
               ].map((action) => (

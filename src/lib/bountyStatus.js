@@ -58,13 +58,8 @@ export function isValidAdminBountyStatusTransition(
 
 /** Count hunter tips linked to a bounty via bounty_reports. */
 export async function countHunterSubmissionsForBounty(supabase, bountyId) {
-  const { count, error } = await supabase
-    .from('bounty_reports')
-    .select('*', { count: 'exact', head: true })
-    .eq('bounty_id', bountyId);
-
-  if (error) throw error;
-  return count ?? 0;
+  const reports = await fetchHunterReportsForBounty(supabase, bountyId);
+  return reports.length;
 }
 
 const UUID_RE =
@@ -137,7 +132,16 @@ export async function fetchHunterReportsForBounty(supabase, bountyId) {
     }
   }
 
-  return links.map((link) => reportByLinkId.get(link.report_id)).filter(Boolean);
+  const seen = new Set();
+  const uniqueReports = [];
+  for (const link of links) {
+    const report = reportByLinkId.get(link.report_id);
+    if (!report || seen.has(report.id)) continue;
+    seen.add(report.id);
+    uniqueReports.push(report);
+  }
+
+  return uniqueReports;
 }
 
 /** @deprecated Use countHunterSubmissionsForBounty */

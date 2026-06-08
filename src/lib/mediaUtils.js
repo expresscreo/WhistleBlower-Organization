@@ -79,7 +79,8 @@ export const getMediaUrlCandidates = (filePath) => {
 
   const candidates = [];
   const add = (url) => {
-    if (url && !candidates.includes(url)) candidates.push(url);
+    if (typeof url !== 'string' || !url || candidates.includes(url)) return;
+    candidates.push(url);
   };
 
   const fileName = path.split('/').pop();
@@ -112,7 +113,7 @@ export const getMediaUrlCandidates = (filePath) => {
   }
 
   const syncLocal = getLocalFileUrl(path) || resolveImageUrl(path);
-  if (syncLocal && typeof syncLocal !== 'function') add(syncLocal);
+  if (typeof syncLocal === 'string' && syncLocal) add(syncLocal);
 
   if (fileName && isImagePath(fileName)) {
     add(`/WBMedia/bounties/delito/${fileName}`);
@@ -189,7 +190,7 @@ const getSignedStorageUrlForPath = async (filePath) => {
  * Resolve the first loadable URL for a media path (Supabase fallback when local file is missing).
  */
 export const resolveMediaUrl = async (path, { preferredSrc } = {}) => {
-  if (!path) return null;
+  if (!path || typeof path !== 'string') return null;
 
   let resolvedPath = path;
   if (path.startsWith('http')) {
@@ -213,16 +214,21 @@ export const resolveMediaUrl = async (path, { preferredSrc } = {}) => {
   }
 
   if (typeof window === 'undefined') {
-    const remote = candidates.find((url) => url.includes('supabase.co'));
+    const remote = candidates.find(
+    (url) => typeof url === 'string' && url.includes('supabase.co')
+  );
     return remote || candidates[0];
   }
 
   const localCandidate = candidates.find(
-    (url) => url.startsWith('/WBMedia/') || url.startsWith('/api/')
+    (url) =>
+      typeof url === 'string' &&
+      (url.startsWith('/WBMedia/') || url.startsWith('/api/'))
   );
   if (localCandidate && (await canLoadUrl(localCandidate))) return localCandidate;
 
   for (const url of candidates) {
+    if (typeof url !== 'string') continue;
     if (url === localCandidate) continue;
     if (url.includes('supabase.co') && url.includes('/object/public/')) {
       if (await canLoadUrl(url)) return url;
@@ -234,7 +240,9 @@ export const resolveMediaUrl = async (path, { preferredSrc } = {}) => {
   const signedUrl = await getSignedStorageUrlForPath(resolvedPath);
   if (signedUrl && (await canLoadUrl(signedUrl))) return signedUrl;
 
-  const remote = candidates.find((url) => url.includes('supabase.co'));
+  const remote = candidates.find(
+    (url) => typeof url === 'string' && url.includes('supabase.co')
+  );
   return localCandidate || remote || signedUrl || preferredSrc || candidates[candidates.length - 1];
 };
 

@@ -1,28 +1,33 @@
+'use client';
+
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ArrowRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMobileMenu } from '@/contexts/MobileMenuContext';
+import { useReportCta } from '@/contexts/ReportCtaContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
 const MobileMenuOverlay = ({ navItems }) => {
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
+  const { reportHref } = useReportCta();
   const [expandedItems, setExpandedItems] = useState({});
+  const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const { theme } = useTheme();
   const pathname = usePathname();
 
-  const logoLight = "/WBMedia/general/whistleblower-logo-light.png";
-  const logoDark = "/WBMedia/general/whistleblower-logo-dark.png";
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleExpanded = (itemName) => {
-    setExpandedItems(prev => ({
+    setExpandedItems((prev) => ({
       ...prev,
-      [itemName]: !prev[itemName]
+      [itemName]: !prev[itemName],
     }));
   };
 
@@ -31,183 +36,153 @@ const MobileMenuOverlay = ({ navItems }) => {
     setExpandedItems({});
   };
 
-  const overlayVariants = {
-    hidden: { 
-      opacity: 0
-    },
-    visible: { 
-      opacity: 1
-    },
-    exit: { 
-      opacity: 0
-    }
-  };
+  if (!mounted) return null;
 
-  const contentVariants = {
-    hidden: { 
-      opacity: 0
-    },
-    visible: { 
-      opacity: 1
-    }
-  };
-
-  const menuItemVariants = {
-    hidden: { 
-      opacity: 0
-    },
-    visible: { 
-      opacity: 1
-    }
-  };
-
-  return (
+  const overlay = (
     <AnimatePresence mode="wait">
       {isMobileMenuOpen && (
-        <motion.div
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          className="md:hidden fixed inset-0 z-20 mobile-menu-bg"
-          style={{ height: '100dvh' }}
-        >
-          {/* Logo header - left aligned like navbar */}
-          <motion.div
-            variants={contentVariants}
-            className="flex items-center h-16 px-4 border-b border-border/20"
-          >
-            <Link href="/" onClick={handleLinkClick} className="flex-shrink min-w-0 max-w-[calc(100vw-5.5rem)]">
-              <img 
-                src={theme === 'light' ? logoLight : logoDark}
-                alt="WhistleBlower.ng Logo" 
-                className="max-h-7 w-auto max-w-full object-contain"
-              />
-            </Link>
-          </motion.div>
+        <div className="nav:hidden">
+          <motion.button
+            type="button"
+            aria-label="Close menu"
+            className="fixed inset-0 top-16 z-[9998] bg-black/40 backdrop-blur-[1px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={closeMobileMenu}
+          />
 
-          {/* Navigation Items - Scrollable with proper height */}
-          <motion.div 
-            variants={contentVariants}
-            className="px-4 pt-8 pb-6 overflow-y-auto"
-            style={{ height: 'calc(100dvh - 64px - 80px)' }}
-          >
-            <nav className="space-y-4">
-              {navItems.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  variants={menuItemVariants}
-                  custom={index}
-                  className="space-y-2"
-                >
-                  {item.dropdown ? (
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleExpanded(item.name)}
-                        className="w-full flex items-center justify-between py-2 group"
-                        aria-expanded={expandedItems[item.name]}
-                      >
-                        <span className="text-[36px] leading-[40px] font-semibold text-foreground group-hover:text-primary transition-colors duration-200 capitalize">
-                          {item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
-                        </span>
-                        <motion.div 
-                          className="w-10 h-10 bg-primary/10 rounded-md flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-200"
-                          animate={{ 
-                            rotate: expandedItems[item.name] ? 180 : 0 
-                          }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                          <ChevronDown className="h-5 w-5 text-primary" />
-                        </motion.div>
-                      </button>
-                      
-                      <AnimatePresence>
-                        {expandedItems[item.name] && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="pl-6 space-y-2 border-l-2 border-primary/20"
-                          >
-                            {item.items.map((subItem) => (
-                              <Link
-                                key={subItem.name}
-                                href={subItem.path}
-                                onClick={handleLinkClick}
-                                className={cn(
-                                  "block py-1 text-lg font-medium transition-colors duration-200",
-                                  pathname === subItem.path 
-                                    ? "text-primary" 
-                                    : "text-muted-foreground hover:text-foreground"
-                                )}
-                                style={{ minHeight: '44px' }}
-                              >
-                                {subItem.name}
-                              </Link>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <Link href={item.path}
-                      onClick={handleLinkClick}
-                        className={cn(
-                          "block py-2 text-[36px] leading-[40px] font-semibold transition-colors duration-200 capitalize",
-                          pathname === item.path 
-                            ? "text-primary" 
-                            : "text-foreground hover:text-primary"
-                        )}
-                      style={{ minHeight: '44px' }}
-                    >
-                      {item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
-                    </Link>
-                  )}
-                </motion.div>
-              ))}
-            </nav>
-          </motion.div>
-
-          {/* Action Buttons - Fixed at absolute bottom */}
           <motion.div
-            variants={contentVariants}
-            className="absolute bottom-0 left-0 right-0 z-30 px-4 pb-safe bg-background shadow-2xl"
-            style={{ height: '80px' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            className="mobile-menu-overlay fixed inset-x-0 bottom-0 top-16 z-[9999] flex w-full flex-col mobile-menu-bg shadow-2xl"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
           >
-            <div className="flex items-center space-x-3 h-full">
-              {user && (
-                <Link href="/admin/overview" onClick={handleLinkClick}>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="h-10 px-4 border border-[#e2e8f0] dark:border-[#2e2e2e] hover:border-[#cbd5e1] dark:hover:border-[#404040] hover:bg-muted/50 transition-all duration-200"
+            <div
+              className="flex-1 overflow-y-auto px-4 pt-8 pb-6"
+              style={{
+                paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
+              }}
+            >
+              <nav className="space-y-4">
+                {navItems.map((item, index) => (
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.05 + index * 0.04, duration: 0.25 }}
+                    className="space-y-2"
                   >
-                    <User className="h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
-              <Link href="/submit-report" onClick={handleLinkClick} className="flex-1">
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <Button 
+                    {item.dropdown ? (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(item.name)}
+                          className="group flex w-full items-center justify-between py-2"
+                          aria-expanded={expandedItems[item.name]}
+                        >
+                          <span className="text-[36px] font-semibold capitalize leading-[40px] text-foreground transition-colors duration-200 group-hover:text-primary">
+                            {item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
+                          </span>
+                          <motion.div
+                            className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200"
+                            animate={{
+                              rotate: expandedItems[item.name] ? 180 : 0,
+                            }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                          >
+                            <ChevronDown className="h-5 w-5 text-primary" />
+                          </motion.div>
+                        </button>
+
+                        <AnimatePresence>
+                          {expandedItems[item.name] && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3, ease: 'easeInOut' }}
+                              className="space-y-2 border-l-2 border-primary/20 pl-6"
+                            >
+                              {item.items.map((subItem) => (
+                                <Link
+                                  key={subItem.name}
+                                  href={subItem.path}
+                                  onClick={handleLinkClick}
+                                  className={cn(
+                                    'block py-1 text-lg font-medium transition-colors duration-200',
+                                    pathname === subItem.path
+                                      ? 'text-primary'
+                                      : 'text-muted-foreground hover:text-foreground'
+                                  )}
+                                  style={{ minHeight: '44px' }}
+                                >
+                                  {subItem.name}
+                                </Link>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <Link
+                        href={item.path}
+                        onClick={handleLinkClick}
+                        className={cn(
+                          'block py-2 text-[36px] font-semibold capitalize leading-[40px] transition-colors duration-200',
+                          pathname === item.path
+                            ? 'text-primary'
+                            : 'text-foreground hover:text-primary'
+                        )}
+                        style={{ minHeight: '44px' }}
+                      >
+                        {item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
+                      </Link>
+                    )}
+                  </motion.div>
+                ))}
+              </nav>
+            </div>
+
+            <div
+              className="shrink-0 border-t border-border/20 bg-background px-4 py-3 md:hidden"
+              style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+            >
+              <div className="flex h-10 items-center space-x-3">
+                {user && (
+                  <Link href="/admin/overview" onClick={handleLinkClick}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-10 border border-[#e2e8f0] px-4 hover:border-[#cbd5e1] hover:bg-muted/50 dark:border-[#2e2e2e] dark:hover:border-[#404040] transition-all duration-200"
+                    >
+                      <User className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                )}
+                <Link href={reportHref} onClick={handleLinkClick} className="flex-1">
+                  <Button
                     size="sm"
-                    className="w-full h-10 text-sm font-semibold uppercase tracking-[0.5px] bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all duration-200 group"
+                    className="group h-10 w-full bg-primary text-sm font-semibold uppercase tracking-[0.5px] hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
                   >
                     SUBMIT REPORT
                     <ArrowRight className="ml-2 h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
                   </Button>
-                </motion.div>
-              </Link>
+                </Link>
+              </div>
             </div>
           </motion.div>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
+
+  return createPortal(overlay, document.body);
 };
 
 export default MobileMenuOverlay;

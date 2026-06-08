@@ -204,7 +204,8 @@ export const getLocalFileUrl = (filePath) => {
     }
 
     if (storagePath.startsWith('reports/')) {
-        return getSignedStorageUrl(storagePath, [PRIVATE_EVIDENCE_BUCKET]);
+        // Signed URLs must be resolved asynchronously (see resolveMediaUrl).
+        return null;
     }
 
     const publicUrl = getPublicStorageUrl(storagePath, bucket);

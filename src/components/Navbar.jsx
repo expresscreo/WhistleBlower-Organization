@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import AnimatedHamburger from '@/components/AnimatedHamburger';
 import MobileMenuOverlay from '@/components/MobileMenuOverlay';
+import { useReportCta } from '@/contexts/ReportCtaContext';
 
 const NavItem = ({ name, path, isActive, isExternal = false }) => {
     return isExternal ? (
@@ -285,6 +286,7 @@ const Navbar = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { isMobileMenuOpen, toggleMobileMenu } = useMobileMenu();
+  const { reportHref } = useReportCta();
 
   const navItems = [
     { name: 'TRACK', path: '/track' },
@@ -318,7 +320,7 @@ const Navbar = () => {
     >
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-[1fr_auto_1fr] items-stretch h-16 w-full">
-          <Link href="/" className="justify-self-start flex items-center min-w-0 max-w-[calc(100vw-5.5rem)]">
+          <Link href="/" className="justify-self-start flex items-center min-w-0 max-w-[calc(100vw-5.5rem)] md:max-nav:max-w-[calc(100vw-18rem)] nav:max-w-none">
             <img 
               src={theme === 'light' ? logoLight : logoDark}
               alt="WhistleBlower.ng Logo" 
@@ -326,7 +328,7 @@ const Navbar = () => {
             />
           </Link>
 
-          <div className="hidden md:flex col-start-2 justify-self-center items-stretch h-full">
+          <div className="hidden nav:flex col-start-2 justify-self-center items-stretch h-full">
             <div className="relative flex h-full items-center space-x-8">
               {navItems.map((item) => {
                   if (item.dropdown) {
@@ -344,7 +346,7 @@ const Navbar = () => {
             </div>
           </div>
 
-          <div className="hidden md:flex col-start-3 justify-self-end items-center space-x-2 self-center">
+          <div className="hidden nav:flex col-start-3 justify-self-end items-center space-x-2 self-center">
             {user && (
               <Link href="/admin/overview">
                 <Button variant="outline" size="icon">
@@ -352,7 +354,7 @@ const Navbar = () => {
                 </Button>
               </Link>
             )}
-            <Link href="/submit-report">
+            <Link href={reportHref}>
               <Button className="uppercase tracking-[1px] px-6 bg-primary hover:bg-[#e96601] group">
                 REPORT NOW
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -360,10 +362,24 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="md:hidden flex justify-self-end items-center col-start-3 self-center">
+          <div className="nav:hidden flex justify-self-end items-center col-start-3 self-center gap-2">
+            {user && (
+              <Link href="/admin/overview" className="hidden md:block">
+                <Button variant="outline" size="icon">
+                  <User className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+            <Link href={reportHref} className="hidden md:block">
+              <Button size="sm" className="uppercase tracking-[1px] px-4 bg-primary hover:bg-[#e96601] group whitespace-nowrap">
+                REPORT NOW
+                <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </Button>
+            </Link>
             <AnimatedHamburger 
               isOpen={isMobileMenuOpen} 
               onClick={toggleMobileMenu}
+              className="relative z-[10001]"
             />
           </div>
         </div>

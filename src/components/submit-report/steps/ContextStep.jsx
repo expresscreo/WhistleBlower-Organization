@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -43,11 +43,29 @@ export default function ContextStep({
     ? 'Select state'
     : 'State where incident occurred';
   const lgaPlaceholder = isBountyMode || isMostWantedMode
-    ? 'Select LGA'
-    : 'Local government area (LGA)';
+    ? 'Select LGA (optional)'
+    : 'Local government area (LGA, optional)';
   const addressPlaceholder = isBountyMode || isMostWantedMode
     ? 'Street, area, or landmark'
     : 'Incident address (optional)';
+  const timeInputRef = useRef(null);
+
+  const openTimePicker = useCallback(() => {
+    const input = timeInputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Fall through to click() when showPicker is blocked.
+      }
+    }
+
+    input.click();
+  }, []);
+
   const subjectPronoun = useMemo(() => {
     const sex = String(mostWantedContext?.sex || '').toLowerCase();
     if (sex === 'male') return 'him';
@@ -102,6 +120,7 @@ export default function ContextStep({
         isBountyMode={isBountyMode || isMostWantedMode}
         label="Local government area (LGA)"
         htmlFor="lga"
+        optional
       >
         <Select
           value={formData.lga || ''}
@@ -268,11 +287,11 @@ export default function ContextStep({
           <div className="relative w-full">
             <button
               type="button"
-              tabIndex={-1}
-              aria-hidden
+              id="timeSeen"
+              onClick={openTimePicker}
               className={cn(
                 inputFieldClasses,
-                'pointer-events-none w-full text-left',
+                'w-full cursor-pointer text-left',
                 !formData.timeSeen?.trim() && 'text-muted-foreground'
               )}
             >
@@ -281,10 +300,11 @@ export default function ContextStep({
                 : 'Select time'}
             </button>
             <input
-              id="timeSeen"
+              ref={timeInputRef}
               type="time"
               aria-label="Time seen"
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              tabIndex={-1}
+              className="sr-only"
               value={formData.timeSeen || ''}
               onChange={(e) => handleSelectChange('timeSeen', e.target.value)}
             />

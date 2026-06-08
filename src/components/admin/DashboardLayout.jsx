@@ -14,7 +14,7 @@ import {
     LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, 
     FileText, Users, Building, GitBranch, BarChart2, MessageSquare, 
     Trash2, FolderGit2, Shield, CheckSquare, ListTodo, Wallet,
-    PanelLeftClose, PanelRightClose, Sun, Moon, Award, Newspaper
+    PanelLeftClose, PanelRightClose, Sun, Moon, Award, Newspaper, ScanSearch, Plus
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -33,6 +33,7 @@ const DashboardLayout = ({ children }) => {
         { href: '/admin/overview', label: 'Overview', icon: LayoutDashboard, pageName: 'Overview' },
         { href: '/admin/reports', label: 'Reports', icon: FileText, pageName: 'Reports' },
         { href: '/admin/bounties', label: 'Bounties', icon: Award, pageName: 'Bounties' },
+        { href: '/admin/most-wanted', label: 'Most Wanted', icon: ScanSearch, pageName: 'Most Wanted' },
         { href: '/admin/customer-feedback', label: 'Customer Feedback', icon: MessageSquare, pageName: 'Customer Feedback' },
         { href: '/admin/news-editor', label: 'News Editor', icon: Newspaper, pageName: 'News Editor' },
         { href: '/admin/triage', label: 'Triage', icon: FolderGit2, pageName: 'Triage' },
@@ -50,6 +51,7 @@ const DashboardLayout = ({ children }) => {
     
     const isSuperAdmin = profile?.user_type === 'super_admin';
     const canSeeTrashed = isSuperAdmin || profile?.user_type === 'executive_admin';
+    const canCreateNewsPost = Boolean(profile && (isSuperAdmin || permissions['News Editor']));
     
     // Show filtered links immediately - if we don't have profile data yet, show basic links
     const visibleNavLinks = profile ? navLinks.filter(link => {
@@ -60,6 +62,7 @@ const DashboardLayout = ({ children }) => {
         { href: '/admin/overview', label: 'Overview', icon: LayoutDashboard, pageName: 'Overview' },
         { href: '/admin/reports', label: 'Reports', icon: FileText, pageName: 'Reports' },
         { href: '/admin/bounties', label: 'Bounties', icon: Award, pageName: 'Bounties' },
+        { href: '/admin/most-wanted', label: 'Most Wanted', icon: ScanSearch, pageName: 'Most Wanted' },
         { href: '/admin/settings', label: 'Settings', icon: Settings, pageName: 'Settings' },
     ];
 
@@ -138,6 +141,17 @@ const DashboardLayout = ({ children }) => {
                            Welcome, {profile?.name || 'Admin'}
                            {profile?.organizationName && ` of ${profile.organizationName}`}
                         </div>
+                        {canCreateNewsPost && (
+                            <Button
+                                variant="default"
+                                size="icon"
+                                onClick={() => router.push('/admin/news-editor/create')}
+                                aria-label="Create news post"
+                                title="Create news post"
+                            >
+                                <Plus className="h-5 w-5" />
+                            </Button>
+                        )}
                         <Button variant="outline" size="icon" onClick={toggleTheme}>
                             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

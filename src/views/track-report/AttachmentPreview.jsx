@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
 import { FieldError } from '@/components/ui/form-feedback';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, Eye, File as FileIcon, Download } from 'lucide-react';
 import { sanitizeFilename } from '@/lib/utils';
-import { resolveMediaUrl } from '@/lib/mediaUtils';
+import { isImagePath, resolveMediaUrl } from '@/lib/mediaUtils';
+
+const getDisplayName = (path) => {
+  const rawName = String(path || '').split('/').pop() || 'attachment';
+  const timestampSeparator = rawName.indexOf('-');
+  const displayName =
+    timestampSeparator >= 0 ? rawName.substring(timestampSeparator + 1) : rawName;
+  return sanitizeFilename(displayName);
+};
 
 const AttachmentPreview = ({ path }) => {
   const [url, setUrl] = useState(null);
   const [actionError, setActionError] = useState('');
   const [loading, setLoading] = useState(false);
-  const rawFileName = path.split('/').pop();
-  const fileName = rawFileName ? sanitizeFilename(rawFileName.substring(rawFileName.indexOf('-') + 1)) : 'attachment';
+  const fileName = getDisplayName(path);
 
-  const isImage = fileName?.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
+  const isImage = isImagePath(path) || isImagePath(fileName);
   const isVideo = fileName?.match(/\.(mp4|webm|ogg)$/i) != null;
   const isAudio = fileName?.match(/\.(mp3|wav|ogg)$/i) != null;
 

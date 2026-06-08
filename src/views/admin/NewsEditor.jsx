@@ -6,6 +6,16 @@ import NewsEditorPostCard from '@/components/admin/news-editor/NewsEditorPostCar
 import NewsEditorPostListRow from '@/components/admin/news-editor/NewsEditorPostListRow';
 import { supabase } from '@/lib/customSupabaseClient';
 import { FieldError, PageErrorBanner } from '@/components/ui/form-feedback';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, ChevronDown, LayoutGrid, List, Newspaper } from 'lucide-react';
@@ -32,6 +42,8 @@ const NewsEditor = () => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const [deleteFeedback, setDeleteFeedback] = useState({ error: '' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [viewMode, setViewMode] = useState('list');
@@ -110,19 +122,28 @@ const NewsEditor = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteRequest = (id) => {
     setDeleteFeedback({ error: '' });
-    if (!window.confirm('Are you sure you want to delete this news post?')) {
-      return;
-    }
+    const item = newsItems.find((post) => post.id === id) || { id, title: 'this post' };
+    setDeleteDialog({ open: true, item });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.item?.id) return;
+
+    setIsDeleting(true);
+    setDeleteFeedback({ error: '' });
 
     try {
-      const { error } = await supabase.from('news').delete().eq('id', id);
+      const { error } = await supabase.from('news').delete().eq('id', deleteDialog.item.id);
       if (error) throw error;
+      setDeleteDialog({ open: false, item: null });
       fetchNews();
     } catch (error) {
       console.error('Error deleting news post:', error);
       setDeleteFeedback({ error: 'Failed to delete news post' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -308,7 +329,7 @@ const NewsEditor = () => {
                   item={item}
                   onEdit={handleEdit}
                   onView={handleViewPost}
-                  onDelete={handleDelete}
+                  onDelete={handleDeleteRequest}
                 />
               ))}
             </div>
@@ -320,7 +341,7 @@ const NewsEditor = () => {
                   item={item}
                   onEdit={handleEdit}
                   onView={handleViewPost}
-                  onDelete={handleDelete}
+                  onDelete={handleDeleteRequest}
                 />
               ))}
             </div>
@@ -348,6 +369,39 @@ const NewsEditor = () => {
           </div>
         )}
       </div>
+
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            setDeleteDialog({ open: false, item: null });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete news post?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &ldquo;{deleteDialog.item?.title || 'this post'}&rdquo;.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <FieldError message={deleteFeedback.error} className="mx-6" />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+              loading={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

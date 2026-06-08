@@ -7,10 +7,13 @@ const ReportCtaContext = createContext({
   reportHref: DEFAULT_SUBMIT_REPORT_HREF,
   setReportHref: () => {},
   resetReportHref: () => {},
+  stickyReportBarVisible: true,
+  setStickyReportBarVisible: () => {},
 });
 
 export function ReportCtaProvider({ children }) {
   const [reportHref, setReportHrefState] = useState(DEFAULT_SUBMIT_REPORT_HREF);
+  const [stickyReportBarVisible, setStickyReportBarVisible] = useState(false);
 
   const setReportHref = useCallback((href) => {
     setReportHrefState(href || DEFAULT_SUBMIT_REPORT_HREF);
@@ -21,8 +24,14 @@ export function ReportCtaProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ reportHref, setReportHref, resetReportHref }),
-    [reportHref, setReportHref, resetReportHref]
+    () => ({
+      reportHref,
+      setReportHref,
+      resetReportHref,
+      stickyReportBarVisible,
+      setStickyReportBarVisible,
+    }),
+    [reportHref, setReportHref, resetReportHref, stickyReportBarVisible]
   );
 
   return <ReportCtaContext.Provider value={value}>{children}</ReportCtaContext.Provider>;

@@ -4,7 +4,6 @@ export function validateStepById(stepId, context) {
     descriptionMode,
     voiceNoteFile,
     isFeedbackMode,
-    hasLgasForState,
     isBountyMode,
     isMostWantedMode,
   } = context;
@@ -41,14 +40,6 @@ export function validateStepById(stepId, context) {
             ? 'Please select the state where you observed this.'
             : 'Please select the state where the incident occurred.',
           focusId: 'stateOfIncident',
-        };
-      }
-      if (hasLgasForState && !formData.lga?.trim()) {
-        return {
-          valid: false,
-          title: 'LGA required',
-          description: 'Please select the local government area.',
-          focusId: 'lga',
         };
       }
       if (!isBountyMode && !formData.dateOfIncident) {
