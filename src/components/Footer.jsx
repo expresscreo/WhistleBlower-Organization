@@ -48,7 +48,7 @@ const Footer = () => {
               />
             </div>
             <p className="text-[#b4b4b4] mb-4 max-w-md">
-              Empowering Nigerian citizens to safely report crimes and illegal activities to appropriate public agencies. Stay anonymous, protect your identity, and help build a safer Nigeria.
+              Empowering Nigerian citizens, organizations, and government agencies to report wrongdoing safely and anonymously. From fraud, corruption and fake drugs to bounty placements, wanted notices, and public safety intelligence, our platform helps turn information into action while protecting reporter identities.
             </p>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-[#b4b4b4]">Follow us:</span>

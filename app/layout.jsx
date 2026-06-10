@@ -3,7 +3,13 @@ import ScopedGoogleAnalytics from '@/components/ScopedGoogleAnalytics';
 import Providers from './providers';
 import { resolveGaMeasurementId, resolveGoogleSiteVerification } from '@/lib/env';
 import { resolveSiteUrl } from '@/lib/siteUrl';
-import { SITE_CONFIG, STRUCTURED_DATA_TEMPLATES } from '@/lib/seoUtils';
+import {
+  SITE_CONFIG,
+  STRUCTURED_DATA_TEMPLATES,
+  DEFAULT_SEO_PAGES,
+} from '@/lib/seoUtils';
+
+const homeSeo = DEFAULT_SEO_PAGES.home;
 import JsonLd from '@/components/JsonLd';
 
 const gaMeasurementId = resolveGaMeasurementId();
@@ -14,10 +20,11 @@ const googleVerification = resolveGoogleSiteVerification();
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
+    default: homeSeo.title,
     template: '%s',
   },
-  description: SITE_CONFIG.description,
+  description: homeSeo.description,
+  keywords: homeSeo.keywords.join(', '),
   alternates: {
     canonical: '/',
     types: {
@@ -25,8 +32,8 @@ export const metadata = {
     },
   },
   openGraph: {
-    title: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
-    description: SITE_CONFIG.description,
+    title: homeSeo.title,
+    description: homeSeo.description,
     url: `${siteUrl}/`,
     siteName: SITE_CONFIG.name,
     images: [{ url: SITE_CONFIG.defaultImage }],
@@ -36,8 +43,8 @@ export const metadata = {
   twitter: {
     card: 'summary_large_image',
     site: SITE_CONFIG.twitterHandle,
-    title: 'WhistleBlower.ng — Report Crime Securely, Earn Rewards',
-    description: SITE_CONFIG.description,
+    title: homeSeo.title,
+    description: homeSeo.description,
     images: [SITE_CONFIG.defaultImage],
   },
   icons: {

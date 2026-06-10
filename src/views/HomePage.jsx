@@ -259,24 +259,24 @@ const HomePage = () => {
                 : undefined
             }
           >
-            <div className="w-full max-w-6xl mx-auto md:-translate-x-12">
-              <h1 className="text-[43px] md:text-6xl font-bold mb-6 text-white leading-tight text-center lg:whitespace-nowrap">
-                Report Crime Securely, And{' '}
-                <span className="relative inline-block align-top text-left">
-                  <span aria-hidden className="invisible select-none">CashOut!</span>
-                  <span className="absolute left-0 top-0">
-                    <FlipWords
-                      words={HERO_FLIP_WORDS}
-                      duration={2000}
-                      className="text-[#ff5100]"
-                    />
-                  </span>
+            <h1 className="w-full max-w-6xl mx-auto text-[43px] md:text-6xl font-bold mb-6 text-white leading-tight flex flex-wrap items-baseline justify-center gap-x-[0.2em] text-center">
+              <span>Report Crime Securely, And</span>
+              <span className="relative inline-grid">
+                <span aria-hidden className="invisible col-start-1 row-start-1 select-none">
+                  CashOut!
                 </span>
-              </h1>
-            </div>
+                <span className="col-start-1 row-start-1 inline-flex justify-center">
+                  <FlipWords
+                    words={HERO_FLIP_WORDS}
+                    duration={2000}
+                    className="text-[#ff5100] text-center"
+                  />
+                </span>
+              </span>
+            </h1>
             
             <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-4xl mx-auto">
-              Nigeria's premier platform for anonymous crime reporting. Your courage contributes to a safer society and is recognized. Stay anonymous, report the crime, and get rewarded—help build a safer Nigeria.
+              Nigeria&apos;s premier platform for anonymous crime reporting, public bounties, and verified rewards. Stay protected, share what you know, and get paid for helping build a safer Nigeria.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md sm:max-w-none sm:w-auto mx-auto">
