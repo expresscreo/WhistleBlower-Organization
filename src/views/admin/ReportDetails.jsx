@@ -6,7 +6,6 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import jsPDF from 'jspdf';
 import ReportActions from '@/components/admin/report-details/ReportActions';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import ReportChat from '@/components/admin/report-details/ReportChat';
@@ -36,6 +35,7 @@ const ReportDetails = () => {
   const [orgUsers, setOrgUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [actionFeedback, setActionFeedback] = useState({ error: '', success: '' });
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   
   // Refs to prevent unnecessary re-fetching
   const hasInitialData = useRef(false);
@@ -315,19 +315,51 @@ const ReportDetails = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
+  const buildPdfPayload = useCallback(() => {
+    const paths = Array.isArray(report.evidence_path)
+      ? report.evidence_path
+      : report.evidence_path
+        ? [report.evidence_path]
+        : [];
+
+    let voiceNote = null;
+    let attachments = paths.map((file_url) => ({ file_url }));
+
+    if (report.is_voice_note && paths.length > 0) {
+      const voicePath =
+        paths.find((path) => String(path).includes('voice-report')) || paths[0];
+      voiceNote = { file_url: voicePath };
+      attachments = paths
+        .filter((path) => path !== voicePath)
+        .map((file_url) => ({ file_url }));
+    }
+
+    return {
+      report,
+      updates,
+      attachments,
+      voiceNote,
+      assignedUsers: selectedUsers.map((user) => ({ name: user.name })),
+    };
+  }, [report, updates, selectedUsers]);
+
+  const handleDownloadPDF = async () => {
     if (!report) return;
-    const doc = new jsPDF();
-    doc.setFont('helvetica');
-    doc.setFontSize(18);
-    doc.text(`Report: ${report.report_id}`, 14, 22);
-    doc.setFontSize(12);
-    doc.text(`Title: ${report.title}`, 14, 32);
-    doc.text(`Status: ${report.status}`, 14, 42);
-    doc.text(`Description:`, 14, 52);
-    const splitDescription = doc.splitTextToSize(report.description, 180);
-    doc.text(splitDescription, 14, 58);
-    doc.save(`report-${report.report_id}.pdf`);
+
+    setIsPdfGenerating(true);
+    setActionFeedback({ error: '', success: '' });
+
+    try {
+      const { downloadReportPdf } = await import('@/lib/generateReportPdf');
+      await downloadReportPdf(buildPdfPayload());
+    } catch (error) {
+      setActionFeedback({
+        error: error.message || 'Could not generate PDF.',
+        success: '',
+      });
+    } finally {
+      setIsPdfGenerating(false);
+    }
   };
 
   const handleTrashRestore = async () => {
@@ -385,7 +417,14 @@ const ReportDetails = () => {
             <h1 className="text-3xl md:text-4xl font-bold">Report Details</h1>
             <p className="text-muted-foreground mt-1">Report ID - {report.report_id}</p>
           </div>
-          <ReportActions report={report} userRole={profile?.user_type} onDownloadPDF={handleDownloadPDF} onTrashRestore={handleTrashRestore} onPermanentDelete={handlePermanentDelete}/>
+          <ReportActions
+            report={report}
+            userRole={profile?.user_type}
+            onDownloadPDF={handleDownloadPDF}
+            onTrashRestore={handleTrashRestore}
+            onPermanentDelete={handlePermanentDelete}
+            isPdfGenerating={isPdfGenerating}
+          />
         </div>
 
         <FieldError message={actionFeedback.error} />

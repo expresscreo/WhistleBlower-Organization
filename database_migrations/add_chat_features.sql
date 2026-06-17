@@ -3,7 +3,7 @@
 
 -- Add the missing columns for advanced chat functionality
 ALTER TABLE public.report_updates 
-ADD COLUMN IF NOT EXISTS reply_to_message_id bigint REFERENCES public.report_updates(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS reply_to_message_id uuid REFERENCES public.report_updates(id) ON DELETE SET NULL,
 ADD COLUMN IF NOT EXISTS is_read_by_reporter boolean DEFAULT false,
 ADD COLUMN IF NOT EXISTS is_read_by_admin boolean DEFAULT false;
 

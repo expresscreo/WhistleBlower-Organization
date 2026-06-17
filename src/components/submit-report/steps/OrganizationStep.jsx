@@ -118,9 +118,8 @@ export default function OrganizationStep({
       />
       <FieldError message={fieldError} />
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Start typing to see suggestions from our database. If your organization
-        isn&apos;t listed, choose the option to use your typed name — we&apos;ll
-        review and match it on our end.
+        Type at least 3 characters to see Organizations in our database. If the
+        Organization isn&apos;t listed, tap the (+) button.
       </p>
     </div>
   );

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Trash2, RotateCcw } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-const ReportActions = ({ report, userRole, onDownloadPDF, onTrashRestore, onPermanentDelete }) => {
+const ReportActions = ({ report, userRole, onDownloadPDF, onTrashRestore, onPermanentDelete, isPdfGenerating = false }) => {
   const canTrash = userRole === 'executive_admin' || userRole === 'super_admin';
   const canRestore = userRole === 'super_admin';
   const canPermanentlyDelete = userRole === 'super_admin';
@@ -83,7 +83,10 @@ const ReportActions = ({ report, userRole, onDownloadPDF, onTrashRestore, onPerm
           )}
         </>
       )}
-      <Button onClick={onDownloadPDF}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+      <Button variant="outline" onClick={onDownloadPDF} loading={isPdfGenerating} disabled={isPdfGenerating}>
+        <Download className="mr-2 h-4 w-4" />
+        Download Report
+      </Button>
     </div>
   );
 };
