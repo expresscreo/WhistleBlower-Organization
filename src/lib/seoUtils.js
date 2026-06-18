@@ -20,6 +20,8 @@ export const TITLE_SEPARATOR = ' — ';
 // Default site configuration
 export const SITE_CONFIG = {
   name: 'WhistleBlower.ng',
+  /** Preferred label in Google Search results (site name above the URL). */
+  siteDisplayName: 'WhistleBlower NG',
   get url() {
     return siteUrl();
   },
@@ -138,7 +140,8 @@ export const STRUCTURED_DATA_TEMPLATES = {
 
   website: () =>
     generateStructuredData('WebSite', {
-      name: SITE_CONFIG.name,
+      name: SITE_CONFIG.siteDisplayName,
+      alternateName: [SITE_CONFIG.name, 'whistleblower.ng'],
       url: SITE_CONFIG.url,
       description: SITE_CONFIG.description,
       inLanguage: 'en-NG',

@@ -19,6 +19,7 @@ const googleVerification = resolveGoogleSiteVerification();
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
+  applicationName: SITE_CONFIG.siteDisplayName,
   title: {
     default: homeSeo.title,
     template: '%s',
@@ -35,7 +36,7 @@ export const metadata = {
     title: homeSeo.title,
     description: homeSeo.description,
     url: `${siteUrl}/`,
-    siteName: SITE_CONFIG.name,
+    siteName: SITE_CONFIG.siteDisplayName,
     images: [{ url: SITE_CONFIG.defaultImage }],
     locale: 'en_NG',
     type: 'website',

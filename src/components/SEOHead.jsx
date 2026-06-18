@@ -1,11 +1,7 @@
 'use client';
 
+import { SITE_CONFIG } from '@/lib/seoUtils';
 import { usePageHead } from '@/hooks/usePageHead';
-
-/**
- * SEOHead Component
- * A reusable component for managing SEO metadata across all pages
- */
 const SEOHead = ({
   title,
   description,
@@ -66,7 +62,7 @@ const SEOHead = ({
     ogImage: safeImage,
     ogUrl: safeUrl,
     ogType: type,
-    ogSiteName: 'WhistleBlower.ng',
+    ogSiteName: SITE_CONFIG.siteDisplayName,
     ogLocale: 'en_NG',
     twitterCard: 'summary_large_image',
     twitterSite: '@WhistleBlowerNG',

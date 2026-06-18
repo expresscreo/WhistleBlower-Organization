@@ -158,7 +158,7 @@ const AboutUsPageV2 = () => {
                                     The Power to <span className="text-primary">Change.</span>
                                 </h1>
                                 <p className="mt-6 text-lg text-black dark:text-black max-w-xl mx-auto md:mx-0">
-                                    WhistleBlower.ng is Nigeria's premier platform for secure crime reporting and public bounties. We give citizens a safe and confidential way to report crimes, corruption, and illegal activities, or to place bounties for specific information—all while ensuring their voice is heard without fear of retaliation.
+                                    WhistleBlower.ng is Nigeria’s digital trust and accountability platform for anonymous reporting, whistleblowing, rewards, bounty placement, crime intelligence, most wanted notices, customer feedback, workplace compliance, and public safety. Speak up safely, track cases securely, and help build a safer Nigeria.
                                 </p>
                                 <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                                     <Link href="/submit-report" className="w-full sm:w-auto">

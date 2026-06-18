@@ -38,7 +38,7 @@ export function seoMetaToNextMetadata(seoMeta, options = {}) {
       title,
       description,
       url: seoMeta?.url || canonical,
-      siteName: SITE_CONFIG.name,
+      siteName: SITE_CONFIG.siteDisplayName,
       images: [
         {
           url: image,
