@@ -13,6 +13,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     import { format } from 'date-fns';
     import PageContentWrapper from '@/components/admin/PageContentWrapper';
     import PageHeader from '@/components/admin/PageHeader';
+    import { notifyRewardPaycode, notifyRewardRequest } from '@/lib/notify';
     
     const RewardPage = () => {
       const { profile } = useAuth();
@@ -123,7 +124,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
           const { error } = await supabase.from('reports').update({ reward_requested_amount: amount, reward_status: 'pending_request' }).eq('id', reportId);
           if (error) throw error;
           
-          console.log(`Email notification to Whistleblower Admin: New reward request for report ${reportId}`);
+          notifyRewardRequest(reportId);
     
           setActionFeedback({ error: '', success: 'Reward request submitted.' });
           fetchData();
@@ -166,7 +167,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
             });
             if (transError) throw transError;
     
-            console.log(`Email notification to Org: Paycode generated for report ${report.report_id}`);
+            notifyRewardPaycode(report.id, paycode);
     
             setActionFeedback({ error: '', success: `Paycode ${paycode} has been generated and assigned.` });
             fetchData();

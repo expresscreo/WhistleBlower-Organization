@@ -207,7 +207,7 @@ const Settings = () => {
             <TabsList className="!transition-none w-full sm:w-auto flex-nowrap">
               <TabsTrigger value="profile" className="!transition-none whitespace-nowrap">Profile</TabsTrigger>
               {isSuperAdmin && <TabsTrigger value="general" className="!transition-none whitespace-nowrap">General</TabsTrigger>}
-              {isSuperAdmin && <TabsTrigger value="email" className="!transition-none whitespace-nowrap">Email (SMTP)</TabsTrigger>}
+              {isSuperAdmin && <TabsTrigger value="email" className="!transition-none whitespace-nowrap">Email (Resend)</TabsTrigger>}
               {isSuperAdmin && <TabsTrigger value="payments" className="!transition-none whitespace-nowrap">Payments</TabsTrigger>}
               {isSuperAdmin && <TabsTrigger value="notifications" className="!transition-none whitespace-nowrap">Notifications</TabsTrigger>}
             </TabsList>
@@ -242,14 +242,22 @@ const Settings = () => {
                 <TabsContent value="email" className="mt-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>SMTP Settings</CardTitle>
-                            <CardDescription>Configure email sending service. Settings are securely stored.</CardDescription>
+                            <CardTitle>Email Delivery</CardTitle>
+                            <CardDescription>
+                                Transactional email is sent through Resend using your verified domain.
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2"><Label htmlFor="smtp-host">Host</Label><Input id="smtp-host" value={appSettings.smtp_host || ''} onChange={e => handleSettingChange('smtp_host', e.target.value)} /></div>
-                            <div className="space-y-2"><Label htmlFor="smtp-port">Port</Label><Input id="smtp-port" type="number" value={appSettings.smtp_port || ''} onChange={e => handleSettingChange('smtp_port', e.target.value)} /></div>
-                            <div className="space-y-2"><Label htmlFor="smtp-user">Username</Label><Input id="smtp-user" value={appSettings.smtp_user || ''} onChange={e => handleSettingChange('smtp_user', e.target.value)} /></div>
-                            <div className="space-y-2"><Label htmlFor="smtp-pass">Password</Label><Input id="smtp-pass" type="password" value={appSettings.smtp_pass || ''} onChange={e => handleSettingChange('smtp_pass', e.target.value)} /></div>
+                        <CardContent className="space-y-4 text-sm text-muted-foreground">
+                            <p>
+                                Configure <code className="text-foreground">RESEND_API_KEY</code> on the server.
+                                Optional overrides: <code className="text-foreground">RESEND_FROM_EMAIL</code> and{' '}
+                                <code className="text-foreground">NOTIFICATION_SUPPORT_EMAIL</code>.
+                            </p>
+                            <div className="border p-4 space-y-2">
+                                <p><span className="font-medium text-foreground">Default from:</span> WhistleBlower.ng &lt;noreply@WhistleBlower.ng&gt;</p>
+                                <p><span className="font-medium text-foreground">Support inbox:</span> support@whistleblower.ng</p>
+                                <p><span className="font-medium text-foreground">Domain:</span> whistleblower.ng (managed in Resend)</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>

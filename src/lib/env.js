@@ -104,4 +104,6 @@ export const serverEnv = {
   paystackTestSecretKey: process.env.PAYSTACK_TEST_SECRET_KEY,
   paystackLiveSecretKey: process.env.PAYSTACK_LIVE_SECRET_KEY,
   resendApiKey: process.env.RESEND_API_KEY,
+  resendFromEmail: process.env.RESEND_FROM_EMAIL,
+  notificationSupportEmail: process.env.NOTIFICATION_SUPPORT_EMAIL,
 };

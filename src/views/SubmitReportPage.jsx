@@ -20,7 +20,7 @@ import SubmitReportStepHero from '@/components/submit-report/SubmitReportStepHer
 import ReportFormWizard from '@/components/submit-report/ReportFormWizard';
 import SuccessView from '@/components/submit-report/SuccessView';
 import SEOHead from '@/components/SEOHead';
-import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
+import { notifyNewReport } from '@/lib/notify';
 
 const initialFormData = {
   organization: null,
@@ -377,6 +377,7 @@ export default function SubmitReportPage() {
       setReportId(newReportId);
       setSuccessPassword(plainPassword || '');
       setIsSubmitted(true);
+      notifyNewReport(newReportId);
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitError(error.message || 'Please try again.');

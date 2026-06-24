@@ -15,6 +15,7 @@ import ReportStatusCard from '@/components/admin/report-details/ReportStatusCard
 import ReportAttachmentsCard from '@/components/admin/report-details/ReportAttachmentsCard';
 import { FieldError } from '@/components/ui/form-feedback';
 import FormattedReportDescription from '@/components/report/FormattedReportDescription';
+import { notifyAdminMessage, notifyStatusUpdate } from '@/lib/notify';
 
 const formatSupabaseError = (error, fallback = 'Action failed.') => {
   if (!error) return fallback;
@@ -251,6 +252,7 @@ const ReportDetails = () => {
       console.error('Failed to update status:', error);
     } else {
       setReport(prev => ({...prev, status: newStatus}));
+      notifyStatusUpdate(id, newStatus);
     }
   }, [id]);
 
@@ -304,8 +306,7 @@ const ReportDetails = () => {
             console.error('Failed to send message:', error);
             setUpdates(prev => prev.filter(u => u.id !== tempId));
         } else {
-            // No need to fetch here, optimistic update is enough.
-            // The realtime subscription will update if another user messages.
+            notifyAdminMessage(id, newUpdate.message);
         }
     } catch(error) {
         console.error('Failed to send message:', error);

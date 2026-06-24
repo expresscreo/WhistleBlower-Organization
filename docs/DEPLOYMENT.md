@@ -46,6 +46,7 @@ Use your real Supabase project URL and anon key from the Supabase dashboard → 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` (pk_* only)
 - Server-only: `SUPABASE_SERVICE_ROLE_KEY`, `PAYSTACK_*_SECRET_KEY`, `RESEND_API_KEY`
+- Optional email overrides: `RESEND_FROM_EMAIL` (default `WhistleBlower.ng <noreply@WhistleBlower.ng>`), `NOTIFICATION_SUPPORT_EMAIL` (default `support@whistleblower.ng`)
 
 ## Static-only hosting
 

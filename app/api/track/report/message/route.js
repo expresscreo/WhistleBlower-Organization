@@ -1,3 +1,4 @@
+import { notifyReporterActivity } from '@/lib/email/notifications';
 import {
   authenticateReport,
   jsonError,
@@ -44,6 +45,13 @@ export async function POST(request) {
       .from('reports')
       .update({ admin_has_viewed: false })
       .eq('id', report.id);
+
+    notifyReporterActivity({
+      report,
+      activity: `New message from reporter:\n\n${message}`,
+    }).catch((error) => {
+      console.error('Reporter message notification failed:', error);
+    });
 
     return Response.json({ update: data });
   } catch (error) {

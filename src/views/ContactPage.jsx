@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { FieldError, FieldSuccess } from '@/components/ui/form-feedback';
-import { supabase } from '@/lib/customSupabaseClient';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 
@@ -35,11 +34,13 @@ const ContactPage = () => {
         }
 
         try {
-            const { error } = await supabase.functions.invoke('send-contact-email', {
-                body: { name, email, subject, message, honeypot },
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, subject, message, honeypot }),
             });
-
-            if (error) throw new Error(error.message);
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || 'Could not send message.');
 
             setFeedback({
                 error: '',

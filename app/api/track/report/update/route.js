@@ -1,3 +1,4 @@
+import { notifyReporterActivity } from '@/lib/email/notifications';
 import {
   authenticateReport,
   jsonError,
@@ -78,6 +79,13 @@ export async function POST(request) {
     if (updateError) {
       console.error('Failed to add report update message:', updateError);
     }
+
+    notifyReporterActivity({
+      report,
+      activity: updateMessage,
+    }).catch((error) => {
+      console.error('Report update notification failed:', error);
+    });
 
     return Response.json({
       report: sanitizeReport(updatedReport),
