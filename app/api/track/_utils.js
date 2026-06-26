@@ -2,6 +2,11 @@ import { pbkdf2, randomBytes, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { createClient } from '@supabase/supabase-js';
 import { publicEnv, serverEnv } from '@/lib/env';
+import {
+  getBucketForStoragePath,
+  PRIVATE_EVIDENCE_BUCKET,
+  PUBLIC_MEDIA_BUCKET,
+} from '@/lib/storageBuckets';
 
 const pbkdf2Async = promisify(pbkdf2);
 const MAX_MESSAGE_LENGTH = 5000;
@@ -174,4 +179,56 @@ export async function authenticateBounty(bountyId, password) {
   }
 
   return { bounty, supabase };
+}
+
+function normalizeStoragePath(filePath) {
+  return String(filePath || '')
+    .replace(/^\//, '')
+    .replace(/^wb_evio\//, '');
+}
+
+function getReportEvidencePaths(report) {
+  return Array.isArray(report?.evidence_path) ? report.evidence_path : [];
+}
+
+function getBountyEvidencePaths(bounty) {
+  const evidence = bounty?.evidence;
+  return Array.isArray(evidence) ? evidence : evidence ? [evidence] : [];
+}
+
+export function entityOwnsEvidencePath(entity, requestedPath, { field = 'report' } = {}) {
+  const normalized = normalizeStoragePath(requestedPath);
+  if (!normalized) return false;
+
+  const paths =
+    field === 'bounty'
+      ? getBountyEvidencePaths(entity)
+      : getReportEvidencePaths(entity);
+
+  return paths.some((path) => normalizeStoragePath(path) === normalized);
+}
+
+export async function createSignedEvidenceUrl(supabase, storagePath) {
+  const cleanPath = normalizeStoragePath(storagePath);
+  if (!cleanPath) {
+    return { error: 'Invalid file path.', status: 400 };
+  }
+
+  const primaryBucket = getBucketForStoragePath(cleanPath);
+  const buckets =
+    primaryBucket === PRIVATE_EVIDENCE_BUCKET
+      ? [PRIVATE_EVIDENCE_BUCKET]
+      : [PUBLIC_MEDIA_BUCKET, PRIVATE_EVIDENCE_BUCKET];
+
+  for (const bucket of [...new Set(buckets)]) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(cleanPath, 3600);
+
+    if (!error && data?.signedUrl) {
+      return { signedUrl: data.signedUrl };
+    }
+  }
+
+  return { error: 'Could not access this file.', status: 500 };
 }

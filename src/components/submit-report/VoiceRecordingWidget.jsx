@@ -1,26 +1,43 @@
 'use client';
 
 import VoiceRecorder from '@/views/submit-report/VoiceRecorder';
+import VoiceNoteCard from '@/components/media/VoiceNoteCard';
 
 export default function VoiceRecordingWidget({
-  onRecordingComplete,
+  voiceNotes = [],
+  onVoiceNoteAdd,
+  onVoiceNoteDelete,
   disabled = false,
   hasOrganization = true,
 }) {
   if (!hasOrganization) {
     return (
-      <div
+      <VoiceNoteCard
         id="voice-recorder"
-        className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground"
+        ariaLabel="Voice note recorder"
+        statusLabel="Unavailable"
+        statusKey="Ready"
+        showAnonymizedBadge={false}
+        footer={
+          <p className="text-sm text-muted-foreground">
+            Select an organization in step 1 before recording a voice note.
+          </p>
+        }
       >
-        Select an organization in step 1 before recording a voice note.
-      </div>
+        <div className="flex h-12 items-center justify-center text-sm text-muted-foreground">
+          Organization required
+        </div>
+      </VoiceNoteCard>
     );
   }
 
   return (
     <div id="voice-recorder" className={disabled ? 'pointer-events-none opacity-50' : ''}>
-      <VoiceRecorder onRecordingComplete={onRecordingComplete} />
+      <VoiceRecorder
+        voiceNotes={voiceNotes}
+        onVoiceNoteAdd={onVoiceNoteAdd}
+        onVoiceNoteDelete={onVoiceNoteDelete}
+      />
     </div>
   );
 }

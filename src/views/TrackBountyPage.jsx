@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, ExternalLink } from 'lucide-react';
@@ -118,15 +118,15 @@ const BountySummary = ({ bounty, publishedBountyUrl, onUpdateBounty, onLogout })
     );
 };
 
-const TrackBountyPage = ({ bountyId, password }) => {
+const TrackBountyPage = ({ bountyId, password, initialAuthData, onAuthFailure, onLogout }) => {
     const router = useRouter();
     const [updateFeedback, setUpdateFeedback] = useState({ error: '', success: '' });
 
-    const [loading, setLoading] = useState(true);
-    const [bountyData, setBountyData] = useState(null);
-    const [authenticated, setAuthenticated] = useState(false);
+    const [loading, setLoading] = useState(!initialAuthData);
+    const [bountyData, setBountyData] = useState(initialAuthData?.bounty ?? null);
+    const [authenticated, setAuthenticated] = useState(!!initialAuthData);
 
-    const [updates, setUpdates] = useState([]);
+    const [updates, setUpdates] = useState(initialAuthData?.updates ?? []);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [updateMessage, setUpdateMessage] = useState('');
@@ -134,15 +134,10 @@ const TrackBountyPage = ({ bountyId, password }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [uploadProgress, setUploadProgress] = useState({});
     const [publishedBountyUrl, setPublishedBountyUrl] = useState(null);
+    const consumedInitialAuth = useRef(false);
 
     const handleLogout = () => {
-        sessionStorage.removeItem('trackId');
-        sessionStorage.removeItem('trackPassword');
-        sessionStorage.removeItem('trackType');
-        setBountyData(null);
-        setPublishedBountyUrl(null);
-        setAuthenticated(false);
-        router.replace('/');
+        onLogout?.();
     };
 
     const markMessagesAsRead = useCallback(async (entityId) => {
@@ -179,26 +174,46 @@ const TrackBountyPage = ({ bountyId, password }) => {
         enabled: authenticated && Boolean(bountyData?.id),
     });
 
+    const applyInitialAuth = useCallback(async (authData) => {
+        sessionStorage.setItem('trackId', bountyId);
+        sessionStorage.setItem('trackPassword', password);
+        sessionStorage.setItem('trackType', 'bounty');
+        setUpdates(authData.updates || []);
+        setBountyData(authData.bounty);
+        setAuthenticated(true);
+        await markMessagesAsRead(authData.bounty.id);
+        setLoading(false);
+    }, [bountyId, password, markMessagesAsRead]);
+
     const handleAuthentication = useCallback(async () => {
         setLoading(true);
         try {
             const { bounty, updates: initialUpdates } = await authenticateTrackedBounty(bountyId, password);
+            sessionStorage.setItem('trackId', bountyId);
+            sessionStorage.setItem('trackPassword', password);
+            sessionStorage.setItem('trackType', 'bounty');
             setUpdates(initialUpdates || []);
             setBountyData(bounty);
             setAuthenticated(true);
             await markMessagesAsRead(bounty.id);
         } catch (error) {
-            sessionStorage.setItem('trackAuthError', error.message || 'Please check the Bounty ID and password.');
-            setLoading(false);
-            router.push('/track');
+            onAuthFailure?.(error.message || 'Please check the Bounty ID and password.');
             return;
         }
         setLoading(false);
-    }, [bountyId, password, router, markMessagesAsRead]);
+    }, [bountyId, password, onAuthFailure, markMessagesAsRead]);
 
     useEffect(() => {
-        handleAuthentication();
-    }, [handleAuthentication]);
+        if (initialAuthData?.bounty && !consumedInitialAuth.current) {
+            consumedInitialAuth.current = true;
+            applyInitialAuth(initialAuthData);
+            return;
+        }
+
+        if (!initialAuthData?.bounty) {
+            handleAuthentication();
+        }
+    }, [applyInitialAuth, handleAuthentication, initialAuthData]);
 
     useEffect(() => {
         if (!bountyData?.id) {

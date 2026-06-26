@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Paperclip, Download, Loader2, File as FileIcon, Mic, Eye } from 'lucide-react';
 import { sanitizeFilename } from '@/lib/utils';
 import { getLocalFileUrl } from '@/lib/fileUtils';
+import { findVoiceNotePaths } from '@/lib/voiceNoteUtils';
 
 const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
   const [url, setUrl] = useState(null);
@@ -99,8 +100,8 @@ const AttachmentPreview = ({ path, isVoiceNotePrimary }) => {
 const ReportAttachmentsCard = ({ evidencePath, isVoiceNote, hideVoiceNote = false }) => {
     const paths = Array.isArray(evidencePath) ? evidencePath : (evidencePath ? [evidencePath] : []);
     
-    const voiceNotePath = isVoiceNote ? paths.find(p => p.includes('voice-report.wav')) : null;
-    const otherPaths = paths.filter(p => p !== voiceNotePath);
+    const voiceNotePaths = isVoiceNote ? findVoiceNotePaths(paths) : [];
+    const otherPaths = paths.filter((p) => !voiceNotePaths.includes(p));
 
     return (
         <Card>
@@ -108,7 +109,10 @@ const ReportAttachmentsCard = ({ evidencePath, isVoiceNote, hideVoiceNote = fals
             <CardContent>
                 {paths.length > 0 ? (
                     <div className="space-y-2">
-                        {voiceNotePath && !hideVoiceNote && <AttachmentPreview key={voiceNotePath} path={voiceNotePath} isVoiceNotePrimary={true} />}
+                        {!hideVoiceNote &&
+                            voiceNotePaths.map((path) => (
+                                <AttachmentPreview key={path} path={path} isVoiceNotePrimary={true} />
+                            ))}
                         {otherPaths.map((path, index) => (
                             <AttachmentPreview key={index} path={path} isVoiceNotePrimary={false} />
                         ))}

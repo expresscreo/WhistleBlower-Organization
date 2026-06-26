@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
@@ -13,6 +13,10 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import TrackReportPage from './TrackReportPage';
 import TrackBountyPage from './TrackBountyPage';
+import {
+    authenticateTrackedReport,
+    authenticateTrackedBounty,
+} from '@/lib/trackApi';
 
 const TrackPage = () => {
     const router = useRouter();
@@ -25,11 +29,48 @@ const TrackPage = () => {
     const [trackId, setTrackId] = useState(null);
     const [trackPassword, setTrackPassword] = useState(null);
     const [trackType, setTrackType] = useState(null);
+    const [trackAuthData, setTrackAuthData] = useState(null);
+
+    const clearTrackSession = useCallback(() => {
+        sessionStorage.removeItem('trackId');
+        sessionStorage.removeItem('trackPassword');
+        sessionStorage.removeItem('trackType');
+        sessionStorage.removeItem('trackAuthError');
+    }, []);
+
+    const handleAuthFailure = useCallback((message) => {
+        clearTrackSession();
+        setTrackId(null);
+        setTrackPassword(null);
+        setTrackType(null);
+        setTrackAuthData(null);
+        setSearchError(message || 'Please check your ID and password.');
+        setLoading(false);
+    }, [clearTrackSession]);
+
+    const handleTrackLogout = useCallback(() => {
+        clearTrackSession();
+        setTrackId(null);
+        setTrackPassword(null);
+        setTrackType(null);
+        setTrackAuthData(null);
+        setIdInput('');
+        setPasswordInput('');
+        setSearchError('');
+        setLoading(false);
+    }, [clearTrackSession]);
 
     useEffect(() => {
         // Scroll to top when component mounts
         window.scrollTo(0, 0);
-        
+
+        const authError = sessionStorage.getItem('trackAuthError');
+        if (authError) {
+            clearTrackSession();
+            setSearchError(authError);
+            return;
+        }
+
         const storedId = sessionStorage.getItem('trackId');
         const storedPassword = sessionStorage.getItem('trackPassword');
         const storedType = sessionStorage.getItem('trackType');
@@ -40,12 +81,7 @@ const TrackPage = () => {
             setTrackPassword(storedPassword);
             setTrackType(type);
         }
-        const authError = sessionStorage.getItem('trackAuthError');
-        if (authError) {
-            setSearchError(authError);
-            sessionStorage.removeItem('trackAuthError');
-        }
-    }, []);
+    }, [clearTrackSession]);
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -54,27 +90,53 @@ const TrackPage = () => {
             setSearchError('Please enter both an ID and a password.');
             return;
         }
+
         setLoading(true);
-
         const type = idInput.startsWith('WBB') ? 'bounty' : 'report';
-        
-        sessionStorage.setItem('trackId', idInput);
-        sessionStorage.setItem('trackPassword', passwordInput);
-        sessionStorage.setItem('trackType', type);
 
-        setTrackId(idInput);
-        setTrackPassword(passwordInput);
-        setTrackType(type);
-        
-        setLoading(false);
+        try {
+            const authData = type === 'bounty'
+                ? await authenticateTrackedBounty(idInput, passwordInput)
+                : await authenticateTrackedReport(idInput, passwordInput);
+
+            sessionStorage.setItem('trackId', idInput);
+            sessionStorage.setItem('trackPassword', passwordInput);
+            sessionStorage.setItem('trackType', type);
+
+            setTrackAuthData(authData);
+            setTrackId(idInput);
+            setTrackPassword(passwordInput);
+            setTrackType(type);
+        } catch (error) {
+            setTrackAuthData(null);
+            setSearchError(error.message || 'Please check your ID and password.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (trackType === 'report') {
-        return <TrackReportPage reportId={trackId} password={trackPassword} />;
+        return (
+            <TrackReportPage
+                reportId={trackId}
+                password={trackPassword}
+                initialAuthData={trackAuthData}
+                onAuthFailure={handleAuthFailure}
+                onLogout={handleTrackLogout}
+            />
+        );
     }
 
     if (trackType === 'bounty') {
-        return <TrackBountyPage bountyId={trackId} password={trackPassword} />;
+        return (
+            <TrackBountyPage
+                bountyId={trackId}
+                password={trackPassword}
+                initialAuthData={trackAuthData}
+                onAuthFailure={handleAuthFailure}
+                onLogout={handleTrackLogout}
+            />
+        );
     }
 
     return (

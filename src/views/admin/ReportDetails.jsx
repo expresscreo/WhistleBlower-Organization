@@ -15,6 +15,12 @@ import ReportStatusCard from '@/components/admin/report-details/ReportStatusCard
 import ReportAttachmentsCard from '@/components/admin/report-details/ReportAttachmentsCard';
 import { FieldError } from '@/components/ui/form-feedback';
 import FormattedReportDescription from '@/components/report/FormattedReportDescription';
+import VoiceNotePlayerList from '@/components/media/VoiceNotePlayerList';
+import {
+  findVoiceNotePath,
+  findVoiceNotePaths,
+  splitVoiceNoteDescription,
+} from '@/lib/voiceNoteUtils';
 import { notifyAdminMessage, notifyStatusUpdate } from '@/lib/notify';
 
 const formatSupabaseError = (error, fallback = 'Action failed.') => {
@@ -327,11 +333,11 @@ const ReportDetails = () => {
     let attachments = paths.map((file_url) => ({ file_url }));
 
     if (report.is_voice_note && paths.length > 0) {
-      const voicePath =
-        paths.find((path) => String(path).includes('voice-report')) || paths[0];
-      voiceNote = { file_url: voicePath };
+      const voicePaths = findVoiceNotePaths(paths);
+      const primaryVoicePath = voicePaths[0] || findVoiceNotePath(paths);
+      voiceNote = primaryVoicePath ? { file_url: primaryVoicePath } : null;
       attachments = paths
-        .filter((path) => path !== voicePath)
+        .filter((path) => !voicePaths.includes(path))
         .map((file_url) => ({ file_url }));
     }
 
@@ -389,6 +395,50 @@ const ReportDetails = () => {
     }
   };
 
+  const resolveVoiceNoteUrl = useCallback(async (mediaPath) => {
+    const { data, error } = await supabase.functions.invoke('create-signed-url', {
+      body: { path: mediaPath },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data.signedUrl;
+  }, []);
+
+  const renderReportDescription = () => {
+    if (!report) return null;
+
+    const evidencePaths = Array.isArray(report.evidence_path)
+      ? report.evidence_path
+      : report.evidence_path
+        ? [report.evidence_path]
+        : [];
+    const voiceNotePaths = report.is_voice_note ? findVoiceNotePaths(evidencePaths) : [];
+    const voiceNoteDescription = splitVoiceNoteDescription(report.description);
+
+    if (!report.is_voice_note || !voiceNotePaths.length) {
+      return <FormattedReportDescription text={report.description} />;
+    }
+
+    if (voiceNoteDescription.hasMarker) {
+      return (
+        <div className="space-y-5">
+          <FormattedReportDescription text={voiceNoteDescription.intro} />
+          <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} />
+          {voiceNoteDescription.remainder.trim() ? (
+            <FormattedReportDescription text={voiceNoteDescription.remainder} />
+          ) : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        <FormattedReportDescription text={report.description} />
+        <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} />
+      </div>
+    );
+  };
+
   if (loading || profileLoading) {
     return (
       <>
@@ -434,7 +484,7 @@ const ReportDetails = () => {
           <div className="lg:col-span-2 space-y-8">
             <Card>
               <CardHeader><CardTitle className="text-2xl">{report.title}</CardTitle></CardHeader>
-              <CardContent><FormattedReportDescription text={report.description} /></CardContent>
+              <CardContent>{renderReportDescription()}</CardContent>
             </Card>
             <ReportChat 
               report={report}
@@ -472,7 +522,11 @@ const ReportDetails = () => {
           <div className="space-y-8">
             <ReportInfoCard report={report} />
             <ReportStatusCard status={report.status} onStatusUpdate={handleStatusUpdate}/>
-            <ReportAttachmentsCard evidencePath={report.evidence_path} isVoiceNote={report.is_voice_note} />
+            <ReportAttachmentsCard
+              evidencePath={report.evidence_path}
+              isVoiceNote={report.is_voice_note}
+              hideVoiceNote={report.is_voice_note}
+            />
             {canAssign && <ReportAssignment orgUsers={orgUsers} selectedUsers={selectedUsers} onAssignReport={handleAssignReport} />}
           </div>
         </div>

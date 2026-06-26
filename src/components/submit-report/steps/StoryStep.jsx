@@ -21,8 +21,10 @@ export default function StoryStep({
   isMostWantedMode,
   fieldErrors = {},
 }) {
+  const voiceNotes = Array.isArray(voiceNoteFile) ? voiceNoteFile : voiceNoteFile ? [voiceNoteFile] : [];
+
   const handleModeChange = (mode) => {
-    if (mode === 'text' && voiceNoteFile) {
+    if (mode === 'text' && voiceNotes.length) {
       onVoiceNoteClear();
     }
     onDescriptionModeChange(mode);
@@ -87,17 +89,9 @@ export default function StoryStep({
       ) : (
         <VoiceRecordingWidget
           hasOrganization={hasOrganization}
-          onRecordingComplete={(blob) => {
-            if (blob) {
-              onVoiceNoteComplete({
-                blob,
-                fileName: `voice-report-${Date.now()}.webm`,
-                audioFormat: 'webm',
-              });
-            } else {
-              onVoiceNoteClear();
-            }
-          }}
+          voiceNotes={voiceNotes}
+          onVoiceNoteAdd={onVoiceNoteComplete}
+          onVoiceNoteDelete={onVoiceNoteClear}
         />
       )}
       {descriptionMode === 'voice' && (

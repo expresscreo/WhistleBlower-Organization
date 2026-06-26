@@ -52,6 +52,10 @@ export function updateTrackedReport({
   });
 }
 
+export function fetchTrackedReportMediaUrl(reportId, password, path) {
+  return postJson('/api/track/report/media', { reportId, password, path });
+}
+
 export function authenticateTrackedBounty(bountyId, password) {
   return postJson('/api/track/bounty', { bountyId, password });
 }

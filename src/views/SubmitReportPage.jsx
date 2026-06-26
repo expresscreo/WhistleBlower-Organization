@@ -20,6 +20,7 @@ import SubmitReportStepHero from '@/components/submit-report/SubmitReportStepHer
 import ReportFormWizard from '@/components/submit-report/ReportFormWizard';
 import SuccessView from '@/components/submit-report/SuccessView';
 import SEOHead from '@/components/SEOHead';
+import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { notifyNewReport } from '@/lib/notify';
 
 const initialFormData = {
@@ -47,7 +48,7 @@ export default function SubmitReportPage() {
   const [submitError, setSubmitError] = useState('');
   const [files, setFiles] = useState([]);
   const [descriptionMode, setDescriptionMode] = useState('text');
-  const [voiceNoteFile, setVoiceNoteFile] = useState(null);
+  const [voiceNoteFile, setVoiceNoteFile] = useState([]);
   const [isOrganizationLocked, setIsOrganizationLocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -61,6 +62,23 @@ export default function SubmitReportPage() {
     stepMeta: getSubmitReportSteps({ isBountyMode: false, isMostWantedMode: false })[0],
   }));
   const submitIntentRef = useRef(false);
+
+  const handleVoiceNoteAdd = useCallback((note) => {
+    setVoiceNoteFile((current) => [...(Array.isArray(current) ? current : []), note]);
+  }, []);
+
+  const handleVoiceNoteClear = useCallback((noteId) => {
+    setVoiceNoteFile((current) => {
+      const notes = Array.isArray(current) ? current : current ? [current] : [];
+      const removedNotes = noteId ? notes.filter((note) => note.id === noteId) : notes;
+
+      removedNotes.forEach((note) => {
+        if (note?.url) URL.revokeObjectURL(note.url);
+      });
+
+      return noteId ? notes.filter((note) => note.id !== noteId) : [];
+    });
+  }, []);
 
   const isFeedbackMode = searchParams.get('feedback') === 'true';
   const isBountyMode = searchParams.has('bounty_id');
@@ -270,21 +288,34 @@ export default function SubmitReportPage() {
       let evidencePaths = [];
       const reportUUIDForPath = generateUUID();
 
-      if (descriptionMode === 'voice' && voiceNoteFile?.blob) {
+      const voiceNotes = Array.isArray(voiceNoteFile)
+        ? voiceNoteFile.filter((note) => note?.blob)
+        : voiceNoteFile?.blob
+          ? [voiceNoteFile]
+          : [];
+
+      if (descriptionMode === 'voice' && voiceNotes.length > 0) {
         setVoiceSubmitProgress(10);
-        const ext = voiceNoteFile.audioFormat || 'webm';
-        const sanitizedName = sanitizeFilename(
-          voiceNoteFile.fileName || `voice-report.${ext}`
-        );
-        const voicePath = `reports/${reportUUIDForPath}/${Date.now()}-${sanitizedName}`;
-        const { error: voiceError } = await supabase.storage
-          .from('wb_evio')
-          .upload(voicePath, voiceNoteFile.blob, {
-            contentType: `audio/${ext}`,
-          });
-        setVoiceSubmitProgress(90);
-        if (voiceError) throw voiceError;
-        evidencePaths.push(voicePath);
+        const uploadedVoicePaths = [];
+
+        for (let index = 0; index < voiceNotes.length; index += 1) {
+          const note = voiceNotes[index];
+          const ext = note.audioFormat || 'wav';
+          const sanitizedName = sanitizeFilename(
+            note.fileName || `voice-report-${index + 1}.${ext}`
+          );
+          const voicePath = `reports/${reportUUIDForPath}/${Date.now()}-${index + 1}-${sanitizedName}`;
+          const { error: voiceError } = await supabase.storage
+            .from('wb_evio')
+            .upload(voicePath, note.blob, {
+              contentType: `audio/${ext}`,
+            });
+          if (voiceError) throw voiceError;
+          uploadedVoicePaths.push(voicePath);
+          setVoiceSubmitProgress(Math.round(((index + 1) / voiceNotes.length) * 90));
+        }
+
+        evidencePaths.push(...uploadedVoicePaths);
         setVoiceSubmitProgress(100);
       }
 
@@ -434,8 +465,8 @@ export default function SubmitReportPage() {
               descriptionMode={descriptionMode}
               onDescriptionModeChange={setDescriptionMode}
               voiceNoteFile={voiceNoteFile}
-              onVoiceNoteComplete={setVoiceNoteFile}
-              onVoiceNoteClear={() => setVoiceNoteFile(null)}
+              onVoiceNoteComplete={handleVoiceNoteAdd}
+              onVoiceNoteClear={handleVoiceNoteClear}
               files={files}
               onFilesChange={setFiles}
               isFeedbackMode={isFeedbackMode}

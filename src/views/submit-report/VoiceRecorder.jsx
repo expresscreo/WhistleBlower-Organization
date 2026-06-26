@@ -1,187 +1,357 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+'use client';
+
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, Loader2, Mic, StopCircle, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { anonymizeVoiceBlob } from '@/lib/voiceAnonymizer';
+import VoiceNoteCard from '@/components/media/VoiceNoteCard';
+import VoiceNoteWaveform from '@/components/media/VoiceNoteWaveform';
+import VoiceNotePlayer from '@/components/media/VoiceNotePlayer';
 import { FieldError } from '@/components/ui/form-feedback';
-import { Button } from '@/components/ui/button';
-import { Mic, StopCircle, Trash2, Loader2, AlertTriangle, CheckCircle, UploadCloud, RefreshCw } from 'lucide-react';
-// import * as Tone from 'tone'; // Temporarily disabled due to build issues
+import { formatTime } from '@/components/media/voiceNoteUi';
 
-// WaveformVisualizer removed - using simple animated bars instead
+const createVoiceNote = (blob) => {
+  const id =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+  return {
+    id,
+    blob,
+    url: URL.createObjectURL(blob),
+    fileName: `voice-report-${Date.now()}.wav`,
+    audioFormat: 'wav',
+  };
+};
 
-const VoiceRecorder = ({ onRecordingComplete }) => {
-    const [recorderState, setRecorderState] = useState('idle');
-    const [recorderError, setRecorderError] = useState('');
-    const [audioBlob, setAudioBlob] = useState(null);
-    const [audioUrl, setAudioUrl] = useState(null);
+const VoiceRecorder = ({
+  voiceNotes = [],
+  onVoiceNoteAdd,
+  onVoiceNoteDelete,
+}) => {
+  const [recorderState, setRecorderState] = useState('idle');
+  const [recorderError, setRecorderError] = useState('');
+  const [processProgress, setProcessProgress] = useState(0);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [showAdditionalRecorder, setShowAdditionalRecorder] = useState(false);
 
-    const mediaRecorderRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const recordingTimerRef = useRef(null);
+  const autoStartPendingRef = useRef(false);
 
-    const startRecording = async () => {
-        setRecorderState('initializing');
-        await resetRecording();
-        
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            const audioChunks = [];
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }, []);
 
-            mediaRecorderRef.current.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunks.push(event.data);
-                }
-            };
+  const clearRecordingTimer = useCallback(() => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  }, []);
 
-            mediaRecorderRef.current.onstop = () => {
-                const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                setAudioBlob(blob);
-                const url = URL.createObjectURL(blob);
-                setAudioUrl(url);
-                setRecorderState('preview');
-            };
+  const startRecordingTimer = useCallback(() => {
+    clearRecordingTimer();
+    setRecordingSeconds(0);
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds((prev) => prev + 1);
+    }, 1000);
+  }, [clearRecordingTimer]);
 
-            mediaRecorderRef.current.start();
-            setRecorderState('recording');
-        } catch (error) {
-            console.error("Audio initialization error:", error);
-            setRecorderError(
-              'Please allow microphone access. If you\'ve already allowed it, try refreshing the page.'
-            );
-            setRecorderState('error');
+  const resetRecorder = useCallback(() => {
+    setRecorderState('idle');
+    setProcessProgress(0);
+    setRecordingSeconds(0);
+    autoStartPendingRef.current = false;
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    setRecorderState('initializing');
+    setRecorderError('');
+    setProcessProgress(0);
+    setRecordingSeconds(0);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : '';
+      mediaRecorderRef.current = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+      const audioChunks = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
         }
-    };
+      };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.stop();
-        }
+      mediaRecorderRef.current.onstop = async () => {
+        stopStream();
+        clearRecordingTimer();
+        const recordedType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+        const rawBlob = new Blob(audioChunks, { type: recordedType });
         setRecorderState('processing');
-    };
+        setProcessProgress(0);
 
-    const handleSubmission = () => {
-        if (audioBlob) {
-            onRecordingComplete(audioBlob);
-            setRecorderState('submitted');
-            setRecorderError('');
+        try {
+          const { blob } = await anonymizeVoiceBlob(rawBlob, {
+            onProgress: (p) => setProcessProgress(Math.round(p * 100)),
+          });
+          onVoiceNoteAdd?.(createVoiceNote(blob));
+          resetRecorder();
+          setShowAdditionalRecorder(false);
+        } catch (error) {
+          console.error('Voice anonymization failed:', error);
+          setRecorderError(
+            'We could not anonymize your recording, so it was discarded for your safety. Please record again.'
+          );
+          setRecorderState('error');
         }
-    };
-    
-    const resetRecording = useCallback(async () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.stop();
-        }
-        
-        if (audioUrl) {
-            URL.revokeObjectURL(audioUrl);
-        }
-        
-        setRecorderState('idle');
-        setAudioBlob(null);
-        setAudioUrl(null);
-        onRecordingComplete(null);
-    }, [audioUrl, onRecordingComplete]);
+      };
 
-    useEffect(() => {
-        return () => {
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                mediaRecorderRef.current.stop();
-            }
-            if (audioUrl) {
-                URL.revokeObjectURL(audioUrl);
-            }
+      mediaRecorderRef.current.start();
+      startRecordingTimer();
+      setRecorderState('recording');
+    } catch (error) {
+      console.error('Audio initialization error:', error);
+      stopStream();
+      clearRecordingTimer();
+      setRecorderError(
+        'Please allow microphone access. If you\'ve already allowed it, try refreshing the page.'
+      );
+      setRecorderState('error');
+    }
+  }, [
+    clearRecordingTimer,
+    onVoiceNoteAdd,
+    resetRecorder,
+    startRecordingTimer,
+    stopStream,
+  ]);
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setRecorderState('processing');
+  };
+
+  const handleRecordMore = () => {
+    setRecorderError('');
+    autoStartPendingRef.current = true;
+    setShowAdditionalRecorder(true);
+  };
+
+  const isFirstRecorder = voiceNotes.length === 0;
+  const showRecorderCard =
+    isFirstRecorder || showAdditionalRecorder || recorderState !== 'idle';
+  const showRecordMoreButton =
+    voiceNotes.length > 0 &&
+    !showAdditionalRecorder &&
+    recorderState === 'idle';
+
+  useEffect(() => {
+    if (autoStartPendingRef.current && showAdditionalRecorder && recorderState === 'idle') {
+      autoStartPendingRef.current = false;
+      startRecording();
+    }
+  }, [showAdditionalRecorder, recorderState, startRecording]);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      stopStream();
+      clearRecordingTimer();
+    };
+  }, [stopStream, clearRecordingTimer]);
+
+  const statusConfig = (() => {
+    switch (recorderState) {
+      case 'initializing':
+        return { key: 'Loading', label: 'Initializing', detail: null };
+      case 'recording':
+        return {
+          key: 'Recording',
+          label: 'Recording',
+          detail: formatTime(recordingSeconds),
         };
-    }, [audioUrl]);
+      case 'processing':
+        return {
+          key: 'Processing',
+          label: 'Anonymizing',
+          detail: `${processProgress}%`,
+        };
+      case 'error':
+        return { key: 'Ready', label: 'Ready to record', detail: null };
+      default:
+        return { key: 'Ready', label: 'Ready to record', detail: null };
+    }
+  })();
 
+  const renderRecordButton = () => {
+    if (recorderState === 'initializing' || recorderState === 'processing') {
+      return (
+        <div
+          className="relative flex h-14 w-14 shrink-0 cursor-not-allowed items-center justify-center border-2 border-border bg-muted text-muted-foreground"
+          aria-hidden="true"
+        >
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      );
+    }
 
-    const renderControls = () => {
-        switch (recorderState) {
-            case 'idle':
-            case 'error':
-                return (
-                    <div className="flex flex-col items-center gap-4">
-                        {recorderState === 'error' && <p className="text-destructive text-sm">Could not initialize microphone.</p>}
-                        <Button onClick={startRecording} size="lg">
-                            <Mic className="mr-2 h-5 w-5" /> Start Recording
-                        </Button>
-                    </div>
-                );
-            case 'initializing':
-                return (
-                     <div className="flex items-center text-primary">
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Initializing...
-                    </div>
-                );
-            case 'recording':
-                return (
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-64 h-16 bg-primary/20 rounded-lg flex items-center justify-center">
-                            <div className="flex gap-1">
-                                <div className="w-1 h-8 bg-primary animate-pulse"></div>
-                                <div className="w-1 h-6 bg-primary animate-pulse" style={{animationDelay: '0.1s'}}></div>
-                                <div className="w-1 h-10 bg-primary animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                                <div className="w-1 h-4 bg-primary animate-pulse" style={{animationDelay: '0.3s'}}></div>
-                                <div className="w-1 h-8 bg-primary animate-pulse" style={{animationDelay: '0.4s'}}></div>
-                            </div>
-                        </div>
-                        <Button onClick={stopRecording} variant="destructive" size="lg">
-                            <StopCircle className="mr-2 h-5 w-5 animate-pulse" /> Stop Recording
-                        </Button>
-                    </div>
-                );
-            case 'processing':
-                return (
-                     <div className="flex items-center text-primary">
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing Audio...
-                    </div>
-                );
-            case 'preview':
-                return (
-                    <div className="w-full space-y-4 text-center">
-                        <p className="font-semibold">Anonymized preview is ready.</p>
-                        <div className="w-full">
-                           <audio src={audioUrl} controls className="w-full" />
-                        </div>
-                        <div className="flex justify-center gap-4 pt-4">
-                            <Button onClick={resetRecording} variant="outline" size="sm">
-                                <Trash2 className="mr-2 h-4 w-4" /> Discard
-                            </Button>
-                            <Button onClick={handleSubmission} size="sm">
-                                <UploadCloud className="mr-2 h-4 w-4" /> Attach Voice Note
-                            </Button>
-                        </div>
-                    </div>
-                );
-            case 'submitted':
-                return (
-                    <div className="w-full space-y-3 text-center">
-                        <div className="flex items-center justify-center bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 p-3 rounded-md">
-                            <CheckCircle className="mr-2 h-5 w-5" />
-                            <p className="font-semibold">Voice note attached successfully!</p>
-                        </div>
-                         <Button onClick={resetRecording} variant="outline" size="sm">
-                            <RefreshCw className="mr-2 h-4 w-4" /> Record New Note
-                        </Button>
-                    </div>
-                );
-            default: return null;
-        }
-    };
-
+    if (recorderState === 'recording') {
+      return (
+        <button
+          type="button"
+          onClick={stopRecording}
+          aria-label="Stop recording"
+          className={cn(
+            'relative flex h-14 w-14 shrink-0 items-center justify-center border-2 transition-all',
+            'border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-95',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2'
+          )}
+        >
+          <StopCircle className="h-5 w-5" aria-hidden="true" />
+        </button>
+      );
+    }
 
     return (
-        <div className="space-y-4 p-4 border-2 border-dashed rounded-lg">
-            <h3 className="text-lg font-semibold text-center">Voice Note Submission</h3>
-            <p className="text-sm text-muted-foreground text-center">Record your report using your voice. We'll automatically anonymize it to protect your identity.</p>
-
-            <div className="flex flex-col items-center justify-center gap-4 min-h-[150px]">
-                {renderControls()}
-                <FieldError message={recorderError} />
-            </div>
-             <div className="text-xs text-muted-foreground bg-secondary p-3 mt-4 flex items-start gap-2 rounded-md">
-                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>For your safety, avoid mentioning any personally identifiable information in your recording, such as your name or specific location.</span>
-            </div>
-        </div>
+      <button
+        type="button"
+        onClick={startRecording}
+        aria-label="Start recording voice note"
+        className={cn(
+          'relative flex h-14 w-14 shrink-0 items-center justify-center border-2 transition-all',
+          'border-primary bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
+        )}
+      >
+        <Mic className="h-5 w-5" aria-hidden="true" />
+      </button>
     );
+  };
+
+  const renderRecorderFooter = () => {
+    if (recorderState === 'recording') {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Speak clearly, then tap stop when finished. Avoid names or other identifying details.
+        </p>
+      );
+    }
+
+    if (recorderState === 'processing') {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Transforming on your device. The original voice is discarded before upload.
+        </p>
+      );
+    }
+
+    if (isFirstRecorder) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Tap the microphone to record. Your voice is transformed on this device before anything is
+          uploaded.
+        </p>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="space-y-3">
+      {voiceNotes.map((note) => (
+        <VoiceNotePlayer
+          key={note.id}
+          src={note.url}
+          rightAction={
+            <button
+              type="button"
+              onClick={() => onVoiceNoteDelete?.(note.id)}
+              aria-label="Delete voice note"
+              className={cn(
+                'relative flex h-14 w-14 items-center justify-center border-2 transition-all',
+                'border-destructive/40 bg-destructive/[0.06] text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground active:scale-95',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2'
+              )}
+            >
+              <Trash2 className="h-5 w-5" aria-hidden="true" />
+            </button>
+          }
+        />
+      ))}
+
+      {showRecordMoreButton ? (
+        <button
+          type="button"
+          onClick={handleRecordMore}
+          className="inline-flex w-full items-center justify-center gap-2 border border-primary/30 bg-primary/[0.06] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary/[0.1]"
+        >
+          <Mic className="h-4 w-4" aria-hidden="true" />
+          Record more voicenote
+        </button>
+      ) : null}
+
+      {showRecorderCard ? (
+        <VoiceNoteCard
+          id={isFirstRecorder ? 'voice-recorder' : undefined}
+          ariaLabel="Voice note recorder"
+          statusLabel={statusConfig.label}
+          statusDetail={statusConfig.detail}
+          statusKey={statusConfig.key}
+          footer={renderRecorderFooter()}
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            {renderRecordButton()}
+            <div className="min-w-0 flex-1">
+              <VoiceNoteWaveform
+                progress={recorderState === 'recording' ? ((recordingSeconds % 8) / 8) * 100 : 0}
+                showSkeleton={
+                  recorderState === 'initializing' ||
+                  recorderState === 'processing' ||
+                  recorderState === 'recording'
+                }
+                isPlaying={recorderState === 'recording'}
+                isReady={recorderState === 'recording'}
+                ariaLabel={
+                  recorderState === 'recording' ? 'Recording waveform' : 'Voice recorder waveform'
+                }
+              />
+            </div>
+          </div>
+
+          {recorderError ? (
+            <div className="mt-3 border border-destructive/20 bg-destructive/[0.04] p-3">
+              <FieldError message={recorderError} className="text-left" />
+            </div>
+          ) : null}
+        </VoiceNoteCard>
+      ) : null}
+
+      <div className="flex items-start gap-2 border border-border/80 bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span>
+          For your safety, avoid mentioning personally identifiable information in your recording,
+          such as your name or specific location.
+        </span>
+      </div>
+    </div>
+  );
 };
 
 export default VoiceRecorder;

@@ -9,6 +9,9 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
+import NavNotificationBadge from '@/components/admin/NavNotificationBadge';
+import { useAdminNavNotifications } from '@/hooks/useAdminNavNotifications';
+import { PAGE_NAME_TO_NOTIFICATION_KEY } from '@/lib/adminNavNotifications';
 
 import { 
     LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, 
@@ -23,6 +26,7 @@ const DashboardLayout = ({ children }) => {
     const { logout, profile, permissions, loading } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
+    const { counts: notificationCounts } = useAdminNavNotifications(profile);
 
     const handleLogout = async () => {
         await logout();
@@ -69,12 +73,16 @@ const DashboardLayout = ({ children }) => {
     const sideNav = (isMinimized) => (
         <div className="flex flex-col h-full">
             <nav className="flex-1 text-sm font-medium">
-                {visibleNavLinks.map((link) => (
+                {visibleNavLinks.map((link) => {
+                    const notificationKey = PAGE_NAME_TO_NOTIFICATION_KEY[link.pageName];
+                    const notificationCount = notificationKey ? notificationCounts[notificationKey] : 0;
+
+                    return (
                     <NavLink
                         key={link.href}
                         to={link.href}
                         className={({ isActive }) =>
-                            cn('flex items-center gap-3 px-4 py-3 transition-all',
+                            cn('relative flex items-center gap-3 px-4 py-3 transition-all',
                              isMinimized ? 'justify-center' : 'justify-start',
                              isActive
                                 ? 'text-primary bg-primary/10'
@@ -83,10 +91,19 @@ const DashboardLayout = ({ children }) => {
                         }
                         onClick={() => setIsMobileMenuOpen(false)}
                     >
-                        <link.icon className="h-5 w-5" />
-                        {!isMinimized && link.label}
+                        <link.icon className="h-5 w-5 shrink-0" />
+                        {!isMinimized && (
+                            <>
+                                <span className="flex-1 truncate">{link.label}</span>
+                                <NavNotificationBadge count={notificationCount} />
+                            </>
+                        )}
+                        {isMinimized && notificationCount > 0 && (
+                            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                        )}
                     </NavLink>
-                ))}
+                    );
+                })}
             </nav>
             <div className="mt-auto p-4 border-t">
                  <Button variant="ghost" className={cn("w-full flex items-center gap-3 px-1", isMinimized ? "justify-center" : "justify-start")} onClick={handleLogout}>

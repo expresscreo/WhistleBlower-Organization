@@ -349,7 +349,11 @@ const SubmitReportPage = () => {
                             isOrgFromUrl={isOrgFromUrl}
                         />
                         <ReportCategorization formData={formData} onInputChange={handleInputChange}/>
-                        <VoiceRecorder onRecordingComplete={setVoiceNote} />
+                        <VoiceRecorder
+                            voiceNotes={[]}
+                            onVoiceNoteAdd={(note) => setVoiceNote(note.blob)}
+                            onVoiceNoteDelete={() => setVoiceNote(null)}
+                        />
                     </>
                   )}
                 </motion.div>

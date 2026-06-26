@@ -1,7 +1,6 @@
-import { useRouter } from 'next/navigation';
 import { generateUUID } from '@/lib/cryptoUtils';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -21,11 +20,11 @@ import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { usePageVisibility } from '@/hooks/usePageVisibility';
 import { useTrackedChatPolling } from '@/hooks/useTrackedChatPolling';
 
-const TrackReportPage = ({ reportId, password }) => {
-  const [loading, setLoading] = useState(true);
-  const [reportData, setReportData] = useState(null);
-  const [updates, setUpdates] = useState([]);
-  const [authenticated, setAuthenticated] = useState(false);
+const TrackReportPage = ({ reportId, password, initialAuthData, onAuthFailure, onLogout }) => {
+  const [loading, setLoading] = useState(!initialAuthData);
+  const [reportData, setReportData] = useState(initialAuthData?.report ?? null);
+  const [updates, setUpdates] = useState(initialAuthData?.updates ?? []);
+  const [authenticated, setAuthenticated] = useState(!!initialAuthData);
   const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
   const [newEvidenceFiles, setNewEvidenceFiles] = useState([]);
@@ -33,7 +32,7 @@ const TrackReportPage = ({ reportId, password }) => {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [updateFeedback, setUpdateFeedback] = useState({ error: '', success: '' });
-  const router = useRouter();
+  const consumedInitialAuth = useRef(false);
 
   const markMessagesAsRead = useCallback(async (reportId) => {
     if (!reportId) return;
@@ -66,20 +65,25 @@ const TrackReportPage = ({ reportId, password }) => {
     enabled: authenticated && Boolean(reportData?.id),
   });
 
+  const persistTrackSession = useCallback(() => {
+    sessionStorage.setItem('trackId', reportId);
+    sessionStorage.setItem('trackPassword', password);
+    sessionStorage.setItem('trackType', 'report');
+  }, [reportId, password]);
+
   const setAuthenticatedState = useCallback(async (report, shouldFetchUpdates = true) => {
+    persistTrackSession();
     setReportData(report);
     setAuthenticated(true);
     await markMessagesAsRead(report.id);
     if (shouldFetchUpdates) {
       await fetchUpdates(true);
     }
-  }, [markMessagesAsRead, fetchUpdates]);
+  }, [markMessagesAsRead, fetchUpdates, persistTrackSession]);
 
   const handleLogout = useCallback(() => {
-    setReportData(null);
-    setAuthenticated(false);
-    router.replace('/');
-  }, [router]);
+    onLogout?.();
+  }, [onLogout]);
 
   const handleAuthentication = useCallback(async () => {
     setLoading(true);
@@ -88,17 +92,24 @@ const TrackReportPage = ({ reportId, password }) => {
         setUpdates(initialUpdates || []);
         await setAuthenticatedState(report, false);
     } catch (error) {
-        sessionStorage.setItem('trackAuthError', error.message || 'Please check the Report ID and password.');
-        setLoading(false);
-        router.push('/track');
+        onAuthFailure?.(error.message || 'Please check the Report ID and password.');
         return;
     }
     setLoading(false);
-  }, [reportId, password, router, setAuthenticatedState]);
+  }, [reportId, password, onAuthFailure, setAuthenticatedState]);
 
   useEffect(() => {
-    handleAuthentication();
-  }, [handleAuthentication]);
+    if (initialAuthData?.report && !consumedInitialAuth.current) {
+      consumedInitialAuth.current = true;
+      setUpdates(initialAuthData.updates || []);
+      setAuthenticatedState(initialAuthData.report, false).finally(() => setLoading(false));
+      return;
+    }
+
+    if (!initialAuthData?.report) {
+      handleAuthentication();
+    }
+  }, [handleAuthentication, initialAuthData, setAuthenticatedState]);
 
   const handleUpdateReport = async () => {
     setUpdateFeedback({ error: '', success: '' });
@@ -210,7 +221,13 @@ const TrackReportPage = ({ reportId, password }) => {
                     <h1 className="text-2xl sm:text-3xl font-bold break-words">Report Summary</h1>
                 </div>
                 <div className="space-y-8">
-                    <ReportSummary report={reportData} onUpdateReport={() => setUpdateModalOpen(true)} onLogout={handleLogout} />
+                    <ReportSummary
+                      report={reportData}
+                      reportId={reportId}
+                      password={password}
+                      onUpdateReport={() => setUpdateModalOpen(true)}
+                      onLogout={handleLogout}
+                    />
                     {!reportData.is_feedback && <RewardSection report={reportData} />}
                     <Chat
                       report={reportData}

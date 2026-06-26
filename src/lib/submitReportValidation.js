@@ -81,7 +81,12 @@ export function validateStepById(stepId, context) {
         };
       }
       if (descriptionMode === 'voice') {
-        if (!voiceNoteFile?.blob) {
+        const voiceNotes = Array.isArray(voiceNoteFile)
+          ? voiceNoteFile
+          : voiceNoteFile
+            ? [voiceNoteFile]
+            : [];
+        if (!voiceNotes.some((note) => note?.blob)) {
           return {
             valid: false,
             title: 'Voice note required',

@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Paperclip, Clock, Edit, LogOut } from 'lucide-react';
 import AttachmentPreview from './AttachmentPreview';
 import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import FormattedReportDescription from '@/components/report/FormattedReportDescription';
+import VoiceNotePlayerList from '@/components/media/VoiceNotePlayerList';
+import { fetchTrackedReportMediaUrl } from '@/lib/trackApi';
+import {
+  findVoiceNotePaths,
+  splitVoiceNoteDescription,
+} from '@/lib/voiceNoteUtils';
 
-const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
+const ReportSummary = ({ report, reportId, password, onUpdateReport, onLogout }) => {
     const statusConfig = {
         'Pending': { progress: 5, color: 'bg-orange-400' },
         'Under Review': { progress: 20, color: 'bg-yellow-400' },
@@ -20,6 +26,41 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
 
     const evidencePaths = Array.isArray(report.evidence_path) ? report.evidence_path : 
                           Array.isArray(report.evidence) ? report.evidence : [];
+    const voiceNotePaths = report.is_voice_note ? findVoiceNotePaths(evidencePaths) : [];
+    const attachmentPaths = voiceNotePaths.length
+        ? evidencePaths.filter((path) => !voiceNotePaths.includes(path))
+        : evidencePaths;
+    const voiceNoteDescription = splitVoiceNoteDescription(report.description);
+
+    const resolveVoiceNoteUrl = useCallback(async (mediaPath) => {
+        const { signedUrl } = await fetchTrackedReportMediaUrl(reportId, password, mediaPath);
+        return signedUrl;
+    }, [reportId, password]);
+
+    const renderDescription = () => {
+        if (!report.is_voice_note || !voiceNotePaths.length) {
+            return <FormattedReportDescription text={report.description} />;
+        }
+
+        if (voiceNoteDescription.hasMarker) {
+            return (
+                <div className="space-y-5">
+                    <FormattedReportDescription text={voiceNoteDescription.intro} />
+                    <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} />
+                    {voiceNoteDescription.remainder.trim() ? (
+                        <FormattedReportDescription text={voiceNoteDescription.remainder} />
+                    ) : null}
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-5">
+                <FormattedReportDescription text={report.description} />
+                <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} />
+            </div>
+        );
+    };
 
     return (
         <div className="bg-card p-6 md:p-8 border">
@@ -58,7 +99,7 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
             <div className="border-t pt-6 border-b pb-6">
                 <h3 className="text-xl sm:text-2xl font-bold mb-4">{report.title}</h3>
                 <div className="text-muted-foreground">
-                  <FormattedReportDescription text={report.description} />
+                  {renderDescription()}
                 </div>
             </div>
             
@@ -78,9 +119,9 @@ const ReportSummary = ({ report, onUpdateReport, onLogout }) => {
             {/* Attachments */}
             <div className="mt-6 border-t pt-6">
                 <h3 className="font-semibold text-xl mb-4 flex items-center"><Paperclip className="mr-2 h-5 w-5"/>Attachments</h3>
-                {evidencePaths && evidencePaths.length > 0 ? (
+                {attachmentPaths && attachmentPaths.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {evidencePaths.map((path, index) => <AttachmentPreview key={index} path={path} />)}
+                        {attachmentPaths.map((path, index) => <AttachmentPreview key={index} path={path} />)}
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">No attachments for this report.</p>
