@@ -13,14 +13,13 @@ import {
 import { cn } from '@/lib/utils';
 import { dateInputFieldClasses, inputFieldClasses, selectTriggerFieldClasses } from '@/lib/fieldStyles';
 import {
-  formatDateForInput,
-  formatIncidentDate,
   formatTimeSeenDisplay,
   getCategories,
 } from '../reportFormUtils';
 import { useReportFormLocation } from '../useReportFormLocation';
 import { FieldError } from '@/components/ui/form-feedback';
 import { TipFieldGroup } from '../TipFieldLabel';
+import MobileIncidentDateField from '../MobileIncidentDateField';
 
 const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
 
@@ -38,7 +37,7 @@ export default function ContextStep({
     handleSelectChange
   );
   const categories = getCategories(isFeedbackMode);
-  const maxDate = formatDateForInput(new Date());
+  const maxDate = useMemo(() => new Date(), []);
   const statePlaceholder = isBountyMode || isMostWantedMode
     ? 'Select state'
     : 'State where incident occurred';
@@ -191,36 +190,33 @@ export default function ContextStep({
 
       {!isBountyMode && !isMostWantedMode && (
         <>
-          {/* Mobile: native date */}
-          <Input
+          <MobileIncidentDateField
             id="dateOfIncident"
-            type="date"
-            max={maxDate}
-            aria-label="Date of incident"
-            className={`md:hidden ${dateInputFieldClasses}`}
-            value={formatDateForInput(formData.dateOfIncident)}
-            onChange={(e) =>
-              handleSelectChange(
-                'dateOfIncident',
-                e.target.value ? new Date(e.target.value) : null
-              )
-            }
+            value={formData.dateOfIncident}
+            onChange={(date) => handleSelectChange('dateOfIncident', date)}
+            placeholder="Select incident date"
+            ariaLabel="Date of incident"
+            maxDate={maxDate}
           />
-          <FieldError message={fieldErrors.dateOfIncident} className="mt-2" />
+          <FieldError message={fieldErrors.dateOfIncident} className="mt-2 md:hidden" />
 
-          {/* Desktop: react-datepicker */}
+          {/* Desktop: react-datepicker popup */}
           <div className="hidden md:block w-full min-w-0 max-w-full">
             <DatePicker
               id="dateOfIncident"
               selected={formData.dateOfIncident}
               onChange={(date) => handleSelectChange('dateOfIncident', date)}
-              maxDate={new Date()}
+              maxDate={maxDate}
               placeholderText="Date of incident"
-              dateFormat="PPP"
+              dateFormat="MMMM d, yyyy"
               className={dateInputFieldClasses}
               wrapperClassName="w-full"
+              showPopperArrow={false}
+              popperPlacement="bottom-start"
+              aria-label="Date of incident"
             />
           </div>
+          <FieldError message={fieldErrors.dateOfIncident} className="mt-2 hidden md:block" />
         </>
       )}
 
@@ -231,50 +227,30 @@ export default function ContextStep({
             label={dateLabel}
             htmlFor="dateOfIncident"
           >
-            {/* Mobile: button-styled native date picker */}
-            <div className="relative w-full md:hidden">
-              <button
-                type="button"
-                tabIndex={-1}
-                aria-hidden
-                className={cn(
-                  inputFieldClasses,
-                  'pointer-events-none w-full text-left',
-                  !formData.dateOfIncident && 'text-muted-foreground'
-                )}
-              >
-                {formData.dateOfIncident
-                  ? formatIncidentDate(formData.dateOfIncident)
-                  : 'Select date'}
-              </button>
-              <input
-                id="dateOfIncident"
-                type="date"
-                max={maxDate}
-                aria-label={dateLabel}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                value={formatDateForInput(formData.dateOfIncident)}
-                onChange={(e) =>
-                  handleSelectChange(
-                    'dateOfIncident',
-                    e.target.value ? new Date(`${e.target.value}T12:00:00`) : null
-                  )
-                }
-              />
-            </div>
+            <MobileIncidentDateField
+              id="dateOfIncident"
+              value={formData.dateOfIncident}
+              onChange={(date) => handleSelectChange('dateOfIncident', date)}
+              placeholder="Select date"
+              ariaLabel={dateLabel}
+              maxDate={maxDate}
+            />
             <FieldError message={fieldErrors.dateOfIncident} className="mt-2 md:hidden" />
 
-            {/* Desktop: react-datepicker */}
+            {/* Desktop: react-datepicker popup */}
             <div className="hidden md:block w-full min-w-0 max-w-full">
               <DatePicker
-                id="dateOfIncident"
+                id="dateOfIncidentDesktop"
                 selected={formData.dateOfIncident}
                 onChange={(date) => handleSelectChange('dateOfIncident', date)}
-                maxDate={new Date()}
+                maxDate={maxDate}
                 placeholderText={dateLabel}
-                dateFormat="PPP"
+                dateFormat="MMMM d, yyyy"
                 className={dateInputFieldClasses}
                 wrapperClassName="w-full"
+                showPopperArrow={false}
+                popperPlacement="bottom-start"
+                aria-label={dateLabel}
               />
             </div>
             <FieldError message={fieldErrors.dateOfIncident} className="mt-2 hidden md:block" />
