@@ -423,7 +423,7 @@ const ReportDetails = () => {
       return (
         <div className="space-y-5">
           <FormattedReportDescription text={voiceNoteDescription.intro} />
-          <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} />
+          <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} showDownload />
           {voiceNoteDescription.remainder.trim() ? (
             <FormattedReportDescription text={voiceNoteDescription.remainder} />
           ) : null}
@@ -434,7 +434,7 @@ const ReportDetails = () => {
     return (
       <div className="space-y-5">
         <FormattedReportDescription text={report.description} />
-        <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} />
+        <VoiceNotePlayerList paths={evidencePaths} resolveUrl={resolveVoiceNoteUrl} showDownload />
       </div>
     );
   };

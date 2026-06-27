@@ -12,21 +12,44 @@ export const FEEDBACK_CATEGORIES = [
   'Others',
 ];
 
-export const REPORT_CATEGORIES = [
-  'Bounty',
-  'Most Wanted',
-  'Fraud & Financial Misconduct',
-  'Harassment & Discrimination',
-  'Safety Violations',
-  'Theft or Vandalism',
-  'Cybersecurity Breach',
-  'Substance Abuse',
-  'Policy Violation',
+/** Public incident categories — Nigeria-focused, plain-language labels. */
+export const PUBLIC_REPORT_CATEGORIES = [
+  'Fraud & Scam',
+  'Cybercrime / Online Fraud',
+  'Bribery & Corruption',
+  'Police Misconduct / Extortion',
+  'Theft / Robbery',
+  'Kidnapping / Human Trafficking',
+  'Drug Abuse or Trafficking',
+  'Fake Drugs',
+  'Cultism / Gang Activity',
+  'Assault / Violence',
+  'Domestic Violence',
+  'Sexual Harassment or Abuse',
+  'Child Abuse or Exploitation',
+  'Illegal Weapons',
+  'Financial Misconduct / Embezzlement',
+  'Workplace Harassment or Abuse',
+  'Vandalism / Property Damage',
+  'Environmental Violation',
+  'Public Safety Threat',
   'Other',
 ];
 
-export function getCategories(isFeedbackMode) {
-  return isFeedbackMode ? FEEDBACK_CATEGORIES : REPORT_CATEGORIES;
+/** System-assigned categories (bounty / most-wanted flows). */
+export const SYSTEM_REPORT_CATEGORIES = ['Bounty', 'Most Wanted'];
+
+export const REPORT_CATEGORIES = [
+  ...SYSTEM_REPORT_CATEGORIES,
+  ...PUBLIC_REPORT_CATEGORIES,
+];
+
+export function getCategories(isFeedbackMode, { isBountyMode = false } = {}) {
+  if (isFeedbackMode) return FEEDBACK_CATEGORIES;
+  if (isBountyMode) {
+    return ['Bounty', ...PUBLIC_REPORT_CATEGORIES];
+  }
+  return PUBLIC_REPORT_CATEGORIES;
 }
 
 export function formatIncidentDate(date) {

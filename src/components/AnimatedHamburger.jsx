@@ -14,12 +14,12 @@ const AnimatedHamburger = ({ isOpen, onClick, className = "" }) => {
         {/* Top line - morphs into arrow */}
         <motion.span
           className="w-5 h-0.5 bg-foreground block absolute"
+          style={{ transformOrigin: 'center' }}
           animate={{
             rotate: isOpen ? 135 : 0,
             y: isOpen ? 0 : -6,
             x: isOpen ? 0 : 0,
             scaleX: isOpen ? 0.7 : 1,
-            transformOrigin: "center"
           }}
           transition={{ 
             duration: 0.4, 
@@ -45,12 +45,12 @@ const AnimatedHamburger = ({ isOpen, onClick, className = "" }) => {
         {/* Bottom line - morphs into arrow */}
         <motion.span
           className="w-5 h-0.5 bg-foreground block absolute"
+          style={{ transformOrigin: 'center' }}
           animate={{
             rotate: isOpen ? 45 : 0,
             y: isOpen ? 0 : 6,
             x: isOpen ? 0 : 0,
             scaleX: isOpen ? 0.7 : 1,
-            transformOrigin: "center"
           }}
           transition={{ 
             duration: 0.4, 

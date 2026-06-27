@@ -36,7 +36,7 @@ export default function ContextStep({
     formData,
     handleSelectChange
   );
-  const categories = getCategories(isFeedbackMode);
+  const categories = getCategories(isFeedbackMode, { isBountyMode });
   const maxDate = useMemo(() => new Date(), []);
   const statePlaceholder = isBountyMode || isMostWantedMode
     ? 'Select state'

@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/form-feedback';
 import { CheckCircle, Copy, Download, Eye, EyeOff } from 'lucide-react';
-import jsPDF from 'jspdf';
 
 const SubmissionSuccess = ({ id, password, type = 'report' }) => {
     const router = useRouter();
@@ -37,35 +36,17 @@ const SubmissionSuccess = ({ id, password, type = 'report' }) => {
         router.push('/track');
     };
 
-    const downloadDetails = () => {
-        const doc = new jsPDF();
-        doc.setFontSize(22);
-        doc.text("Your Submission Details", 20, 20);
-        
-        doc.setFontSize(14);
-        doc.text("Please save these details in a secure location.", 20, 30);
-        
-        doc.setLineWidth(0.5);
-        doc.line(20, 35, 190, 35);
-        
-        doc.setFontSize(16);
-        doc.text(`${idLabel}:`, 20, 45);
-        doc.setFont('courier');
-        doc.text(id, 60, 45);
-        
-        if (password) {
-            doc.setFont('helvetica');
-            doc.text("Password:", 20, 60);
-            doc.setFont('courier');
-            doc.text(password, 60, 60);
-        }
-
-        doc.setFont('helvetica');
-        doc.setFontSize(12);
-        const fullTrackUrl = `${window.location.origin}/track`;
-        doc.textWithLink(`You can track your ${type} here.`, 20, 80, { url: fullTrackUrl });
-
-        doc.save(`whistleblower_${type}_${id}.pdf`);
+    const downloadDetails = async () => {
+        const trackPageUrl = `${window.location.origin}/track`;
+        const { downloadSubmissionCredentialsPdf } = await import(
+            '@/lib/generateSubmissionCredentialsPdf'
+        );
+        await downloadSubmissionCredentialsPdf({
+            reportId: id,
+            password,
+            trackPageUrl,
+            variant: isBounty ? 'bounty' : 'report',
+        });
     };
 
     const containerRef = useRef(null);

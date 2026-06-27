@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Pause, Play, RotateCcw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Download, Loader2, Pause, Play, RotateCcw } from 'lucide-react';
+import { cn, sanitizeFilename } from '@/lib/utils';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { FieldError } from '@/components/ui/form-feedback';
 import VoiceNoteCard from './VoiceNoteCard';
@@ -16,6 +16,7 @@ export default function VoiceNotePlayer({
   resolveUrl,
   embedded = false,
   rightAction = null,
+  showDownload = false,
 }) {
   const audioRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState(src || null);
@@ -24,6 +25,7 @@ export default function VoiceNotePlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   const isLocalPreview = Boolean(src?.startsWith('blob:'));
   // Mobile browsers (iOS Safari, Android Chrome) frequently never fire
@@ -156,6 +158,46 @@ export default function VoiceNotePlayer({
     }
   };
 
+  const getDownloadFilename = () => {
+    if (!path) return 'voice-note.wav';
+    const rawFileName = path.split('/').pop();
+    return rawFileName
+      ? sanitizeFilename(rawFileName.substring(rawFileName.indexOf('-') + 1))
+      : 'voice-note.wav';
+  };
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      let downloadUrl = audioUrl;
+      if (!downloadUrl && path) {
+        const data = resolveUrl ? await resolveUrl(path) : null;
+        downloadUrl =
+          typeof data === 'string'
+            ? data
+            : data?.signedUrl || (resolveUrl ? null : await resolveMediaUrl(path));
+      }
+      if (!downloadUrl) return;
+
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = getDownloadFilename();
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      setError('Unable to download your voice recording. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const showSkeleton = loading;
   const showControls = !loading && !error;
 
@@ -222,7 +264,29 @@ export default function VoiceNotePlayer({
               duration={duration}
             />
           </div>
-          {rightAction ? <div className="shrink-0">{rightAction}</div> : null}
+          {rightAction ? (
+            <div className="shrink-0">{rightAction}</div>
+          ) : showDownload ? (
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={!playbackReady || downloading || showSkeleton}
+              aria-label="Download voice note"
+              className={cn(
+                'relative flex h-14 w-14 shrink-0 items-center justify-center border-2 transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                playbackReady && !downloading && !showSkeleton
+                  ? 'border-border bg-background text-foreground hover:border-primary hover:text-primary active:scale-95'
+                  : 'cursor-not-allowed border-border bg-muted text-muted-foreground'
+              )}
+            >
+              {downloading ? (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+          ) : null}
         </div>
       )}
 
