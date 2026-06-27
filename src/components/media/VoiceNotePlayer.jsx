@@ -22,17 +22,24 @@ export default function VoiceNotePlayer({
   const [loading, setLoading] = useState(!src && !!path);
   const [error, setError] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isReady, setIsReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  const isLocalPreview = Boolean(src?.startsWith('blob:'));
+  // Mobile browsers (iOS Safari, Android Chrome) frequently never fire
+  // canplay/loadedmetadata for hidden or blob-backed <audio> elements, which
+  // would leave the UI stuck on a spinner forever. So we treat the player as
+  // ready as soon as we have a resolved URL and let the user's tap drive the
+  // actual load()+play() — which also satisfies mobile autoplay gesture rules.
+  const playbackReady = Boolean(audioUrl) && !error;
 
   const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
   const statusSubtext = (() => {
-    if (loading || (audioUrl && !isReady && !error)) return 'Loading';
+    if (loading) return 'Loading';
     if (isPlaying) return 'Playing';
-    if (isReady && !isPlaying && currentTime > 0) return 'Pause';
-    if (isReady) return 'Ready';
+    if (playbackReady && currentTime > 0) return 'Pause';
+    if (playbackReady) return 'Ready';
     return 'Loading';
   })();
 
@@ -44,7 +51,6 @@ export default function VoiceNotePlayer({
       setCurrentTime(0);
       setDuration(0);
       setIsPlaying(false);
-      setIsReady(false);
       return;
     }
 
@@ -60,7 +66,6 @@ export default function VoiceNotePlayer({
     setCurrentTime(0);
     setDuration(0);
     setIsPlaying(false);
-    setIsReady(false);
 
     try {
       const data = resolveUrl ? await resolveUrl(path) : null;
@@ -89,9 +94,17 @@ export default function VoiceNotePlayer({
     };
   }, []);
 
+  const syncDuration = useCallback((audio) => {
+    if (!audio) return;
+    const nextDuration = audio.duration;
+    if (Number.isFinite(nextDuration) && nextDuration > 0) {
+      setDuration(nextDuration);
+    }
+  }, []);
+
   const togglePlayPause = async () => {
     const audio = audioRef.current;
-    if (!audio || !isReady) return;
+    if (!audio || !playbackReady) return;
 
     if (isPlaying) {
       audio.pause();
@@ -100,6 +113,11 @@ export default function VoiceNotePlayer({
     }
 
     try {
+      // Force a load within the user gesture — mobile browsers often won't
+      // fetch a hidden/blob audio source until playback is explicitly requested.
+      if (audio.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        audio.load();
+      }
       await audio.play();
       setIsPlaying(true);
     } catch {
@@ -110,7 +128,7 @@ export default function VoiceNotePlayer({
 
   const handleSeek = (clientX, rect) => {
     const audio = audioRef.current;
-    if (!audio || !duration || !isReady) return;
+    if (!audio || !duration || !playbackReady) return;
 
     const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
     audio.currentTime = ratio * duration;
@@ -119,7 +137,7 @@ export default function VoiceNotePlayer({
 
   const handleWaveformKeyDown = (event) => {
     const audio = audioRef.current;
-    if (!audio || !duration || !isReady) return;
+    if (!audio || !duration || !playbackReady) return;
 
     const step = event.shiftKey ? 10 : 5;
     if (event.key === 'ArrowRight') {
@@ -138,11 +156,11 @@ export default function VoiceNotePlayer({
     }
   };
 
-  const showSkeleton = loading || (audioUrl && !isReady && !error);
+  const showSkeleton = loading;
   const showControls = !loading && !error;
 
   const statusDetail =
-    !loading && !error && (isReady || duration > 0) ? (
+    !loading && !error && playbackReady ? (
       <>
         <span className={cn(isPlaying && 'text-foreground')}>
           {formatTime(currentTime)}
@@ -173,12 +191,12 @@ export default function VoiceNotePlayer({
           <button
             type="button"
             onClick={togglePlayPause}
-            disabled={!isReady || showSkeleton}
+            disabled={!playbackReady || showSkeleton}
             aria-label={isPlaying ? 'Pause voice note' : 'Play voice note'}
             className={cn(
               'relative flex h-14 w-14 shrink-0 items-center justify-center border-2 transition-all',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-              isReady && !showSkeleton
+              playbackReady && !showSkeleton
                 ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
                 : 'cursor-not-allowed border-border bg-muted text-muted-foreground'
             )}
@@ -197,7 +215,7 @@ export default function VoiceNotePlayer({
               progress={progress}
               showSkeleton={showSkeleton}
               isPlaying={isPlaying}
-              isReady={isReady}
+              isReady={playbackReady}
               onSeek={handleSeek}
               onKeyDown={handleWaveformKeyDown}
               currentTime={currentTime}
@@ -208,32 +226,20 @@ export default function VoiceNotePlayer({
         </div>
       )}
 
-      {showControls && !isReady && !showSkeleton ? (
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Preparing audio…
-        </p>
-      ) : null}
-
       {audioUrl ? (
         <audio
           ref={audioRef}
           src={audioUrl}
-          preload="metadata"
+          preload={isLocalPreview ? 'auto' : 'metadata'}
+          playsInline
           className="sr-only"
-          onCanPlay={() => setIsReady(true)}
+          onCanPlay={() => syncDuration(audioRef.current)}
+          onLoadedData={() => syncDuration(audioRef.current)}
+          onDurationChange={() => syncDuration(audioRef.current)}
           onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
-          onLoadedMetadata={() => {
-            setDuration(audioRef.current?.duration || 0);
-            if (
-              audioRef.current &&
-              audioRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-            ) {
-              setIsReady(true);
-            }
-          }}
+          onLoadedMetadata={() => syncDuration(audioRef.current)}
           onError={() => {
             setError('Unable to load your voice recording. Please try again.');
-            setIsReady(false);
             setIsPlaying(false);
           }}
           onEnded={() => {

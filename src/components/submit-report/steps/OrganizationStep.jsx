@@ -95,6 +95,7 @@ export default function OrganizationStep({
         styles={reactSelectStyles}
         menuPortalTarget={menuPortalTarget}
         menuPosition="fixed"
+        menuPlacement="bottom"
         menuShouldScrollIntoView={false}
         closeMenuOnScroll={false}
         blurInputOnSelect
