@@ -15,7 +15,7 @@ const getPublishedNewsIndex = unstable_cache(
       .from('news')
       .select(NEWS_INDEX_COLUMNS)
       .eq('status', 'published')
-      .order('updated_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('[newsServer] getPublishedNewsIndex:', error.message);
@@ -24,7 +24,7 @@ const getPublishedNewsIndex = unstable_cache(
 
     return data || [];
   },
-  ['published-news-index'],
+  ['published-news-index-v2'],
   { revalidate: 60, tags: ['news'] }
 );
 
@@ -84,6 +84,11 @@ export async function fetchPublishedNewsByCategory(category = 'all', limit = 100
 
   const rows = filtered
     .filter((row) => getPublishedNewsPublicPath(row))
+    .sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    })
     .slice(0, limit);
 
   return serializeNewsRowsForClient(rows);

@@ -18,7 +18,7 @@ import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGaller
 import MaximizableImage from '@/components/media/MaximizableImage';
 import RichTextMediaContent from '@/components/media/RichTextMediaContent';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
-import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
+import { getBountyGalleryDisplayPaths } from '@/lib/publishedEvidence';
 import { hasStructuredMostWantedDetails } from '@/lib/mostWantedUtils';
 import MostWantedPostLayout from '@/components/news/MostWantedPostLayout';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
@@ -238,9 +238,9 @@ const NewsPostPage = () => {
         );
     }
 
-    const publishedEvidencePaths =
-        post?.category === 'bounty' && bountyDetails
-            ? getEvidencePathsForPublishedPost(post, bountyDetails.evidence)
+    const bountyGalleryPaths =
+        post?.category === 'bounty'
+            ? getBountyGalleryDisplayPaths(post, bountyDetails?.evidence || [])
             : [];
 
     const isStructuredMostWanted = hasStructuredMostWantedDetails(post);
@@ -354,14 +354,15 @@ const NewsPostPage = () => {
                                             </div>
                                         </div>
                                     </div>
-
-                                    {publishedEvidencePaths.length > 0 && (
-                                        <EvidenceThumbnailGallery
-                                            paths={publishedEvidencePaths}
-                                            showOtherAttachments={false}
-                                        />
-                                    )}
                                 </div>
+                            )}
+
+                            {post.category === 'bounty' && bountyGalleryPaths.length > 0 && (
+                                <EvidenceThumbnailGallery
+                                    paths={bountyGalleryPaths}
+                                    showOtherAttachments={false}
+                                    className="border-t pt-6"
+                                />
                             )}
                             
                             {/* Social Share Section */}

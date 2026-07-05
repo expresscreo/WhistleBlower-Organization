@@ -11,6 +11,7 @@ const NEWS_WRITE_FIELDS = new Set([
   'status',
   'featured_image',
   'bounty_id',
+  'bounty_amount',
   'most_wanted_details',
   'published_evidence',
   'updated_at',
@@ -98,6 +99,15 @@ export async function persistNewsRecord(service, payload, id) {
     result = await saveWithData(service, currentPayload, id);
     if (!result.error) {
       warnings.push('Most Wanted details were not saved. Run the most_wanted_details migration.');
+    }
+  }
+
+  if (result.error && /bounty_amount/i.test(result.error.message || '')) {
+    const { bounty_amount, ...withoutBountyAmount } = currentPayload;
+    currentPayload = withoutBountyAmount;
+    result = await saveWithData(service, currentPayload, id);
+    if (!result.error) {
+      warnings.push('Bounty amount was not saved on the news record.');
     }
   }
 

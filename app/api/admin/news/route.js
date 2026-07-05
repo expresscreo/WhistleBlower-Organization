@@ -1,4 +1,5 @@
 import { formatSupabaseError } from '@/lib/supabaseErrors';
+import { dispatchPublicContentPush } from '@/lib/push/notifications';
 import { jsonError, readJson } from '../../track/_utils';
 import { persistNewsRecord, pickNewsPayload, requireNewsAdmin } from './_utils';
 
@@ -10,6 +11,7 @@ async function handleSave(request, { id, body } = {}) {
 
   const parsedBody = body ?? (await readJson(request));
   const payload = pickNewsPayload(parsedBody);
+  const shouldSendPush = parsedBody?.send_push_notification === true;
 
   if (!payload?.title?.trim()) {
     return jsonError('Title is required.');
@@ -25,8 +27,24 @@ async function handleSave(request, { id, body } = {}) {
       return jsonError(formatSupabaseError(result.error), 500);
     }
 
+    const savedId = result.data?.id || id || null;
+    if (shouldSendPush && payload.status === 'published' && savedId) {
+      try {
+        const pushResult = await dispatchPublicContentPush(auth.service, {
+          ...payload,
+          id: savedId,
+        });
+        if (pushResult.message) {
+          warnings.push(pushResult.message);
+        }
+      } catch (pushError) {
+        console.error('News push notification failed:', pushError);
+        warnings.push('Post saved, but the push notification could not be sent.');
+      }
+    }
+
     return Response.json({
-      id: result.data?.id || id || null,
+      id: savedId,
       warnings,
     });
   } catch (error) {

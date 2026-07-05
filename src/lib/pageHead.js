@@ -19,7 +19,7 @@ function upsertMeta(attr, name, content) {
 
   return () => {
     if (isNew) {
-      el.remove();
+      if (el.isConnected) el.remove();
       return;
     }
     if (previous != null) el.setAttribute('content', previous);
@@ -46,7 +46,7 @@ function upsertLink(rel, href) {
 
   return () => {
     if (isNew) {
-      el.remove();
+      if (el.isConnected) el.remove();
       return;
     }
     if (previous != null) el.setAttribute('href', previous);
@@ -74,7 +74,7 @@ function upsertJsonLd(id, data) {
 
   return () => {
     if (isNew) {
-      el.remove();
+      if (el.isConnected) el.remove();
       return;
     }
     if (previous != null) el.textContent = previous;

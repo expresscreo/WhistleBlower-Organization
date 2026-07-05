@@ -5,6 +5,7 @@ import AttachmentPreview from '@/views/track-report/AttachmentPreview';
 import {
   areSameMediaPath,
   getMediaUrlCandidates,
+  isVideoPath,
   partitionEvidence,
   resolveMediaUrl,
 } from '@/lib/mediaUtils';
@@ -20,6 +21,7 @@ import {
   Plus,
   Star,
   X,
+  Play,
 } from 'lucide-react';
 import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/components/media/MaximizableThumbnailOverlay';
 
@@ -94,25 +96,29 @@ const EvidenceThumbnailGallery = ({
   const lightboxTrackRef = useRef(null);
   const swipePendingIndexRef = useRef(null);
   const touchSwipeRef = useRef({ startX: 0, startY: 0, active: false, isHorizontal: false });
-  const { images, other } = useMemo(() => partitionEvidence(paths), [paths]);
-  const visibleImages = useMemo(
-    () => images.filter((path) => !excludePath || !areSameMediaPath(path, excludePath)),
-    [excludePath, images]
+  const { images, videos, other } = useMemo(() => partitionEvidence(paths), [paths]);
+  const visibleGalleryItems = useMemo(
+    () =>
+      [...images, ...videos].filter(
+        (path) => !excludePath || !areSameMediaPath(path, excludePath)
+      ),
+    [excludePath, images, videos]
   );
 
-  const imageCount = visibleImages.length;
+  const galleryCount = visibleGalleryItems.length;
   const displayTitle =
     title === ''
       ? ''
-      : title ?? (imageCount > 0 ? getBountyPhotoGalleryTitle(imageCount) : '');
-  const activePath = visibleImages[activeIndex];
+      : title ?? (galleryCount > 0 ? getBountyPhotoGalleryTitle(visibleGalleryItems) : '');
+  const activePath = visibleGalleryItems[activeIndex];
   const activeUrl = activePath ? imageUrls[activePath] : null;
-  const activeAlt = activePath ? getDisplayName(activePath, activeIndex) : 'Evidence photo';
+  const activeIsVideo = activePath ? isVideoPath(activePath) : false;
+  const activeAlt = activePath ? getDisplayName(activePath, activeIndex) : 'Evidence media';
 
   useEffect(() => {
     let cancelled = false;
 
-    visibleImages.forEach(async (path) => {
+    visibleGalleryItems.forEach(async (path) => {
       const url = await resolveMediaUrl(path);
       if (!cancelled && url) {
         setImageUrls((prev) => (prev[path] ? prev : { ...prev, [path]: url }));
@@ -122,7 +128,7 @@ const EvidenceThumbnailGallery = ({
     return () => {
       cancelled = true;
     };
-  }, [visibleImages]);
+  }, [visibleGalleryItems]);
 
   const handleImageError = useCallback(async (path, currentUrl) => {
     const candidates = getMediaUrlCandidates(path);
@@ -146,6 +152,9 @@ const EvidenceThumbnailGallery = ({
 
   const closeLightbox = useCallback(() => {
     clearCloseTimer();
+    document.querySelector('[data-evidence-lightbox]')?.querySelectorAll('video').forEach((video) => {
+      video.pause();
+    });
     const rect = captureThumbRect(activeIndex);
     if (rect) setOriginRect(rect);
     setIsExpanded(false);
@@ -167,14 +176,14 @@ const EvidenceThumbnailGallery = ({
   }, [clearCloseTimer]);
 
   const goToPrevious = useCallback(() => {
-    if (imageCount <= 1) return;
-    setActiveIndex((current) => (current - 1 + imageCount) % imageCount);
-  }, [imageCount]);
+    if (galleryCount <= 1) return;
+    setActiveIndex((current) => (current - 1 + galleryCount) % galleryCount);
+  }, [galleryCount]);
 
   const goToNext = useCallback(() => {
-    if (imageCount <= 1) return;
-    setActiveIndex((current) => (current + 1) % imageCount);
-  }, [imageCount]);
+    if (galleryCount <= 1) return;
+    setActiveIndex((current) => (current + 1) % galleryCount);
+  }, [galleryCount]);
 
   const resetSwipeState = useCallback(() => {
     swipePendingIndexRef.current = null;
@@ -200,7 +209,7 @@ const EvidenceThumbnailGallery = ({
       const width = getSwipeTrackWidth();
       if (!width) return;
 
-      if (direction < 0 && activeIndex < imageCount - 1) {
+      if (direction < 0 && activeIndex < galleryCount - 1) {
         swipePendingIndexRef.current = activeIndex + 1;
         setSwipeDragging(false);
         setSwipeTransitioning(true);
@@ -218,12 +227,12 @@ const EvidenceThumbnailGallery = ({
 
       snapSwipeBack();
     },
-    [activeIndex, getSwipeTrackWidth, imageCount, snapSwipeBack]
+    [activeIndex, getSwipeTrackWidth, galleryCount, snapSwipeBack]
   );
 
   const handleSwipeTouchStart = useCallback(
     (event) => {
-      if (imageCount <= 1 || swipeTransitioning) return;
+      if (galleryCount <= 1 || swipeTransitioning) return;
       const touch = event.touches[0];
       if (!touch) return;
       touchSwipeRef.current = {
@@ -233,12 +242,12 @@ const EvidenceThumbnailGallery = ({
         isHorizontal: false,
       };
     },
-    [imageCount, swipeTransitioning]
+    [galleryCount, swipeTransitioning]
   );
 
   const handleSwipeTouchMove = useCallback(
     (event) => {
-      if (!touchSwipeRef.current.active || imageCount <= 1 || swipeTransitioning) return;
+      if (!touchSwipeRef.current.active || galleryCount <= 1 || swipeTransitioning) return;
 
       const touch = event.touches[0];
       if (!touch) return;
@@ -259,17 +268,17 @@ const EvidenceThumbnailGallery = ({
 
       let offset = deltaX;
       if (activeIndex === 0 && offset > 0) offset *= SWIPE_RUBBER_BAND;
-      if (activeIndex === imageCount - 1 && offset < 0) offset *= SWIPE_RUBBER_BAND;
+      if (activeIndex === galleryCount - 1 && offset < 0) offset *= SWIPE_RUBBER_BAND;
 
       setSwipeDragging(true);
       setSwipeOffset(offset);
     },
-    [activeIndex, imageCount, swipeTransitioning]
+    [activeIndex, galleryCount, swipeTransitioning]
   );
 
   const handleSwipeTouchEnd = useCallback(
     (event) => {
-      if (!touchSwipeRef.current.active || imageCount <= 1) return;
+      if (!touchSwipeRef.current.active || galleryCount <= 1) return;
 
       const touch = event.changedTouches[0];
       const wasHorizontal = touchSwipeRef.current.isHorizontal;
@@ -295,7 +304,7 @@ const EvidenceThumbnailGallery = ({
         animateSwipeCommit(1);
       }
     },
-    [animateSwipeCommit, imageCount, snapSwipeBack, swipeOffset]
+    [animateSwipeCommit, galleryCount, snapSwipeBack, swipeOffset]
   );
 
   const handleTrackTransitionEnd = useCallback((event) => {
@@ -332,12 +341,12 @@ const EvidenceThumbnailGallery = ({
 
   useEffect(() => {
     const el = lightboxTrackRef.current;
-    if (!el || !lightboxOpen || !isExpanded || imageCount <= 1) return undefined;
+    if (!el || !lightboxOpen || !isExpanded || galleryCount <= 1) return undefined;
 
     const onMove = (event) => handleSwipeTouchMove(event);
     el.addEventListener('touchmove', onMove, { passive: false });
     return () => el.removeEventListener('touchmove', onMove);
-  }, [handleSwipeTouchMove, imageCount, isExpanded, lightboxOpen]);
+  }, [handleSwipeTouchMove, galleryCount, isExpanded, lightboxOpen]);
 
   useEffect(() => {
     if (!lightboxOpen) return undefined;
@@ -358,7 +367,7 @@ const EvidenceThumbnailGallery = ({
   }, [lightboxOpen]);
 
   useEffect(() => {
-    if (!lightboxOpen || imageCount <= 1) return undefined;
+    if (!lightboxOpen || galleryCount <= 1) return undefined;
 
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -375,17 +384,73 @@ const EvidenceThumbnailGallery = ({
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [closeLightbox, goToNext, goToPrevious, imageCount, lightboxOpen]);
+  }, [closeLightbox, goToNext, goToPrevious, galleryCount, lightboxOpen]);
 
   useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
 
   const isPathInserted = (path) =>
     insertedPaths.some((inserted) => areSameMediaPath(inserted, path));
 
+  const renderLightboxMedia = (path, url, alt, className) => {
+    if (isVideoPath(path)) {
+      return (
+        <video
+          src={url}
+          controls
+          playsInline
+          preload="metadata"
+          className={className}
+          onClick={(event) => event.stopPropagation()}
+          onError={() => handleImageError(path, url)}
+        />
+      );
+    }
+
+    return (
+      <img
+        src={url}
+        alt={alt}
+        decoding="async"
+        draggable={false}
+        className={className}
+        onError={() => handleImageError(path, url)}
+      />
+    );
+  };
+
+  const renderThumbnailMedia = (path, url, displayName, imageClassName) => {
+    if (isVideoPath(path)) {
+      return (
+        <>
+          <video
+            src={url}
+            className={imageClassName}
+            muted
+            playsInline
+            preload="metadata"
+            onError={() => handleImageError(path, url)}
+          />
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30">
+            <Play className="h-8 w-8 fill-white/90 text-white" />
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <img
+        src={url}
+        alt={displayName}
+        className={imageClassName}
+        onError={() => handleImageError(path, url)}
+      />
+    );
+  };
+
   if (
-    visibleImages.length === 0 &&
+    visibleGalleryItems.length === 0 &&
     (!showOtherAttachments || other.length === 0) &&
-    !(isEditor && images.length === 0)
+    !(isEditor && images.length === 0 && videos.length === 0)
   ) {
     return null;
   }
@@ -397,7 +462,8 @@ const EvidenceThumbnailGallery = ({
             className={`${LIGHTBOX_Z} fixed inset-0`}
             role="dialog"
             aria-modal="true"
-            aria-label="Evidence photo gallery"
+            aria-label="Evidence media gallery"
+            data-evidence-lightbox
           >
             <button
               type="button"
@@ -418,7 +484,7 @@ const EvidenceThumbnailGallery = ({
               <X className="h-5 w-5" />
             </button>
 
-            {imageCount > 1 && (
+            {galleryCount > 1 && (
               <button
                 type="button"
                 className={`${navButtonClass} left-3 sm:left-6`}
@@ -447,7 +513,7 @@ const EvidenceThumbnailGallery = ({
                     : 'max-h-[calc(100dvh-5rem)] max-w-[calc(100vw-7rem)] sm:max-w-[calc(100vw-10rem)]'
                 )}
               >
-                {isExpanded && imageCount > 1 && (
+                {isExpanded && galleryCount > 1 && (
                   <div
                     ref={lightboxTrackRef}
                     className="pointer-events-auto absolute inset-0 touch-pan-y overflow-hidden sm:hidden"
@@ -465,24 +531,22 @@ const EvidenceThumbnailGallery = ({
                       }}
                       onTransitionEnd={handleTrackTransitionEnd}
                     >
-                      {visibleImages.map((path, index) => {
+                      {visibleGalleryItems.map((path, index) => {
                         const url = imageUrls[path];
                         const alt = getDisplayName(path, index);
 
                         return (
                           <div key={`${path}-${index}`} className="relative h-full w-full flex-shrink-0">
                             {url ? (
-                              <img
-                                src={url}
-                                alt={alt}
-                                decoding="async"
-                                draggable={false}
-                                className="absolute inset-0 h-full w-full select-none object-contain"
-                                onError={() => handleImageError(path, url)}
-                              />
+                              renderLightboxMedia(
+                                path,
+                                url,
+                                alt,
+                                'absolute inset-0 h-full w-full select-none object-contain'
+                              )
                             ) : (
                               <div className="flex h-full w-full items-center justify-center text-white/70">
-                                Image preview is loading...
+                                Media preview is loading...
                               </div>
                             )}
                           </div>
@@ -493,45 +557,45 @@ const EvidenceThumbnailGallery = ({
                 )}
 
                 {activeUrl ? (
-                  <img
-                    src={activeUrl}
-                    alt={activeAlt}
-                    decoding="async"
-                    className={cn(
+                  renderLightboxMedia(
+                    activePath,
+                    activeUrl,
+                    activeAlt,
+                    cn(
                       'object-contain transition-opacity duration-200',
-                      isExpanded && imageCount > 1 && 'hidden sm:block',
+                      isExpanded && galleryCount > 1 && 'hidden sm:block',
                       isExpanded
                         ? 'absolute inset-0 h-full w-full sm:static sm:h-auto sm:w-auto sm:max-h-[calc(100dvh-5rem)] sm:max-w-[calc(100vw-10rem)]'
                         : 'block max-h-[calc(100dvh-5rem)] max-w-[calc(100vw-7rem)] sm:max-w-[calc(100vw-10rem)]',
-                      imageVisible ? 'opacity-100' : 'opacity-0'
-                    )}
-                    onError={() => activePath && handleImageError(activePath, activeUrl)}
-                  />
+                      imageVisible ? 'opacity-100' : 'opacity-0',
+                      activeIsVideo && 'pointer-events-auto bg-black'
+                    )
+                  )
                 ) : (
                   <div
                     className={cn(
                       'flex h-64 w-64 items-center justify-center text-white/70',
-                      isExpanded && imageCount > 1 && 'hidden sm:flex'
+                      isExpanded && galleryCount > 1 && 'hidden sm:flex'
                     )}
                   >
-                    Image preview is loading...
+                    Media preview is loading...
                   </div>
                 )}
 
-                {imageCount > 1 && (
+                {galleryCount > 1 && (
                   <p
                     className={cn(
                       'pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 text-sm font-medium tracking-wide text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] transition-opacity duration-300 sm:bottom-5',
                       isExpanded ? 'opacity-100' : 'opacity-0'
                     )}
                   >
-                    {activeIndex + 1} / {imageCount}
+                    {activeIndex + 1} / {galleryCount}
                   </p>
                 )}
               </div>
             </div>
 
-            {imageCount > 1 && (
+            {galleryCount > 1 && (
               <button
                 type="button"
                 className={`${navButtonClass} right-3 sm:right-6`}
@@ -554,6 +618,7 @@ const EvidenceThumbnailGallery = ({
     const displayName = getDisplayName(path, index);
     const isFeatured = featuredPath && areSameMediaPath(path, featuredPath);
     const isInserted = isPathInserted(path);
+    const isVideo = isVideoPath(path);
 
     if (isEditor) {
       return (
@@ -571,18 +636,18 @@ const EvidenceThumbnailGallery = ({
             onClick={(event) => openLightbox(index, event)}
           >
             {url ? (
-              <img
-                src={url}
-                alt={displayName}
-                className="h-full w-full object-cover transition-transform duration-200 group-hover/tile:scale-105"
-                onError={() => handleImageError(path, url)}
-              />
+              renderThumbnailMedia(
+                path,
+                url,
+                displayName,
+                'h-full w-full object-cover transition-transform duration-200 group-hover/tile:scale-105'
+              )
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                 <ImageIcon className="h-6 w-6 animate-pulse" />
               </div>
             )}
-            {url && <MaximizableThumbnailOverlay />}
+            {url && !isVideo && <MaximizableThumbnailOverlay />}
           </button>
 
           {isFeatured && (
@@ -601,7 +666,7 @@ const EvidenceThumbnailGallery = ({
 
           {(onSelectFeatured || onInsertContent) && (
             <div className="absolute inset-x-0 bottom-0 z-20 flex gap-1 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-1.5 pt-6 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover/tile:opacity-100">
-              {onSelectFeatured && (
+              {onSelectFeatured && !isVideo && (
                 <Button
                   type="button"
                   size="sm"
@@ -626,7 +691,7 @@ const EvidenceThumbnailGallery = ({
                     'h-7 flex-1 px-2 text-[10px]',
                     isInserted && 'bg-emerald-600 hover:bg-emerald-600/90'
                   )}
-                  title={isInserted ? 'Approved for public bounty photos' : 'Approve for public bounty photos'}
+                  title={isInserted ? 'Approved for public gallery' : 'Approve for public gallery'}
                   disabled={isInserted}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -655,18 +720,18 @@ const EvidenceThumbnailGallery = ({
           onClick={(event) => openLightbox(index, event)}
         >
           {url ? (
-            <img
-              src={url}
-              alt={displayName}
-              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-              onError={() => handleImageError(path, url)}
-            />
+            renderThumbnailMedia(
+              path,
+              url,
+              displayName,
+              'h-full w-full object-cover transition-transform duration-200 group-hover:scale-105'
+            )
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">
               <ImageIcon className="h-8 w-8" />
             </div>
           )}
-          {url && <MaximizableThumbnailOverlay />}
+          {url && !isVideoPath(path) && <MaximizableThumbnailOverlay />}
           {isFeatured && (
             <span className="absolute left-2 top-2 z-20 inline-flex items-center rounded-full bg-primary px-2 py-1 text-[10px] font-medium uppercase text-primary-foreground">
               <Check className="mr-1 h-3 w-3" />
@@ -716,21 +781,21 @@ const EvidenceThumbnailGallery = ({
         </div>
       )}
 
-      {visibleImages.length > 0 && (
+      {visibleGalleryItems.length > 0 && (
         <div
           className={cn(
             'grid gap-3',
             isEditor ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
           )}
         >
-          {visibleImages.map((path, index) => renderThumbnail(path, index))}
+          {visibleGalleryItems.map((path, index) => renderThumbnail(path, index))}
         </div>
       )}
 
-      {isEditor && visibleImages.length === 0 && images.length === 0 && (
+      {isEditor && visibleGalleryItems.length === 0 && images.length === 0 && videos.length === 0 && (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
           <ImageIcon className="mx-auto mb-2 h-8 w-8 opacity-40" />
-          No photos attached to this bounty.
+          No photos or videos attached to this bounty.
         </div>
       )}
 

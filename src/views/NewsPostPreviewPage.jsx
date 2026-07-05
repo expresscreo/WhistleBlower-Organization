@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PageErrorBanner } from '@/components/ui/form-feedback';
 import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
 import { getBountyInfo } from '@/lib/bountyCta';
-import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
+import { getEvidencePathsForPublishedPost, getBountyGalleryDisplayPaths } from '@/lib/publishedEvidence';
 import { hasStructuredMostWantedDetails } from '@/lib/mostWantedUtils';
 import {
   getPreviewIdFromLocation,
@@ -125,15 +125,24 @@ function PreviewImageGallery({ urls, title = 'Gallery' }) {
     <div className="border-t pt-6">
       <h3 className="mb-4 text-xl font-semibold">{title}</h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        {urls.map((url, index) => (
-          <MaximizableImage
-            key={`${url}-${index}`}
-            src={url}
-            alt={`${title} ${index + 1}`}
-            wrapperClassName="aspect-square w-full"
-            imageClassName="h-full w-full object-cover"
-          />
-        ))}
+        {urls.map((url, index) =>
+          String(url).startsWith('data:video/') || String(url).includes('.mp4') ? (
+            <div
+              key={`${url}-${index}`}
+              className="aspect-square w-full overflow-hidden rounded-lg bg-black"
+            >
+              <video src={url} controls playsInline className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <MaximizableImage
+              key={`${url}-${index}`}
+              src={url}
+              alt={`${title} ${index + 1}`}
+              wrapperClassName="aspect-square w-full"
+              imageClassName="h-full w-full object-cover"
+            />
+          )
+        )}
       </div>
     </div>
   );
@@ -200,10 +209,7 @@ export default function NewsPostPreviewPage() {
   const publishedEvidencePaths = useMemo(() => {
     if (!post) return [];
     if (post.category === 'bounty') {
-      return getEvidencePathsForPublishedPost(
-        { published_evidence: post.published_evidence },
-        bountyDetails?.evidence || []
-      );
+      return getBountyGalleryDisplayPaths(post, bountyDetails?.evidence || []);
     }
     if (post.category === 'most_wanted') {
       return getEvidencePathsForPublishedPost(post, []);
@@ -311,12 +317,18 @@ export default function NewsPostPreviewPage() {
                 </div>
               </div>
 
-              {publishedEvidencePaths.length > 0 && (
-                <EvidenceThumbnailGallery
-                  paths={publishedEvidencePaths}
-                  showOtherAttachments={false}
-                  className="border-t pt-6"
-                />
+              {(publishedEvidencePaths.length > 0 || previewGalleryUrls.length > 0) && (
+                <div className="space-y-4 border-t pt-6">
+                  {publishedEvidencePaths.length > 0 && (
+                    <EvidenceThumbnailGallery
+                      paths={publishedEvidencePaths}
+                      showOtherAttachments={false}
+                    />
+                  )}
+                  {previewGalleryUrls.length > 0 && (
+                    <PreviewImageGallery urls={previewGalleryUrls} title="Photo Gallery" />
+                  )}
+                </div>
               )}
 
               <div className="border-t pt-6">

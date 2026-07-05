@@ -35,6 +35,7 @@ import {
   fetchHunterReportsForBounty,
   isValidAdminBountyStatusTransition,
 } from '@/lib/bountyStatus';
+import { notifyTrackingUpdatePush } from '@/lib/adminPushApi';
 import { BOUNTY_CHAT_CONFIG } from '@/lib/chatEntityConfig';
 
 const formatSupabaseError = (error, fallback = 'Update failed.') => {
@@ -367,13 +368,29 @@ const BountyDetails = () => {
     const handleSendToEditor = async () => {
         if (bounty.status !== 'approved') return;
 
-        const { data: existingNews, error: checkError } = await supabase.from('news').select('id').eq('bounty_id', bounty.id).maybeSingle();
+        const { data: existingNews, error: checkError } = await supabase
+            .from('news')
+            .select('id, bounty_amount')
+            .eq('bounty_id', bounty.id)
+            .maybeSingle();
         if (checkError) {
             console.error('Error checking for existing news item:', checkError);
             return;
         }
         if (existingNews) {
-            router.push('/admin/news-editor');
+            if (!existingNews.bounty_amount && bounty.bounty_amount) {
+                await supabase
+                    .from('news')
+                    .update({ bounty_amount: bounty.bounty_amount })
+                    .eq('id', existingNews.id);
+            }
+            setNavigationState({
+                prefillBountyAmount: bounty.bounty_amount || '',
+                prefillBountyTypeOfCrime: bounty.type_of_crime || '',
+                prefillBountyState: bounty.state || '',
+                prefillBountyLga: bounty.location || '',
+            });
+            router.push(`/admin/news-editor/edit/${existingNews.id}`);
             return;
         }
 
@@ -385,6 +402,7 @@ const BountyDetails = () => {
             category: 'bounty',
             status: 'draft',
             bounty_id: bounty.id,
+            bounty_amount: bounty.bounty_amount || null,
             featured_image: firstImage || null
         }).select('id').single();
 
@@ -393,7 +411,10 @@ const BountyDetails = () => {
         } else {
             if (createdNews?.id) {
                 setNavigationState({
-                  prefillBountyAmount: bounty.bounty_amount || '',
+                    prefillBountyAmount: bounty.bounty_amount || '',
+                    prefillBountyTypeOfCrime: bounty.type_of_crime || '',
+                    prefillBountyState: bounty.state || '',
+                    prefillBountyLga: bounty.location || '',
                 });
                 router.push(`/admin/news-editor/edit/${createdNews.id}`);
             } else {
@@ -462,6 +483,11 @@ const BountyDetails = () => {
             setUpdates((prev) =>
                 prev.map((item) => (item.id === tempId ? data : item))
             );
+            if (bounty.bounty_id) {
+                notifyTrackingUpdatePush({ trackingType: 'bounty', trackingId: bounty.bounty_id }).catch((pushError) => {
+                    console.error('Failed to send tracking push notification:', pushError);
+                });
+            }
         } catch (error) {
             console.error('Failed to send bounty message:', error);
             setUpdates((prev) => prev.filter((item) => item.id !== tempId));

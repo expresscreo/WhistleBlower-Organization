@@ -1,5 +1,5 @@
 import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { uploadFileToLocal, getLocalFileUrl } from '@/lib/fileUtils';
 import { areSameMediaPath, resolveMediaUrl } from '@/lib/mediaUtils';
@@ -7,6 +7,7 @@ import { isEvidencePathApproved, normalizePublishedEvidence } from '@/lib/publis
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FieldError, PageErrorBanner } from '@/components/ui/form-feedback';
@@ -37,6 +38,9 @@ import {
   storeNewsPreviewPayload,
 } from '@/lib/newsPreviewState';
 import SocialEmbedInsertDialog from '@/components/admin/news-editor/SocialEmbedInsertDialog';
+import NewsPostGalleryEditor from '@/components/admin/news-editor/NewsPostGalleryEditor';
+import { BOUNTY_CRIME_TYPES } from '@/lib/bountyCrimeTypes';
+import { useBountyFormLocation } from '@/components/place-bounty/useBountyFormLocation';
 import {
   createSocialEmbedElement,
   hydrateSocialEmbeds,
@@ -46,6 +50,68 @@ import {
   parseSocialEmbedUrl,
   resolveSocialEmbedUrl,
 } from '@/lib/socialEmbeds';
+
+function resolvePrefilledBountyField(savedValue, prefillValue, linkedValue) {
+    if (savedValue != null && savedValue !== '') {
+        return { value: savedValue, fromLinked: false };
+    }
+    if (prefillValue != null && prefillValue !== '') {
+        return { value: prefillValue, fromLinked: true };
+    }
+    if (linkedValue != null && linkedValue !== '') {
+        return { value: linkedValue, fromLinked: true };
+    }
+    return { value: '', fromLinked: false };
+}
+
+function resolveLinkedBountyMeta(newsData, navPrefill, linkedBounty) {
+    const amountResult = resolvePrefilledBountyField(
+        newsData?.bounty_amount,
+        navPrefill?.prefillBountyAmount,
+        linkedBounty?.bounty_amount
+    );
+    const crimeResult = resolvePrefilledBountyField(
+        null,
+        navPrefill?.prefillBountyTypeOfCrime,
+        linkedBounty?.type_of_crime
+    );
+    const stateResult = resolvePrefilledBountyField(
+        null,
+        navPrefill?.prefillBountyState,
+        linkedBounty?.state
+    );
+    const lgaResult = resolvePrefilledBountyField(
+        null,
+        navPrefill?.prefillBountyLga,
+        linkedBounty?.location
+    );
+
+    return {
+        bounty_amount: amountResult.value ? formatNumberWithCommas(String(amountResult.value)) : '',
+        bounty_type_of_crime: crimeResult.value || '',
+        bounty_state: stateResult.value || '',
+        bounty_lga: lgaResult.value || '',
+        fromLinked: [amountResult, crimeResult, stateResult, lgaResult].some((result) => result.fromLinked),
+    };
+}
+
+function buildEditorBountyDetails(currentItem, linkedDetails = null) {
+    const numericAmount = currentItem.bounty_amount
+        ? Number(String(currentItem.bounty_amount).replace(/,/g, ''))
+        : null;
+
+    return {
+        ...(linkedDetails || {}),
+        bounty_amount: Number.isFinite(numericAmount) ? numericAmount : linkedDetails?.bounty_amount ?? null,
+        type_of_crime: currentItem.bounty_type_of_crime || linkedDetails?.type_of_crime || null,
+        state: currentItem.bounty_state || linkedDetails?.state || null,
+        location: currentItem.bounty_lga || linkedDetails?.location || null,
+    };
+}
+
+function shouldDefaultPushNotification({ category, status, wasPublishedOnLoad }) {
+    return status === 'published' && !wasPublishedOnLoad && ['bounty', 'most_wanted'].includes(category);
+}
 
 const NewsEditorPage = () => {
     const router = useRouter();
@@ -62,9 +128,13 @@ const NewsEditorPage = () => {
         featured_image: null,
         bounty_id: null,
         bounty_amount: '',
+        bounty_type_of_crime: '',
+        bounty_state: '',
+        bounty_lga: '',
         most_wanted_details: { ...EMPTY_MOST_WANTED_DETAILS },
     });
     const [mostWantedPendingGalleryFiles, setMostWantedPendingGalleryFiles] = useState([]);
+    const [bountyPendingGalleryFiles, setBountyPendingGalleryFiles] = useState([]);
     const [featuredImageFile, setFeaturedImageFile] = useState(null);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -72,8 +142,12 @@ const NewsEditorPage = () => {
     const [editorContent, setEditorContent] = useState('');
     const [bountyEvidence, setBountyEvidence] = useState([]);
     const [publishedEvidencePaths, setPublishedEvidencePaths] = useState([]);
-    const [bountyAmountVerified, setBountyAmountVerified] = useState(false);
+    const [bountyFieldsFromLinkedBounty, setBountyFieldsFromLinkedBounty] = useState(false);
     const [wasPublishedOnLoad, setWasPublishedOnLoad] = useState(false);
+    const [sendPushNotification, setSendPushNotification] = useState(false);
+    const pushPreferenceTouchedRef = useRef(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(!isEditing);
+    const suppressDirtyTrackingRef = useRef(isEditing);
     
     // Undo/Redo state management
     const [history, setHistory] = useState([]);
@@ -86,13 +160,65 @@ const NewsEditorPage = () => {
     const editorRef = useRef(null);
     const contentInitializedRef = useRef(false);
 
-    // Prefill bounty amount when navigated from BountyDetails (create flow only)
+    const bountyLocationFormData = useMemo(
+        () => ({
+            state: currentItem.bounty_state || '',
+            lga: currentItem.bounty_lga || '',
+        }),
+        [currentItem.bounty_state, currentItem.bounty_lga]
+    );
+
+    const handleBountyLocationInputChange = useCallback((field, value) => {
+        setCurrentItem((prev) => ({
+            ...prev,
+            bounty_state: field === 'state' ? value : prev.bounty_state,
+            bounty_lga: field === 'lga' ? value : prev.bounty_lga,
+        }));
+        setBountyFieldsFromLinkedBounty(false);
+    }, []);
+
+    const {
+        states: bountyStates,
+        lgas: bountyLgas,
+        hasLgasForState: bountyHasLgasForState,
+        handleStateChange: handleBountyStateChange,
+    } = useBountyFormLocation(bountyLocationFormData, handleBountyLocationInputChange);
+
+    useEffect(() => {
+        if (pushPreferenceTouchedRef.current) return;
+        setSendPushNotification(
+            shouldDefaultPushNotification({
+                category: currentItem.category,
+                status: currentItem.status,
+                wasPublishedOnLoad,
+            })
+        );
+    }, [currentItem.category, currentItem.status, wasPublishedOnLoad]);
+
+    // Prefill bounty fields when navigated from BountyDetails (create flow only)
     useEffect(() => {
         if (isEditing) return;
-        const prefill = consumeNavigationState()?.prefillBountyAmount;
-        if (prefill !== undefined && prefill !== null && prefill !== '') {
-            setCurrentItem(prev => ({ ...prev, category: 'bounty', bounty_amount: formatNumberWithCommas(String(prefill)) }));
-            setBountyAmountVerified(true);
+        const prefill = consumeNavigationState();
+        if (!prefill) return;
+
+        setCurrentItem((prev) => ({
+            ...prev,
+            category: 'bounty',
+            bounty_amount: prefill.prefillBountyAmount
+                ? formatNumberWithCommas(String(prefill.prefillBountyAmount))
+                : prev.bounty_amount,
+            bounty_type_of_crime: prefill.prefillBountyTypeOfCrime || prev.bounty_type_of_crime,
+            bounty_state: prefill.prefillBountyState || prev.bounty_state,
+            bounty_lga: prefill.prefillBountyLga || prev.bounty_lga,
+        }));
+
+        if (
+            prefill.prefillBountyAmount ||
+            prefill.prefillBountyTypeOfCrime ||
+            prefill.prefillBountyState ||
+            prefill.prefillBountyLga
+        ) {
+            setBountyFieldsFromLinkedBounty(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -104,7 +230,31 @@ const NewsEditorPage = () => {
         }
     }, [id, isEditing]);
 
+    const resetDirtyTracking = useCallback(() => {
+        setHasUnsavedChanges(false);
+    }, []);
+
+    const releaseDirtyTracking = useCallback(() => {
+        window.setTimeout(() => {
+            suppressDirtyTrackingRef.current = false;
+        }, 0);
+    }, []);
+
+    useEffect(() => {
+        if (suppressDirtyTrackingRef.current) return;
+        setHasUnsavedChanges(true);
+    }, [
+        currentItem,
+        featuredImageFile,
+        publishedEvidencePaths,
+        editorContent,
+        mostWantedPendingGalleryFiles,
+        bountyPendingGalleryFiles,
+        inlineImages,
+    ]);
+
     const loadNewsItem = async (newsId) => {
+        suppressDirtyTrackingRef.current = true;
         setLoading(true);
         try {
             const { data, error } = await supabase
@@ -115,22 +265,24 @@ const NewsEditorPage = () => {
 
             if (error) throw error;
 
-            // If we navigated from BountyDetails with a prefilled amount, prefer that
-            const prefill = consumeNavigationState()?.prefillBountyAmount;
-            const bountyAmountPrefilled = prefill !== undefined && prefill !== null && prefill !== ''
-                ? formatNumberWithCommas(String(prefill))
-                : (data?.bounty_amount ? formatNumberWithCommas(String(data.bounty_amount)) : '');
+            // Prefer saved news amount, then navigation prefill, then linked bounty record.
+            const navPrefill = consumeNavigationState();
+            const linkedBounty = data.bounty_id ? await fetchLinkedBounty(data.bounty_id) : null;
+            const linkedBountyMeta = resolveLinkedBountyMeta(data, navPrefill, linkedBounty);
 
             setCurrentItem({
                 ...data,
-                bounty_amount: bountyAmountPrefilled,
+                bounty_amount: linkedBountyMeta.bounty_amount,
+                bounty_type_of_crime: linkedBountyMeta.bounty_type_of_crime,
+                bounty_state: linkedBountyMeta.bounty_state,
+                bounty_lga: linkedBountyMeta.bounty_lga,
                 category: data?.category || 'bounty',
                 most_wanted_details: normalizeMostWantedDetails(data?.most_wanted_details),
             });
             setWasPublishedOnLoad(data?.status === 'published');
             setMostWantedPendingGalleryFiles([]);
 
-            setBountyAmountVerified(Boolean(prefill));
+            setBountyFieldsFromLinkedBounty(linkedBountyMeta.fromLinked);
             setPublishedEvidencePaths(normalizePublishedEvidence(data.published_evidence));
             setEditorContent(data.content || '');
             if (data.featured_image) {
@@ -139,11 +291,9 @@ const NewsEditorPage = () => {
                 setFeaturedImageUrl(null);
             }
             
-            if (data.bounty_id) {
-                fetchBountyEvidence(data.bounty_id);
-            }
-            
             contentInitializedRef.current = false;
+            resetDirtyTracking();
+            releaseDirtyTracking();
         } catch (error) {
             console.error('Error loading news post:', error);
             setFetchError('Failed to load news post');
@@ -152,12 +302,65 @@ const NewsEditorPage = () => {
         }
     };
 
-    const fetchBountyEvidence = async (bountyId) => {
-        if (!bountyId) return;
-        const { data, error } = await supabase.from('bounties').select('evidence').eq('id', bountyId).single();
-        if (!error && data.evidence) {
+    const fetchLinkedBounty = async (bountyId) => {
+        if (!bountyId) return null;
+        const { data, error } = await supabase
+            .from('bounties')
+            .select('evidence, bounty_amount, type_of_crime, state, location')
+            .eq('id', bountyId)
+            .single();
+        if (!error && data?.evidence) {
             setBountyEvidence(data.evidence);
         }
+        return error ? null : data;
+    };
+
+    const syncEditorBountyRecord = async ({
+        resolvedTitle,
+        resolvedContent,
+        galleryEvidencePaths,
+        status,
+        bountyId,
+    }) => {
+        const numericAmount = currentItem.bounty_amount
+            ? Number(String(currentItem.bounty_amount).replace(/,/g, ''))
+            : null;
+
+        const bountyPayload = {
+            title: resolvedTitle,
+            description: resolvedContent,
+            type_of_crime: currentItem.bounty_type_of_crime || null,
+            state: currentItem.bounty_state || null,
+            location: currentItem.bounty_lga || null,
+            bounty_amount: Number.isFinite(numericAmount) ? numericAmount : null,
+        };
+
+        if (bountyId) {
+            if (status === 'published') {
+                bountyPayload.status = 'published';
+            }
+            await supabase.from('bounties').update(bountyPayload).eq('id', bountyId);
+            return bountyId;
+        }
+
+        const publicBountyId = `WBB${String(Math.floor(Math.random() * 1000000000)).padStart(9, '0')}`;
+        const { data, error } = await supabase
+            .from('bounties')
+            .insert({
+                ...bountyPayload,
+                bounty_id: publicBountyId,
+                password: 'admin:no-track',
+                status: status === 'published' ? 'published' : 'approved',
+                evidence: Array.isArray(galleryEvidencePaths) ? galleryEvidencePaths : [],
+            })
+            .select('id')
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        return data.id;
     };
 
     const handleFileSelect = (e) => {
@@ -870,6 +1073,9 @@ const NewsEditorPage = () => {
         if (value !== 'most_wanted') {
             setMostWantedPendingGalleryFiles([]);
         }
+        if (value !== 'bounty') {
+            setBountyPendingGalleryFiles([]);
+        }
     };
 
     const handlePreview = async () => {
@@ -877,13 +1083,16 @@ const NewsEditorPage = () => {
 
         try {
             let bountyDetails = null;
-            if (currentItem.category === 'bounty' && currentItem.bounty_id) {
-                const { data } = await supabase
-                    .from('bounties')
-                    .select('bounty_amount, evidence, location, state, type_of_crime')
-                    .eq('id', currentItem.bounty_id)
-                    .maybeSingle();
-                bountyDetails = data;
+            if (currentItem.category === 'bounty') {
+                if (currentItem.bounty_id) {
+                    const { data } = await supabase
+                        .from('bounties')
+                        .select('bounty_amount, evidence, location, state, type_of_crime')
+                        .eq('id', currentItem.bounty_id)
+                        .maybeSingle();
+                    bountyDetails = data;
+                }
+                bountyDetails = buildEditorBountyDetails(currentItem, bountyDetails);
             }
 
             const editorHtml =
@@ -896,7 +1105,12 @@ const NewsEditorPage = () => {
                 editorHtml,
                 featuredImageUrl,
                 featuredImageFile,
-                pendingGalleryFiles: mostWantedPendingGalleryFiles,
+                pendingGalleryFiles:
+                    currentItem.category === 'most_wanted'
+                        ? mostWantedPendingGalleryFiles
+                        : currentItem.category === 'bounty'
+                          ? bountyPendingGalleryFiles
+                          : [],
                 publishedEvidencePaths,
                 bountyDetails,
             });
@@ -989,19 +1203,6 @@ const NewsEditorPage = () => {
 
             let galleryEvidencePaths = [...publishedEvidencePaths];
 
-            if (isMostWanted && mostWantedPendingGalleryFiles.length > 0) {
-                const subfolder = currentItem.id || slugify(currentItem.title) || 'new';
-                for (const file of mostWantedPendingGalleryFiles) {
-                    try {
-                        const path = await uploadFileToLocal(file, 'news', subfolder);
-                        galleryEvidencePaths.push(path);
-                    } catch (e) {
-                        console.error('Most wanted gallery upload failed:', e);
-                    }
-                }
-                setMostWantedPendingGalleryFiles([]);
-            }
-
             const mostWantedDetails = isMostWanted
                 ? ensureMostWantedReportReference(currentItem.most_wanted_details)
                 : null;
@@ -1010,9 +1211,43 @@ const NewsEditorPage = () => {
                 ? buildMostWantedHeadline(mostWantedDetails) || suggestMostWantedTitle(mostWantedDetails)
                 : currentItem.title;
 
+            const pendingGalleryUploads = isMostWanted
+                ? mostWantedPendingGalleryFiles
+                : currentItem.category === 'bounty'
+                  ? bountyPendingGalleryFiles
+                  : [];
+
+            if (pendingGalleryUploads.length > 0) {
+                const subfolder = currentItem.id || slugify(resolvedTitle) || 'new';
+                for (const file of pendingGalleryUploads) {
+                    try {
+                        const path = await uploadFileToLocal(file, 'news', subfolder);
+                        galleryEvidencePaths.push(path);
+                    } catch (e) {
+                        console.error('Gallery upload failed:', e);
+                    }
+                }
+                if (isMostWanted) {
+                    setMostWantedPendingGalleryFiles([]);
+                } else if (currentItem.category === 'bounty') {
+                    setBountyPendingGalleryFiles([]);
+                }
+            }
+
             const resolvedContent = isMostWanted
                 ? buildMostWantedContentSnippet(resolvedTitle, mostWantedDetails)
                 : finalContent;
+
+            let linkedBountyId = currentItem.bounty_id;
+            if (currentItem.category === 'bounty') {
+                linkedBountyId = await syncEditorBountyRecord({
+                    resolvedTitle,
+                    resolvedContent,
+                    galleryEvidencePaths,
+                    status: currentItem.status,
+                    bountyId: currentItem.bounty_id,
+                });
+            }
 
             const newsData = {
                 title: resolvedTitle,
@@ -1020,7 +1255,10 @@ const NewsEditorPage = () => {
                 category: currentItem.category,
                 status: currentItem.status,
                 featured_image: featuredImagePath,
-                bounty_id: currentItem.bounty_id,
+                bounty_id: linkedBountyId,
+                bounty_amount: currentItem.bounty_amount
+                    ? Number(String(currentItem.bounty_amount).replace(/,/g, ''))
+                    : null,
                 most_wanted_details: isMostWanted ? mostWantedDetails : null,
                 published_evidence:
                     currentItem.category === 'bounty' || isMostWanted ? galleryEvidencePaths : [],
@@ -1030,41 +1268,36 @@ const NewsEditorPage = () => {
             const saveResult = await saveNewsPost({
                 id: isEditing ? id : undefined,
                 payload: newsData,
+                sendPushNotification: currentItem.status === 'published' && sendPushNotification,
             });
 
             if (saveResult?.warnings?.length) {
                 setSaveFeedback({ error: saveResult.warnings.join(' ') });
             }
 
-            // If linked to a bounty, propagate changes
-            if (currentItem.category === 'bounty' && currentItem.bounty_id) {
-                // 1) Update bounty amount, if provided
-                if (currentItem.bounty_amount) {
-                    const numericAmount = Number(String(currentItem.bounty_amount).replace(/,/g, ''));
-                    try {
-                        await supabase
-                            .from('bounties')
-                            .update({ bounty_amount: numericAmount })
-                            .eq('id', currentItem.bounty_id);
-                    } catch (e) {
-                        console.warn('Could not update bounty amount on bounty record:', e);
-                    }
-                }
-
-                // 2) If the news post is being published, mark the bounty as published
-                if (currentItem.status === 'published') {
-                    try {
-                        await supabase
-                            .from('bounties')
-                            .update({ status: 'published' })
-                            .eq('id', currentItem.bounty_id);
-                    } catch (e) {
-                        console.warn('Could not update bounty status to published:', e);
-                    }
-                }
+            suppressDirtyTrackingRef.current = true;
+            setCurrentItem((prev) => ({
+                ...prev,
+                title: resolvedTitle,
+                content: resolvedContent,
+                featured_image: featuredImagePath,
+                bounty_id: linkedBountyId ?? prev.bounty_id,
+                most_wanted_details: isMostWanted ? mostWantedDetails : prev.most_wanted_details,
+            }));
+            setPublishedEvidencePaths(galleryEvidencePaths);
+            setFeaturedImageFile(null);
+            setInlineImages([]);
+            if (currentItem.status === 'published') {
+                setWasPublishedOnLoad(true);
             }
+            pushPreferenceTouchedRef.current = false;
+            setSendPushNotification(false);
+            resetDirtyTracking();
+            releaseDirtyTracking();
 
-            router.push('/admin/news-editor');
+            if (!isEditing) {
+                router.push('/admin/news-editor');
+            }
         } catch (error) {
             console.error('Error saving news post:', error);
             setSaveFeedback({ error: `Failed to save news post: ${formatSupabaseError(error)}` });
@@ -1399,9 +1632,9 @@ const NewsEditorPage = () => {
                             </Card>
                         </div>
 
-                        {/* Sidebar — sticky while scrolling the editor */}
-                        <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:z-10 lg:max-h-[calc(100vh-5rem)]">
-                            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain lg:pr-1">
+                        {/* Sidebar — sticky while scrolling the page */}
+                        <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:z-10 lg:self-start">
+                            <div className="space-y-6">
                             {/* Settings */}
                             <Card>
                                 <CardHeader>
@@ -1428,26 +1661,100 @@ const NewsEditorPage = () => {
 
                                     {/* Bounty Amount (only for bounty category) */}
                                     {currentItem.category === 'bounty' && (
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <Label htmlFor="bounty_amount">Bounty Amount</Label>
-                                                {bountyAmountVerified && (
-                                                    <span className="inline-flex items-center text-xs text-green-600">
-                                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                                        Verified from bounty
-                                                    </span>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="bounty_amount">Bounty Amount</Label>
+                                                    {bountyFieldsFromLinkedBounty && (
+                                                        <span className="inline-flex items-center text-xs text-green-600">
+                                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                                            Verified from bounty
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <Input
+                                                    id="bounty_amount"
+                                                    placeholder="e.g., 50,000"
+                                                    value={currentItem.bounty_amount}
+                                                    onChange={(e) => {
+                                                        const formatted = formatNumberWithCommas(e.target.value);
+                                                        setCurrentItem(prev => ({ ...prev, bounty_amount: formatted }));
+                                                        setBountyFieldsFromLinkedBounty(false);
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bounty_type_of_crime">Type of Crime</Label>
+                                                <Select
+                                                    value={currentItem.bounty_type_of_crime || undefined}
+                                                    onValueChange={(value) => {
+                                                        setCurrentItem(prev => ({ ...prev, bounty_type_of_crime: value }));
+                                                        setBountyFieldsFromLinkedBounty(false);
+                                                    }}
+                                                >
+                                                    <SelectTrigger id="bounty_type_of_crime">
+                                                        <SelectValue placeholder="Select type of crime" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {BOUNTY_CRIME_TYPES.map((crime) => (
+                                                            <SelectItem key={crime} value={crime}>
+                                                                {crime}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bounty_state">State</Label>
+                                                <Select
+                                                    value={currentItem.bounty_state || undefined}
+                                                    onValueChange={(value) => {
+                                                        handleBountyStateChange(value);
+                                                        setBountyFieldsFromLinkedBounty(false);
+                                                    }}
+                                                >
+                                                    <SelectTrigger id="bounty_state">
+                                                        <SelectValue placeholder="Select state" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {bountyStates.map((state) => (
+                                                            <SelectItem key={state} value={state}>
+                                                                {state}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bounty_lga">Local Government Area (LGA)</Label>
+                                                <Select
+                                                    value={currentItem.bounty_lga || undefined}
+                                                    onValueChange={(value) => {
+                                                        handleBountyLocationInputChange('lga', value);
+                                                        setBountyFieldsFromLinkedBounty(false);
+                                                    }}
+                                                    disabled={!currentItem.bounty_state}
+                                                >
+                                                    <SelectTrigger id="bounty_lga">
+                                                        <SelectValue placeholder="Select LGA" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {bountyLgas.map((lga) => (
+                                                            <SelectItem key={lga} value={lga}>
+                                                                {lga}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {currentItem.bounty_state && !bountyHasLgasForState && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        No LGA list available for this state.
+                                                    </p>
                                                 )}
                                             </div>
-                                            <Input
-                                                id="bounty_amount"
-                                                placeholder="e.g., 50,000"
-                                                value={currentItem.bounty_amount}
-                                                onChange={(e) => {
-                                                    const formatted = formatNumberWithCommas(e.target.value);
-                                                    setCurrentItem(prev => ({ ...prev, bounty_amount: formatted }));
-                                                    setBountyAmountVerified(false);
-                                                }}
-                                            />
                                         </div>
                                     )}
 
@@ -1467,6 +1774,34 @@ const NewsEditorPage = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {currentItem.status === 'published' && (
+                                        <div className="rounded-lg border border-border bg-muted/30 p-3">
+                                            <div className="flex items-start gap-3">
+                                                <Checkbox
+                                                    id="send_push_notification"
+                                                    checked={sendPushNotification}
+                                                    onCheckedChange={(checked) => {
+                                                        pushPreferenceTouchedRef.current = true;
+                                                        setSendPushNotification(checked === true);
+                                                    }}
+                                                    className="mt-1"
+                                                />
+                                                <div className="space-y-1">
+                                                    <Label
+                                                        htmlFor="send_push_notification"
+                                                        className="cursor-pointer leading-none"
+                                                    >
+                                                        Send push notification
+                                                    </Label>
+                                                    <p className="text-xs leading-relaxed text-muted-foreground">
+                                                        Notify mobile users after this published post saves successfully.
+                                                        Leave off for quiet edits.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
@@ -1516,6 +1851,15 @@ const NewsEditorPage = () => {
                                                 </Button>
                                             </div>
                                         )}
+
+                                        {currentItem.category === 'bounty' && (
+                                            <NewsPostGalleryEditor
+                                                galleryPaths={publishedEvidencePaths}
+                                                onGalleryPathsChange={setPublishedEvidencePaths}
+                                                pendingGalleryFiles={bountyPendingGalleryFiles}
+                                                onPendingGalleryFilesChange={setBountyPendingGalleryFiles}
+                                            />
+                                        )}
                                     </CardContent>
                                 </Card>
                             )}
@@ -1546,10 +1890,30 @@ const NewsEditorPage = () => {
                                     </CardContent>
                                 </Card>
                             )}
+
+                            {currentItem.category === 'bounty' && currentItem.bounty_id && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Additional Photos</CardTitle>
+                                        <CardDescription>
+                                            Upload extra photos and videos from the news editor. They appear at the bottom of the public bounty post.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <NewsPostGalleryEditor
+                                            galleryPaths={publishedEvidencePaths}
+                                            onGalleryPathsChange={setPublishedEvidencePaths}
+                                            pendingGalleryFiles={bountyPendingGalleryFiles}
+                                            onPendingGalleryFilesChange={setBountyPendingGalleryFiles}
+                                            description=""
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
                             </div>
 
-                            {/* Actions — pinned to bottom of sticky sidebar */}
-                            <div className="shrink-0 space-y-2 border-t border-border bg-background/95 pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                            {/* Actions */}
+                            <div className="space-y-2">
                                 <div className="flex gap-2">
                                     <Button
                                         type="button"
@@ -1565,6 +1929,7 @@ const NewsEditorPage = () => {
                                         variant="default"
                                         onClick={handleSave}
                                         loading={isUploading}
+                                        disabled={isUploading || (isEditing && !hasUnsavedChanges)}
                                         className="flex-1"
                                     >
                                         <Save className="mr-2 h-4 w-4" />

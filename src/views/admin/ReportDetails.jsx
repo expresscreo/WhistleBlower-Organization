@@ -21,6 +21,7 @@ import {
   findVoiceNotePaths,
   splitVoiceNoteDescription,
 } from '@/lib/voiceNoteUtils';
+import { notifyTrackingUpdatePush } from '@/lib/adminPushApi';
 import { notifyAdminMessage, notifyStatusUpdate } from '@/lib/notify';
 
 const formatSupabaseError = (error, fallback = 'Action failed.') => {
@@ -259,8 +260,13 @@ const ReportDetails = () => {
     } else {
       setReport(prev => ({...prev, status: newStatus}));
       notifyStatusUpdate(id, newStatus);
+      if (report?.report_id) {
+        notifyTrackingUpdatePush({ trackingType: 'report', trackingId: report.report_id }).catch((pushError) => {
+          console.error('Failed to send tracking push notification:', pushError);
+        });
+      }
     }
-  }, [id]);
+  }, [id, report?.report_id]);
 
   const handleAssignReport = useCallback(async (newSelectedUserIds) => {
     if (!canAssign) return;
@@ -313,6 +319,11 @@ const ReportDetails = () => {
             setUpdates(prev => prev.filter(u => u.id !== tempId));
         } else {
             notifyAdminMessage(id, newUpdate.message);
+            if (report?.report_id) {
+              notifyTrackingUpdatePush({ trackingType: 'report', trackingId: report.report_id }).catch((pushError) => {
+                console.error('Failed to send tracking push notification:', pushError);
+              });
+            }
         }
     } catch(error) {
         console.error('Failed to send message:', error);

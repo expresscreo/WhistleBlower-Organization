@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/customSupabaseClient';
 import { formatSupabaseError } from '@/lib/supabaseErrors';
 
-export async function saveNewsPost({ id, payload }) {
+export async function saveNewsPost({ id, payload, sendPushNotification = false }) {
   const {
     data: { session },
     error: sessionError,
@@ -17,7 +17,7 @@ export async function saveNewsPost({ id, payload }) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify(id ? { id, ...payload } : payload),
+    body: JSON.stringify(id ? { id, ...payload, send_push_notification: sendPushNotification } : { ...payload, send_push_notification: sendPushNotification }),
   });
 
   let data = null;

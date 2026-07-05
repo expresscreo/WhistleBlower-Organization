@@ -56,7 +56,10 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="mw-crime-type">Crime type</Label>
-        <Select value={details.crime_type || ''} onValueChange={(v) => set('crime_type', v)}>
+        <Select
+          value={details.crime_type || undefined}
+          onValueChange={(v) => set('crime_type', v)}
+        >
           <SelectTrigger id="mw-crime-type">
             <SelectValue placeholder="Select crime type" />
           </SelectTrigger>
@@ -205,11 +208,14 @@ export default function CaseFactsStep({ details, onChange, fieldErrors = {} }) {
 
       <div className="space-y-2">
         <Label htmlFor="mw-law-enforcement">Law enforcement</Label>
-        <Select value={details.law_enforcement || ''} onValueChange={(v) => set('law_enforcement', v)}>
+        <Select
+          value={details.law_enforcement || undefined}
+          onValueChange={(v) => set('law_enforcement', v)}
+        >
           <SelectTrigger id="mw-law-enforcement">
             <SelectValue placeholder="Select agency" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent collisionPadding={{ top: 8, right: 8, bottom: 96, left: 8 }}>
             {LAW_ENFORCEMENT_OPTIONS.map((agency) => (
               <SelectItem key={agency} value={agency}>
                 {agency}

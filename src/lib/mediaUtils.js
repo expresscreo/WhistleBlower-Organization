@@ -20,12 +20,20 @@ import {
 } from '@/lib/mediaThumbnailStyles';
 
 const IMAGE_EXTENSION_PATTERN = /\.(avif|gif|jpe?g|png|webp)(\?.*)?$/i;
+const VIDEO_EXTENSION_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
 const BARE_IMAGE_FILENAME_PATTERN = /^[a-zA-Z0-9._-]+\.(avif|gif|jpe?g|png|webp)$/i;
 
 export const isImagePath = (path) => {
   if (!path) return false;
   return IMAGE_EXTENSION_PATTERN.test(String(path).split('?')[0]);
 };
+
+export const isVideoPath = (path) => {
+  if (!path) return false;
+  return VIDEO_EXTENSION_PATTERN.test(String(path).split('?')[0]);
+};
+
+export const isGalleryMediaPath = (path) => isImagePath(path) || isVideoPath(path);
 
 export const partitionEvidence = (paths = []) => {
   const evidencePaths = Array.isArray(paths) ? paths.filter(Boolean) : [];
@@ -34,12 +42,14 @@ export const partitionEvidence = (paths = []) => {
     (acc, path) => {
       if (isImagePath(path)) {
         acc.images.push(path);
+      } else if (isVideoPath(path)) {
+        acc.videos.push(path);
       } else {
         acc.other.push(path);
       }
       return acc;
     },
-    { images: [], other: [] }
+    { images: [], videos: [], other: [] }
   );
 };
 

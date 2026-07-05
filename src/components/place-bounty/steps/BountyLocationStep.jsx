@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -10,9 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { dateInputFieldClasses, inputFieldClasses, selectTriggerFieldClasses } from '@/lib/fieldStyles';
-import { formatDateForInput } from '@/components/submit-report/reportFormUtils';
 import { FieldError } from '@/components/ui/form-feedback';
 import { TipFieldGroup } from '@/components/submit-report/TipFieldLabel';
+import MobileIncidentDateField from '@/components/submit-report/MobileIncidentDateField';
 import { useBountyFormLocation } from '../useBountyFormLocation';
 
 const DatePicker = dynamic(() => import('react-datepicker'), { ssr: false });
@@ -22,7 +23,7 @@ export default function BountyLocationStep({ formData, handleInputChange, fieldE
     formData,
     handleInputChange
   );
-  const maxDate = formatDateForInput(new Date());
+  const maxDate = useMemo(() => new Date(), []);
 
   return (
     <div className="w-full min-w-0 max-w-full space-y-4">
@@ -80,19 +81,13 @@ export default function BountyLocationStep({ formData, handleInputChange, fieldE
       </TipFieldGroup>
 
       <TipFieldGroup isBountyMode label="Date of incident" htmlFor="bounty-incident-date">
-        <Input
+        <MobileIncidentDateField
           id="bounty-incident-date"
-          type="date"
-          max={maxDate}
-          aria-label="Date of incident"
-          className={`md:hidden ${dateInputFieldClasses}`}
-          value={formatDateForInput(formData.dateOfIncident)}
-          onChange={(e) =>
-            handleInputChange(
-              'dateOfIncident',
-              e.target.value ? new Date(`${e.target.value}T12:00:00`) : null
-            )
-          }
+          value={formData.dateOfIncident}
+          onChange={(date) => handleInputChange('dateOfIncident', date)}
+          placeholder="Select incident date"
+          ariaLabel="Date of incident"
+          maxDate={maxDate}
         />
         <FieldError message={fieldErrors.dateOfIncident} className="mt-2 md:hidden" />
 
@@ -101,11 +96,14 @@ export default function BountyLocationStep({ formData, handleInputChange, fieldE
             id="bounty-incident-date-desktop"
             selected={formData.dateOfIncident}
             onChange={(date) => handleInputChange('dateOfIncident', date)}
-            maxDate={new Date()}
+            maxDate={maxDate}
             placeholderText="Date of incident"
-            dateFormat="PPP"
+            dateFormat="MMMM d, yyyy"
             className={dateInputFieldClasses}
             wrapperClassName="w-full"
+            showPopperArrow={false}
+            popperPlacement="bottom-start"
+            aria-label="Date of incident"
           />
         </div>
         <FieldError message={fieldErrors.dateOfIncident} className="mt-2 hidden md:block" />

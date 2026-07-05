@@ -15,7 +15,7 @@ export default async function Page() {
   return (
     <>
       <JsonLd data={structuredData} />
-      <NewsPage initialNews={initialNews} />
+      <NewsPage key="most_wanted" category="most_wanted" initialNews={initialNews} />
     </>
   );
 }

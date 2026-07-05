@@ -20,7 +20,7 @@ export default async function Page({ params }) {
   return (
     <>
       <JsonLd data={structuredData} />
-      <NewsPage initialNews={initialNews} />
+      <NewsPage key={key} category={key} initialNews={initialNews} />
     </>
   );
 }

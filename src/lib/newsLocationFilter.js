@@ -67,7 +67,10 @@ export async function fetchBountyLocationLookup(supabase, newsItems) {
     .select('id, state, location')
     .in('id', bountyIds);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[newsLocationFilter] fetchBountyLocationLookup:', error.message);
+    return {};
+  }
 
   return Object.fromEntries((data ?? []).map((bounty) => [bounty.id, bounty]));
 }

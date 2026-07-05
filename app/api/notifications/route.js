@@ -101,6 +101,10 @@ export async function POST(request) {
     }
   } catch (error) {
     console.error('Notification dispatch failed:', error);
-    return jsonError('Could not send notification.', 500);
+    return Response.json({
+      ok: false,
+      skipped: true,
+      reason: 'dispatch_failed',
+    });
   }
 }

@@ -1,9 +1,9 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { PageErrorBanner } from '@/components/ui/form-feedback';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -12,8 +12,6 @@ import { Loader2, AlertTriangle, Calendar, Bookmark, Newspaper, Target, Hand, Me
 import { format } from 'date-fns';
 import nigerianStatesAndLgas from '@/data/nigerianStatesAndLgas.json';
 import { resolveOgImageUrl } from '@/lib/ogImageUrl';
-import SEOHead from '@/components/SEOHead';
-import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
 import { cn, slugify, htmlToPlainText } from '@/lib/utils';
 import { getMostWantedCardExcerpt } from '@/lib/mostWantedUtils';
 import {
@@ -27,6 +25,7 @@ import FeaturedNewsListItem from '@/components/news/FeaturedNewsListItem';
 import {
     getNewsCategoryFromPathname,
     getNewsCategoryPath,
+    getNewsCategoryFromRouteSegment,
 } from '@/lib/newsCategoryPaths';
 
 const NewsCard = ({ item }) => {
@@ -132,9 +131,12 @@ const categoryDetails = {
     }
 };
 
-const NewsPage = ({ initialNews = null }) => {
+const NewsPage = ({ initialNews = null, category: categoryProp = null }) => {
     const pathname = usePathname();
+    const params = useParams();
     const router = useRouter();
+    const fetchSeqRef = useRef(0);
+    const [categoryOverride, setCategoryOverride] = useState(null);
     const [fetchError, setFetchError] = useState('');
     const [news, setNews] = useState(initialNews ?? []);
     const [bountyLookup, setBountyLookup] = useState({});
@@ -145,43 +147,33 @@ const NewsPage = ({ initialNews = null }) => {
     const [lgas, setLgas] = useState([]);
     const [visibleCount, setVisibleCount] = useState(NEWS_PER_PAGE);
 
-    const category = useMemo(
-        () => getNewsCategoryFromPathname(pathname),
-        [pathname]
-    );
+    const routeCategory = getNewsCategoryFromRouteSegment(params?.category);
+    const pathnameCategory = getNewsCategoryFromPathname(pathname);
+    const category = categoryOverride ?? categoryProp ?? routeCategory ?? pathnameCategory;
+
+    useEffect(() => {
+        if (!categoryOverride) return;
+        const resolved = categoryProp ?? routeCategory ?? pathnameCategory;
+        if (resolved === categoryOverride) {
+            setCategoryOverride(null);
+        }
+    }, [categoryOverride, categoryProp, routeCategory, pathnameCategory]);
     const currentCategory = categoryDetails[category] || categoryDetails.all;
+    const categoryFilteredNews = useMemo(() => {
+        if (!category || category === 'all') return news;
+        return news.filter((item) => item.category === category);
+    }, [news, category]);
     const filteredNews = useMemo(
-        () => filterNewsByLocation(news, { state: selectedState, lga: selectedLga }, bountyLookup),
-        [news, selectedState, selectedLga, bountyLookup]
+        () => filterNewsByLocation(categoryFilteredNews, { state: selectedState, lga: selectedLga }, bountyLookup),
+        [categoryFilteredNews, selectedState, selectedLga, bountyLookup]
     );
     const visibleNews = useMemo(() => filteredNews.slice(0, visibleCount), [filteredNews, visibleCount]);
     const hasMoreNews = visibleCount < filteredNews.length;
     const Icon = currentCategory.icon;
 
-    // Generate SEO metadata based on category
-    const getPageTitle = (category) => {
-        if (category === 'bounty') {
-            return 'Active Bounties — WhistleBlower.ng';
-        } else if (category === 'most_wanted') {
-            return 'Most Wanted — WhistleBlower.ng';
-        } else if (category === 'news') {
-            return 'Latest News — WhistleBlower.ng';
-        }
-        return 'News & Updates — WhistleBlower.ng';
-    };
-
-    const getPageDescription = (category) => {
-        if (category === 'bounty') {
-            return 'Browse active bounties and earn rewards for providing valuable information. Help solve cases and make Nigeria safer.';
-        } else if (category === 'most_wanted') {
-            return 'View Nigeria\'s most wanted individuals and help law enforcement. Provide anonymous tips to bring fugitives to justice.';
-        } else if (category === 'news') {
-            return 'Stay informed with the latest news and security updates from across Nigeria. Important information for citizen safety.';
-        }
-        return 'Stay updated with the latest news, published bounties, and most wanted alerts from across the nation.';
-    };
-
     const fetchNews = useCallback(async ({ background = false } = {}) => {
+        const requestSeq = ++fetchSeqRef.current;
+
         if (!background) {
             setLoading(true);
         }
@@ -196,6 +188,7 @@ const NewsPage = ({ initialNews = null }) => {
             const { data, error } = await query.order('created_at', { ascending: false });
 
             if (error) throw error;
+            if (requestSeq !== fetchSeqRef.current) return;
 
             const newsWithImageUrls = data.map(item => ({
                 ...item,
@@ -203,17 +196,28 @@ const NewsPage = ({ initialNews = null }) => {
             }));
 
             const lookup = await fetchBountyLocationLookup(supabase, newsWithImageUrls);
+            if (requestSeq !== fetchSeqRef.current) return;
 
             setBountyLookup(lookup);
             setNews(newsWithImageUrls);
         } catch (error) {
+            if (requestSeq !== fetchSeqRef.current) return;
             setFetchError(error.message);
             setBountyLookup({});
             setNews([]);
         } finally {
-            setLoading(false);
+            if (requestSeq === fetchSeqRef.current) {
+                setLoading(false);
+            }
         }
     }, [category]);
+
+    useEffect(() => {
+        if (initialNews != null) {
+            setNews(initialNews);
+            setLoading(false);
+        }
+    }, [initialNews, category]);
 
     useEffect(() => {
         fetchNews({ background: initialNews != null });
@@ -245,7 +249,7 @@ const NewsPage = ({ initialNews = null }) => {
                     // Refresh news when any published news item is updated
                     // Add a small delay to ensure database consistency
                     setTimeout(() => {
-                        fetchNews();
+                        fetchNews({ background: true });
                     }, 100);
                 }
             )
@@ -275,7 +279,17 @@ const NewsPage = ({ initialNews = null }) => {
         const activeCategory = category || 'all';
         if (nextCategory === activeCategory) return;
 
-        router.push(getNewsCategoryPath(nextCategory));
+        setCategoryOverride(nextCategory);
+        setSelectedState('all');
+        setSelectedLga('all');
+        setLgas([]);
+
+        // Defer navigation so React can finish this render before Next.js swaps the route tree.
+        // Calling router.push in the same tick as head/state updates causes a removeChild crash.
+        const nextPath = getNewsCategoryPath(nextCategory);
+        queueMicrotask(() => {
+            router.push(nextPath);
+        });
     };
 
     const handleLgaChange = (event) => {
@@ -286,70 +300,14 @@ const NewsPage = ({ initialNews = null }) => {
         setVisibleCount((count) => Math.min(count + NEWS_PER_PAGE, filteredNews.length));
     };
 
-    // Generate SEO metadata based on category
-    const seoMeta = generateSEOMeta({
-        title: getPageTitle(category),
-        description: getPageDescription(category),
-        url: getNewsCategoryPath(category),
-        keywords: category === 'bounty' ? ['bounty', 'reward', 'active bounties', 'information bounty', 'Nigeria bounty'] :
-                 category === 'most_wanted' ? ['most wanted', 'fugitive', 'criminal', 'wanted person', 'law enforcement'] :
-                 category === 'news' ? ['news', 'latest news', 'security updates', 'crime news', 'Nigeria news'] :
-                 ['news', 'updates', 'bounties', 'most wanted', 'Nigeria security']
-    });
-
-    // Generate structured data for news listing
-    const structuredData = [
-        STRUCTURED_DATA_TEMPLATES.organization(),
-        {
-            '@context': 'https://schema.org',
-            '@type': 'CollectionPage',
-            name: getPageTitle(category),
-            description: getPageDescription(category),
-            mainEntity: {
-                '@type': 'ItemList',
-                numberOfItems: filteredNews.length,
-                itemListElement: filteredNews.slice(0, 10).map((item, index) => ({
-                    '@type': 'ListItem',
-                    position: index + 1,
-                    item: {
-                        '@type': 'Article',
-                        headline: item.title,
-                        description: (item.category === 'most_wanted' && item.most_wanted_details
-                            ? getMostWantedCardExcerpt(item)
-                            : htmlToPlainText(item.content)
-                        ).substring(0, 160),
-                        url: item.bounty_id ? `/bounties/${slugify(item.title)}` : `/news/post/${item.slug || `${slugify(item.title)}`}`,
-                        datePublished: item.created_at,
-                        author: {
-                            '@type': 'Organization',
-                            name: 'WhistleBlower.ng'
-                        }
-                    }
-                }))
-            }
-        }
-    ];
-
     return (
-        <>
-            <SEOHead
-                {...seoMeta}
-                structuredData={structuredData}
-            />
-            <div className="container mx-auto px-4 py-16 md:py-24">
+        <div className="container mx-auto px-4 py-16 md:py-24">
                 <div className="text-center mb-12">
                     <Icon className="h-16 w-16 text-primary mx-auto mb-6" />
                     <h1 className="text-3xl md:text-4xl font-bold mb-4">{currentCategory.title}</h1>
                     <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
                         {currentCategory.description}
                     </p>
-                    {(category === 'most_wanted' || category === 'bounty') && (
-                        <p className="mx-auto mt-4 max-w-3xl text-base text-muted-foreground">
-                            {category === 'most_wanted'
-                                ? 'Published alerts include case details and anonymous tip links. WhistleBlower.ng helps citizens share information with law enforcement without exposing their identity.'
-                                : 'Each bounty includes reward details and a secure way to submit verified information.'}
-                        </p>
-                    )}
                 </div>
 
                 <PageErrorBanner error={fetchError} title="Could not load news" className="mb-8" />
@@ -474,7 +432,6 @@ const NewsPage = ({ initialNews = null }) => {
                     </div>
                 )}
             </div>
-        </>
     );
 };
 

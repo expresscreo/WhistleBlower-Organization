@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { findPublishedNewsByRouteSlug } from '@/lib/postSlug';
 import { slugify } from '@/lib/utils';
 import PageHead from '@/components/PageHead';
@@ -16,10 +16,11 @@ import { Loader2, Info, MapPin, Calendar, Coins } from 'lucide-react';
 import SocialShare from '@/components/SocialShare';
 import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGallery';
 import MaximizableImage from '@/components/media/MaximizableImage';
+import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 import RichTextMediaContent from '@/components/media/RichTextMediaContent';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
-import { getEvidencePathsForPublishedPost } from '@/lib/publishedEvidence';
+import { getBountyGalleryDisplayPaths } from '@/lib/publishedEvidence';
 import { BOUNTY_STATUSES_WITH_PUBLIC_PAGE } from '@/lib/bountyPostUrl';
 import { getBountyInfo } from '@/lib/bountyCta';
 import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
@@ -28,11 +29,11 @@ import { useStickyReportHref } from '@/contexts/ReportCtaContext';
 
 const BountyPostPage = () => {
     const { slug } = useParams();
-    const router = useRouter();
     const [fetchError, setFetchError] = useState('');
     const [bounty, setBounty] = useState(null);
     const [loading, setLoading] = useState(true);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
+    const hasLoadedBountyRef = useRef(false);
 
     const stickyReportHref = useMemo(() => {
         if (!bounty) return null;
@@ -44,8 +45,10 @@ const BountyPostPage = () => {
 
     useStickyReportHref(stickyReportHref);
 
-    const fetchBounty = useCallback(async () => {
-        setLoading(true);
+    const fetchBounty = useCallback(async ({ silent = false } = {}) => {
+        if (!silent && !hasLoadedBountyRef.current) {
+            setLoading(true);
+        }
         setFetchError('');
 
         const { data: newsList, error: newsListError } = await supabase
@@ -92,7 +95,7 @@ const BountyPostPage = () => {
             };
             setFetchError('');
             setBounty(updatedBounty);
-            setFeaturedImageUrl(null);
+            hasLoadedBountyRef.current = true;
             setLoading(false);
             return;
         }
@@ -115,9 +118,9 @@ const BountyPostPage = () => {
         // Use original bounty data
         setFetchError('');
         setBounty(bountyData);
-        setFeaturedImageUrl(null);
+        hasLoadedBountyRef.current = true;
         setLoading(false);
-    }, [slug, router]);
+    }, [slug]);
 
     useEffect(() => {
         fetchBounty();
@@ -135,9 +138,7 @@ const BountyPostPage = () => {
             getLocalFileUrl(bounty.featured_image) ||
             resolveImageUrl(bounty.featured_image);
         if (immediateSrc) {
-            setFeaturedImageUrl(immediateSrc);
-        } else {
-            setFeaturedImageUrl(null);
+            setFeaturedImageUrl((current) => current || immediateSrc);
         }
 
         const resolveWithRetry = async () => {
@@ -173,14 +174,16 @@ const BountyPostPage = () => {
     useEffect(() => {
         if (!bounty?.id) return;
 
+        const bountyId = bounty.id;
+
         const channel = supabase
-            .channel(`bounty-updates-${bounty.id}`)
+            .channel(`bounty-updates-${bountyId}`)
             .on('postgres_changes', 
                 { 
                     event: 'UPDATE', 
                     schema: 'public', 
                     table: 'bounties',
-                    filter: `id=eq.${bounty.id}`
+                    filter: `id=eq.${bountyId}`
                 }, 
                 (payload) => {
                     console.log('Bounty update received:', payload);
@@ -205,13 +208,13 @@ const BountyPostPage = () => {
                     event: 'UPDATE', 
                     schema: 'public', 
                     table: 'news',
-                    filter: `bounty_id=eq.${bounty.id}`
+                    filter: `bounty_id=eq.${bountyId}`
                 }, 
                 (payload) => {
                     console.log('Bounty news update received:', payload);
                     // Refresh bounty data when related news is updated
                     if (payload.new && payload.new.status === 'published') {
-                        fetchBounty();
+                        fetchBounty({ silent: true });
                     }
                 }
             )
@@ -220,7 +223,7 @@ const BountyPostPage = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [bounty, fetchBounty]);
+    }, [bounty?.id, fetchBounty]);
 
     if (loading) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="h-16 w-16 animate-spin" /></div>;
     if (!bounty) {
@@ -240,8 +243,11 @@ const BountyPostPage = () => {
         bountyId: bounty.id,
         title: bounty.title,
     });
-    const publishedEvidencePaths = getEvidencePathsForPublishedPost(
-        bounty.published_evidence !== undefined ? { published_evidence: bounty.published_evidence } : null,
+    const galleryPaths = getBountyGalleryDisplayPaths(
+        {
+            published_evidence: bounty.published_evidence,
+            featured_image: bounty.featured_image,
+        },
         bounty.evidence
     );
 
@@ -260,14 +266,24 @@ const BountyPostPage = () => {
             />
             <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
                 <Card className="overflow-hidden border-border/70 shadow-sm">
-                        {featuredImageUrl && (
-                            <MaximizableImage
-                                src={featuredImageUrl}
-                                alt={bounty.title}
-                                wrapperClassName="aspect-video w-full"
-                                imageClassName="h-full w-full object-cover"
-                            />
-                        )}
+                        {bounty.featured_image ? (
+                            featuredImageUrl ? (
+                                <MaximizableImage
+                                    src={featuredImageUrl}
+                                    alt={bounty.title}
+                                    wrapperClassName="aspect-video w-full"
+                                    imageClassName="h-full w-full object-cover"
+                                />
+                            ) : (
+                                <div className="aspect-video w-full overflow-hidden bg-muted">
+                                    <ResolvedStorageImage
+                                        path={bounty.featured_image}
+                                        alt={bounty.title}
+                                        className="h-full w-full object-cover"
+                                    />
+                                </div>
+                            )
+                        ) : null}
                         <CardContent className="space-y-8 p-6 md:p-8 lg:p-10">
                             <div className="text-center py-6 border-t border-b bg-primary/5 rounded-lg">
                                 <Link href={giveInfoUrl}>
@@ -315,9 +331,9 @@ const BountyPostPage = () => {
                                 </div>
                             </div>
 
-                            {publishedEvidencePaths.length > 0 && (
+                            {galleryPaths.length > 0 && (
                                 <EvidenceThumbnailGallery
-                                    paths={publishedEvidencePaths}
+                                    paths={galleryPaths}
                                     showOtherAttachments={false}
                                     className="border-t pt-6"
                                 />

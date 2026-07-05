@@ -54,7 +54,7 @@ export async function buildNewsPreviewPayload({
 
   const previewGalleryDataUrls = [];
   for (const file of pendingGalleryFiles) {
-    if (!file?.type?.startsWith('image/')) continue;
+    if (!file?.type?.startsWith('image/') && !file?.type?.startsWith('video/')) continue;
     try {
       const dataUrl = await readFileAsDataUrl(file);
       if (dataUrl) previewGalleryDataUrls.push(dataUrl);

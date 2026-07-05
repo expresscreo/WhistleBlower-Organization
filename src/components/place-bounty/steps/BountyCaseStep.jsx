@@ -13,20 +13,7 @@ import { inputFieldClasses, textareaFieldClasses, selectTriggerFieldClasses } fr
 import { FieldError } from '@/components/ui/form-feedback';
 import { TipFieldGroup } from '@/components/submit-report/TipFieldLabel';
 
-const crimeTypes = [
-  'Theft',
-  'Murderer',
-  'Fraud',
-  'Assault',
-  'Scam',
-  'Sex Predator',
-  'Armed Robbery',
-  'Kidnapping',
-  'Vandalism',
-  'Missing Person',
-  'Cybercrime',
-  'Other',
-];
+import { BOUNTY_CRIME_TYPES } from '@/lib/bountyCrimeTypes';
 
 export default function BountyCaseStep({ formData, handleInputChange, fieldErrors = {} }) {
   return (
@@ -65,7 +52,7 @@ export default function BountyCaseStep({ formData, handleInputChange, fieldError
             <SelectValue placeholder="Select type of crime" />
           </SelectTrigger>
           <SelectContent>
-            {crimeTypes.map((crime) => (
+            {BOUNTY_CRIME_TYPES.map((crime) => (
               <SelectItem key={crime} value={crime}>
                 {crime}
               </SelectItem>

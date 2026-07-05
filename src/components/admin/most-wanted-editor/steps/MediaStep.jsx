@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Upload, Play, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/form-feedback';
@@ -10,9 +10,20 @@ import MaximizableThumbnailOverlay, {
   maximizableThumbnailGroupClass,
 } from '@/components/media/MaximizableThumbnailOverlay';
 import { getLocalFileUrl } from '@/lib/fileUtils';
+import { isVideoPath } from '@/lib/mediaUtils';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 
-const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+const isAcceptedGalleryFile = (file) =>
+  file?.type?.startsWith('image/') || file?.type?.startsWith('video/');
+
+const isFileWithinSizeLimit = (file) => {
+  if (file.type?.startsWith('video/')) return file.size <= MAX_VIDEO_BYTES;
+  if (file.type?.startsWith('image/')) return file.size <= MAX_IMAGE_BYTES;
+  return false;
+};
 
 export default function MediaStep({
   featuredImageUrl,
@@ -32,7 +43,7 @@ export default function MediaStep({
   useEffect(() => {
     const next = {};
     pendingGalleryFiles.forEach((file, index) => {
-      if (file.type?.startsWith('image/')) {
+      if (isAcceptedGalleryFile(file)) {
         next[`pending-${index}`] = URL.createObjectURL(file);
       }
     });
@@ -56,10 +67,9 @@ export default function MediaStep({
   }, [galleryPaths]);
 
   const handleGalleryPick = (e) => {
-    const picked = Array.from(e.target.files || []);
+    const picked = Array.from(e.target.files || []).filter(isAcceptedGalleryFile);
     e.target.value = '';
-    const oversized = picked.filter((file) => file.size > MAX_FILE_BYTES);
-    if (oversized.length) return;
+    if (picked.some((file) => !isFileWithinSizeLimit(file))) return;
     onPendingGalleryFilesChange([...pendingGalleryFiles, ...picked]);
   };
 
@@ -71,11 +81,22 @@ export default function MediaStep({
     onPendingGalleryFilesChange(pendingGalleryFiles.filter((_, i) => i !== index));
   };
 
-  const ThumbnailTile = ({ src, alt, onRemove, badge }) => (
+  const ThumbnailTile = ({ src, alt, onRemove, badge, isVideo = false }) => (
     <div className="relative">
-      <div className={`${maximizableThumbnailGroupClass} aspect-square rounded-lg bg-muted`}>
-        <img src={src} alt={alt} className="h-full w-full rounded-lg object-cover" />
-        <MaximizableThumbnailOverlay />
+      <div className={`${maximizableThumbnailGroupClass} relative aspect-square rounded-lg bg-muted`}>
+        {isVideo ? (
+          <>
+            <video src={src} className="h-full w-full rounded-lg object-cover" muted playsInline preload="metadata" />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30">
+              <Play className="h-7 w-7 fill-white/90 text-white" />
+            </div>
+          </>
+        ) : (
+          <>
+            <img src={src} alt={alt} className="h-full w-full rounded-lg object-cover" />
+            <MaximizableThumbnailOverlay />
+          </>
+        )}
       </div>
       {badge && (
         <span className="pointer-events-none absolute left-1 top-1 z-10 rounded bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase text-primary-foreground">
@@ -97,9 +118,9 @@ export default function MediaStep({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label>Photos</Label>
+        <Label>Photos & videos</Label>
         <p className="text-xs text-muted-foreground">
-          Featured image is required. Add more square thumbnails for the public gallery.
+          Featured image is required. Add more photos or videos for the public gallery.
         </p>
         <input
           ref={featuredInputRef}
@@ -112,7 +133,7 @@ export default function MediaStep({
         <input
           ref={galleryInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           className="hidden"
           onChange={handleGalleryPick}
@@ -128,7 +149,7 @@ export default function MediaStep({
           </Button>
           <Button type="button" variant="outline" onClick={() => galleryInputRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" />
-            Add more photos
+            Add more photos & videos
           </Button>
         </div>
         <FieldError message={fieldErrors.featured_image} />
@@ -149,6 +170,7 @@ export default function MediaStep({
                 key={path}
                 src={url}
                 alt=""
+                isVideo={isVideoPath(path)}
                 onRemove={() => removeGalleryPath(path)}
               />
             );
@@ -159,6 +181,7 @@ export default function MediaStep({
                 key={`pending-${file.name}-${index}`}
                 src={galleryPreviewUrls[`pending-${index}`]}
                 alt={sanitizeFilename(file.name)}
+                isVideo={file.type?.startsWith('video/')}
                 onRemove={() => removePendingFile(index)}
               />
             ) : null

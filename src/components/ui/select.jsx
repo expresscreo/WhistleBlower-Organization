@@ -60,7 +60,7 @@ const SelectContent = React.forwardRef(({
   position = 'popper',
   side = 'bottom',
   sideOffset = 4,
-  avoidCollisions = false,
+  avoidCollisions = true,
   collisionPadding = { top: 8, right: 8, bottom: 80, left: 8 },
   collisionBoundary = typeof document !== 'undefined' ? document.documentElement : undefined,
   ...props
@@ -87,7 +87,7 @@ const SelectContent = React.forwardRef(({
         className={cn(
           'p-1',
           position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
+            'w-full min-w-[var(--radix-select-trigger-width)]'
         )}
       >
         {children}
