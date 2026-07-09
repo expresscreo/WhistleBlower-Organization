@@ -3,7 +3,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Paperclip, Download, Loader2, File as FileIcon, Mic, Eye } from 'lucide-react';
+import { Download, Loader2, File as FileIcon, Mic, Eye } from 'lucide-react';
 import { sanitizeFilename } from '@/lib/utils';
 import { getLocalFileUrl } from '@/lib/fileUtils';
 import { findVoiceNotePaths } from '@/lib/voiceNoteUtils';
@@ -105,7 +105,7 @@ const ReportAttachmentsCard = ({ evidencePath, isVoiceNote, hideVoiceNote = fals
 
     return (
         <Card>
-            <CardHeader><CardTitle className="flex items-center text-2xl"><Paperclip className="mr-2 text-primary"/>Attachments</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-2xl">Attachments</CardTitle></CardHeader>
             <CardContent>
                 {paths.length > 0 ? (
                     <div className="space-y-2">

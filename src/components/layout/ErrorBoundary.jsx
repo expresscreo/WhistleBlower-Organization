@@ -16,6 +16,16 @@ export default class ErrorBoundary extends React.Component {
     console.error('App render error:', error, info);
   }
 
+  componentDidUpdate(prevProps) {
+    if (
+      process.env.NODE_ENV === 'development' &&
+      this.state.hasError &&
+      prevProps.children !== this.props.children
+    ) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (

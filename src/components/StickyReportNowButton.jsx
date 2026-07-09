@@ -80,7 +80,7 @@ export default function StickyReportNowButton() {
     >
       <div className="px-4 pt-3">
         <Link href={reportHref} className="block">
-          <Button className="group h-11 w-full uppercase tracking-[1px] bg-primary hover:bg-[#e96601]">
+          <Button className="group h-11 w-full uppercase tracking-[1px] bg-primary hover:bg-[#e64900]">
             REPORT NOW
             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Button>

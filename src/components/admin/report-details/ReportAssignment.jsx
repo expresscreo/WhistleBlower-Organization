@@ -1,7 +1,6 @@
 import React from 'react';
 import Select from 'react-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserCheck } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const ReportAssignment = ({ orgUsers, selectedUsers, onAssignReport }) => {
@@ -82,10 +81,7 @@ const ReportAssignment = ({ orgUsers, selectedUsers, onAssignReport }) => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-2xl flex items-center">
-                    <UserCheck className="mr-2 text-primary" />
-                    Assign Report
-                </CardTitle>
+                <CardTitle className="text-2xl">Assign Report</CardTitle>
             </CardHeader>
             <CardContent>
                 <Select

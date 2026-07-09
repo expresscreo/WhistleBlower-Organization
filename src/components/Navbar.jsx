@@ -11,9 +11,16 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import AnimatedHamburger from '@/components/AnimatedHamburger';
 import MobileMenuOverlay from '@/components/MobileMenuOverlay';
+import NavLabelWithNewTag from '@/components/NavLabelWithNewTag';
 import { useReportCta } from '@/contexts/ReportCtaContext';
 
-const NavItem = ({ name, path, isActive, isExternal = false }) => {
+const NavItem = ({ name, path, isActive, isExternal = false, activeAccent = 'default', showNewTag = false }) => {
+    const isBountyAccent = activeAccent === 'bounty';
+    const activeTextClass = isBountyAccent ? 'text-bounty-gold' : 'text-primary';
+    const inactiveTextClass = isBountyAccent
+        ? 'text-foreground/80 hover:text-bounty-gold'
+        : 'text-foreground/80 hover:text-primary';
+
     return isExternal ? (
         <a
             href={path}
@@ -28,13 +35,18 @@ const NavItem = ({ name, path, isActive, isExternal = false }) => {
             data-path={path}
             className={cn(
                 "relative flex items-center h-full px-1 text-xs font-medium tracking-[2px] uppercase transition-colors",
-                isActive ? "text-primary" : "text-foreground/80 hover:text-primary"
+                isActive ? activeTextClass : inactiveTextClass
             )}
         >
-            {name}
+            <span className="inline-block">
+                <NavLabelWithNewTag name={name} showNewTag={showNewTag} />
+            </span>
             {isActive && (
                 <motion.div
-                    className="absolute bottom-0 left-0 right-0 h-1 bg-primary"
+                    className={cn(
+                        "absolute bottom-0 left-0 right-0 h-1",
+                        isBountyAccent ? "bg-bounty-gold" : "bg-primary"
+                    )}
                     layoutId="underline"
                     transition={{ type: "spring", stiffness: 350, damping: 30, mass: 0.7 }}
                 />
@@ -301,7 +313,7 @@ const Navbar = () => {
         { name: 'Active Bounties', path: '/news/bounty', description: 'View current bounties and opportunities to earn rewards.' },
         { name: 'Most Wanted', path: '/most-wanted', description: 'Discover high-priority cases seeking whistleblower information.' }
     ]},
-    { name: 'PLACE A BOUNTY', path: '/place-bounty' },
+    { name: 'PLACE A BOUNTY', path: '/place-bounty', activeAccent: 'bounty', showNewTag: true },
     { name: 'FAQ', path: '/faq' }
   ];
 
@@ -341,7 +353,17 @@ const Navbar = () => {
                       return <DropdownNavItem key={item.name} name={item.name} items={item.items} />;
                   }
                   const isActive = pathname === item.path || (item.path === '/news' && pathname.startsWith('/news'));
-                  return <NavItem key={item.name} name={item.name} path={item.path} isActive={isActive} isExternal={item.external} />;
+                  return (
+                    <NavItem
+                      key={item.name}
+                      name={item.name}
+                      path={item.path}
+                      isActive={isActive}
+                      isExternal={item.external}
+                      activeAccent={item.activeAccent}
+                      showNewTag={item.showNewTag}
+                    />
+                  );
               })}
             </div>
           </div>
@@ -355,7 +377,7 @@ const Navbar = () => {
               </Link>
             )}
             <Link href={reportHref}>
-              <Button className="uppercase tracking-[1px] px-6 bg-primary hover:bg-[#e96601] group">
+              <Button className="uppercase tracking-[1px] px-6 bg-primary hover:bg-[#e64900] group">
                 REPORT NOW
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
@@ -371,7 +393,7 @@ const Navbar = () => {
               </Link>
             )}
             <Link href={reportHref} className="hidden md:block">
-              <Button size="sm" className="uppercase tracking-[1px] px-4 bg-primary hover:bg-[#e96601] group whitespace-nowrap">
+              <Button size="sm" className="uppercase tracking-[1px] px-4 bg-primary hover:bg-[#e64900] group whitespace-nowrap">
                 REPORT NOW
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>

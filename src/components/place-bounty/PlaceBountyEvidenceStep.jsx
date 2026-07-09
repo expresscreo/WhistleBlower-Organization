@@ -13,7 +13,7 @@ import { TipFieldGroup } from '@/components/submit-report/TipFieldLabel';
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
-export default function BountyEvidenceStep({
+export default function PlaceBountyEvidenceStep({
   files,
   onFilesChange,
   disabled = false,
@@ -65,10 +65,10 @@ export default function BountyEvidenceStep({
         id="bounty-file-upload"
         onClick={handlePick}
         disabled={disabled}
-        className="w-full border-2 border-dashed rounded-lg p-8 md:p-10 text-center transition-colors hover:border-primary/50 hover:bg-muted/30 disabled:opacity-50"
+        className="w-full border-2 border-dashed rounded-lg p-8 text-center transition-colors hover:border-primary/50 hover:bg-muted/30 disabled:opacity-50 md:p-10"
       >
-        <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" aria-hidden />
-        <p className="font-medium mb-1">Drag files here or tap to browse</p>
+        <Upload className="mx-auto mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
+        <p className="mb-1 font-medium">Drag files here or tap to browse</p>
         <p className="text-sm text-muted-foreground">
           Images, videos, or documents — max 25MB each. At least one file is required.
         </p>
@@ -103,15 +103,15 @@ export default function BountyEvidenceStep({
                   />
                 </div>
               )}
-              <div className="flex-grow min-w-0">
-                <div className="flex justify-between items-center gap-2">
+              <div className="min-w-0 flex-grow">
+                <div className="flex items-center justify-between gap-2">
                   <span className="truncate">{sanitizeFilename(file.name)}</span>
                   {disabled && uploadProgress[index] > 0 && (
-                    <span className="text-xs shrink-0">{Math.round(uploadProgress[index])}%</span>
+                    <span className="shrink-0 text-xs">{Math.round(uploadProgress[index])}%</span>
                   )}
                 </div>
                 {disabled && uploadProgress[index] > 0 && (
-                  <Progress value={uploadProgress[index]} className="h-2 mt-1" />
+                  <Progress value={uploadProgress[index]} className="mt-1 h-2" />
                 )}
               </div>
               <Button

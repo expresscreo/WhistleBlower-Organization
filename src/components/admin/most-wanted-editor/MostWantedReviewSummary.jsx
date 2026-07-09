@@ -1,6 +1,5 @@
 'use client';
 
-import { Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getMostWantedStepNumber } from './mostWantedStepMeta';
 import {
@@ -24,10 +23,9 @@ function ReviewRow({ label, value, onEdit, step }) {
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 shrink-0 gap-1 text-primary"
+          className="h-8 shrink-0 text-primary"
           onClick={() => onEdit(step)}
         >
-          <Edit2 className="h-3.5 w-3.5" />
           Edit
         </Button>
       )}

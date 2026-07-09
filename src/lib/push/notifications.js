@@ -145,10 +145,15 @@ export async function dispatchTrackingUpdatePush(service, { trackingType, tracki
 
   let sent = 0;
   for (const batch of chunk(tokens, MAX_TOKENS_PER_REQUEST)) {
+    const title = normalizedType === 'bounty' ? 'Secure Bounty Update' : 'Secure Report Update';
+    const body =
+      normalizedType === 'bounty'
+        ? 'Your bounty has a new update. Open WhistleBlower to view it securely.'
+        : 'Your report has a new update. Open WhistleBlower to view it securely.';
     const messages = batch.map((to) => ({
       to,
-      title: 'Secure tracker update',
-      body: 'Your submission has a new update. Open WhistleBlower to view it securely.',
+      title,
+      body,
       sound: 'default',
       data: {
         route: '/notifications',

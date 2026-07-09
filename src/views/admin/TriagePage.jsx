@@ -127,8 +127,10 @@ const TriagePage = () => {
                      <CardDescription>
                         ID: {currentReport.report_id} | Submitted: {format(new Date(currentReport.created_at), 'PPP')}
                      </CardDescription>
-                     {currentReport.organization_name && (
+                     {currentReport.organization_name ? (
                         <p className="text-sm text-primary pt-2">Submitted For: <span className="font-semibold">{currentReport.organization_name}</span></p>
+                     ) : (
+                        <p className="text-sm text-muted-foreground pt-2">No organization was selected by the reporter. Assign based on the report details.</p>
                      )}
                    </CardHeader>
                    <CardContent>

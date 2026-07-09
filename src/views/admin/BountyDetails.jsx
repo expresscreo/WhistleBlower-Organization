@@ -346,6 +346,12 @@ const BountyDetails = () => {
             setBounty(data);
             setStatusFeedback({ error: '', success: 'Bounty status updated.' });
             invalidateCache('bounties');
+            const publicBountyId = data?.bounty_id ?? bounty?.bounty_id;
+            if (publicBountyId) {
+                notifyTrackingUpdatePush({ trackingType: 'bounty', trackingId: publicBountyId }).catch((pushError) => {
+                    console.error('Failed to send tracking push notification:', pushError);
+                });
+            }
         }
     };
 

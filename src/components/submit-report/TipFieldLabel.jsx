@@ -1,14 +1,9 @@
 import { cn } from '@/lib/utils';
+import { fieldLabelClasses } from '@/lib/fieldStyles';
 
 export function TipFieldLabel({ htmlFor, children, optional = false, className }) {
   return (
-    <label
-      htmlFor={htmlFor}
-      className={cn(
-        'mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground',
-        className
-      )}
-    >
+    <label htmlFor={htmlFor} className={cn(fieldLabelClasses, className)}>
       {children}
       {optional ? (
         <span className="font-normal normal-case tracking-normal"> (optional)</span>
@@ -19,6 +14,7 @@ export function TipFieldLabel({ htmlFor, children, optional = false, className }
 
 export function TipFieldGroup({
   isBountyMode,
+  showLabel,
   label,
   htmlFor,
   optional = false,
@@ -26,9 +22,11 @@ export function TipFieldGroup({
   labelClassName,
   children,
 }) {
+  const shouldShowLabel = showLabel ?? isBountyMode;
+
   return (
-    <div className={cn('w-full min-w-0', className)}>
-      {isBountyMode ? (
+    <div className={cn('w-full min-w-0 text-left', className)}>
+      {shouldShowLabel && label ? (
         <TipFieldLabel htmlFor={htmlFor} optional={optional} className={labelClassName}>
           {label}
         </TipFieldLabel>

@@ -11,6 +11,7 @@ import { useMobileMenu } from '@/contexts/MobileMenuContext';
 import { useReportCta } from '@/contexts/ReportCtaContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { cn } from '@/lib/utils';
+import NavLabelWithNewTag from '@/components/NavLabelWithNewTag';
 
 const MobileMenuOverlay = ({ navItems }) => {
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
@@ -134,14 +135,22 @@ const MobileMenuOverlay = ({ navItems }) => {
                         href={item.path}
                         onClick={handleLinkClick}
                         className={cn(
-                          'block py-2 text-[36px] font-semibold capitalize leading-[40px] transition-colors duration-200',
+                          'relative block py-2 text-[36px] font-semibold capitalize leading-[40px] transition-colors duration-200',
                           pathname === item.path
-                            ? 'text-primary'
-                            : 'text-foreground hover:text-primary'
+                            ? item.activeAccent === 'bounty'
+                              ? 'text-bounty-gold'
+                              : 'text-primary'
+                            : item.activeAccent === 'bounty'
+                              ? 'text-foreground hover:text-bounty-gold'
+                              : 'text-foreground hover:text-primary'
                         )}
                         style={{ minHeight: '44px' }}
                       >
-                        {item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
+                        <NavLabelWithNewTag
+                          name={item.name === 'FAQ' ? item.name : item.name.toLowerCase()}
+                          showNewTag={item.showNewTag}
+                          tagClassName="rounded-[4px] px-1.5 py-0.5 text-[10px]"
+                        />
                       </Link>
                     )}
                   </motion.div>

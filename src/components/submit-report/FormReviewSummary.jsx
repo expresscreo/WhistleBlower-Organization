@@ -1,6 +1,5 @@
 'use client';
 
-import { Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getStepNumber } from './submitReportStepMeta';
 import { formatIncidentDate } from './reportFormUtils';
@@ -8,7 +7,7 @@ import { formatIncidentDate } from './reportFormUtils';
 function ReviewRow({ label, value, onEdit, step }) {
   if (!value) return null;
   return (
-    <div className="flex items-start justify-between gap-3 px-4 py-3 border-b last:border-0">
+    <div className="flex items-start justify-between gap-3 border-b py-3">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
           {label}
@@ -20,10 +19,9 @@ function ReviewRow({ label, value, onEdit, step }) {
           type="button"
           variant="ghost"
           size="sm"
-          className="shrink-0 h-8 gap-1 text-primary"
+          className="shrink-0 h-8 text-primary"
           onClick={() => onEdit(step)}
         >
-          <Edit2 className="h-3.5 w-3.5" />
           Edit
         </Button>
       )}
@@ -80,7 +78,7 @@ export default function FormReviewSummary({
       : "I DON'T want to be eligible for reward";
 
   return (
-    <div className="rounded-lg border bg-muted/20 divide-y">
+    <div>
       {isBountyMode || isMostWantedMode ? (
         <ReviewRow
           label={isMostWantedMode ? 'Most Wanted alert' : 'Bounty'}

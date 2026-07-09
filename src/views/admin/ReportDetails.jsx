@@ -10,10 +10,11 @@ import ReportActions from '@/components/admin/report-details/ReportActions';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import ReportChat from '@/components/admin/report-details/ReportChat';
 import ReportAssignment from '@/components/admin/report-details/ReportAssignment';
+import ReportOrganizationAssignment from '@/components/admin/report-details/ReportOrganizationAssignment';
 import ReportInfoCard from '@/components/admin/report-details/ReportInfoCard';
 import ReportStatusCard from '@/components/admin/report-details/ReportStatusCard';
 import ReportAttachmentsCard from '@/components/admin/report-details/ReportAttachmentsCard';
-import { FieldError } from '@/components/ui/form-feedback';
+import { FieldError, FieldSuccess } from '@/components/ui/form-feedback';
 import FormattedReportDescription from '@/components/report/FormattedReportDescription';
 import VoiceNotePlayerList from '@/components/media/VoiceNotePlayerList';
 import {
@@ -41,9 +42,11 @@ const ReportDetails = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [orgUsers, setOrgUsers] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [actionFeedback, setActionFeedback] = useState({ error: '', success: '' });
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+  const [isUpdatingOrganization, setIsUpdatingOrganization] = useState(false);
   
   // Refs to prevent unnecessary re-fetching
   const hasInitialData = useRef(false);
@@ -52,6 +55,49 @@ const ReportDetails = () => {
   const fetchUpdatesRef = useRef(null);
   
   const canAssign = !profileLoading && (profile?.user_type === 'super_admin' || profile?.user_type === 'executive_admin' || profile?.user_type === 'organization_admin');
+  const canUpdateOrganization = !profileLoading && ['super_admin', 'executive_admin'].includes(profile?.user_type);
+
+  const fetchAssignableUsers = useCallback(async (organizationId) => {
+    if (!organizationId || !canAssign) {
+      setOrgUsers([]);
+      setSelectedUsers([]);
+      return [];
+    }
+
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, user_type')
+      .eq('organization_id', organizationId);
+
+    if (usersError) throw usersError;
+
+    const assignableUsers = (usersData || []).filter((orgUser) =>
+      ['organization_admin', 'staff'].includes(orgUser.user_type)
+    );
+    setOrgUsers(assignableUsers);
+    return assignableUsers;
+  }, [canAssign]);
+
+  const fetchOrganizations = useCallback(async () => {
+    if (!canUpdateOrganization) return;
+
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('status', 'active')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Failed to fetch organizations:', error);
+      setActionFeedback({
+        error: formatSupabaseError(error, 'Could not load organizations.'),
+        success: '',
+      });
+      return;
+    }
+
+    setOrganizations(data || []);
+  }, [canUpdateOrganization]);
 
   const markMessagesAsRead = useCallback(async (reportId, readerId) => {
     if (!reportId || !readerId) return;
@@ -146,16 +192,15 @@ const ReportDetails = () => {
       fetchUpdates(true);
 
       if (reportData.organization_id && canAssign) {
-          const { data: usersData, error: usersError } = await supabase.from('users').select('id, name, user_type').eq('organization_id', reportData.organization_id);
-          if(usersError) throw usersError;
-          const assignableUsers = usersData.filter(u => ['organization_admin', 'staff'].includes(u.user_type));
-          setOrgUsers(assignableUsers);
-          
+          const assignableUsers = await fetchAssignableUsers(reportData.organization_id);
           const { data: assignments, error: assignmentsError } = await supabase.from('report_assignments').select('assigned_to').eq('report_id', id);
           if (assignmentsError) throw assignmentsError;
           const assignedIds = assignments.map(a => a.assigned_to);
           const currentAssignedUsers = assignableUsers.filter(u => assignedIds.includes(u.id));
           setSelectedUsers(currentAssignedUsers);
+      } else {
+          setOrgUsers([]);
+          setSelectedUsers([]);
       }
 
       await supabase.from('reports').update({ admin_has_viewed: true }).eq('id', id);
@@ -166,7 +211,7 @@ const ReportDetails = () => {
     } finally {
         setLoading(false);
     }
-  }, [id, canAssign, profile, router, user, markMessagesAsRead, fetchUpdates]);
+  }, [id, canAssign, profile, router, user, markMessagesAsRead, fetchUpdates, fetchAssignableUsers]);
 
   // Store the latest fetch functions in refs
   fetchReportDetailsRef.current = fetchReportDetails;
@@ -178,6 +223,10 @@ const ReportDetails = () => {
         fetchReportDetails(true); // Force initial fetch
     }
   }, [profileLoading, profile?.id, id]); // Only depend on stable references
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
   useEffect(() => {
     if (id && user?.id) {
@@ -267,6 +316,62 @@ const ReportDetails = () => {
       }
     }
   }, [id, report?.report_id]);
+
+  const handleUpdateOrganization = useCallback(async (organizationId) => {
+    if (!canUpdateOrganization || !report || organizationId === report.organization_id) return;
+
+    const organization = organizations.find((org) => org.id === organizationId);
+    if (!organization) {
+      setActionFeedback({ error: 'Please select a valid organization.', success: '' });
+      return;
+    }
+
+    setIsUpdatingOrganization(true);
+    setActionFeedback({ error: '', success: '' });
+
+    try {
+      const shouldMarkAssigned = !report.organization_id && report.status === 'Under Review';
+      const updatePayload = {
+        organization_id: organization.id,
+        ...(shouldMarkAssigned ? { status: 'Assigned' } : {}),
+      };
+
+      const { error: updateError } = await supabase
+        .from('reports')
+        .update(updatePayload)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      const { error: assignmentError } = await supabase
+        .from('report_assignments')
+        .delete()
+        .eq('report_id', id);
+
+      if (assignmentError) throw assignmentError;
+
+      await fetchAssignableUsers(organization.id);
+      setSelectedUsers([]);
+      setReport((prev) => ({
+        ...prev,
+        organization_id: organization.id,
+        organizations: { name: organization.name },
+        status: shouldMarkAssigned ? 'Assigned' : prev.status,
+      }));
+      setActionFeedback({
+        error: '',
+        success: `Report assigned to ${organization.name}.`,
+      });
+    } catch (error) {
+      console.error('Failed to update report organization:', error);
+      setActionFeedback({
+        error: formatSupabaseError(error, 'Failed to update organization.'),
+        success: '',
+      });
+    } finally {
+      setIsUpdatingOrganization(false);
+    }
+  }, [canUpdateOrganization, fetchAssignableUsers, id, organizations, report]);
 
   const handleAssignReport = useCallback(async (newSelectedUserIds) => {
     if (!canAssign) return;
@@ -490,6 +595,7 @@ const ReportDetails = () => {
         </div>
 
         <FieldError message={actionFeedback.error} />
+        <FieldSuccess message={actionFeedback.success} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
@@ -538,6 +644,14 @@ const ReportDetails = () => {
               isVoiceNote={report.is_voice_note}
               hideVoiceNote={report.is_voice_note}
             />
+            {canUpdateOrganization && (
+              <ReportOrganizationAssignment
+                organizations={organizations}
+                currentOrganizationId={report.organization_id}
+                onUpdateOrganization={handleUpdateOrganization}
+                isUpdating={isUpdatingOrganization}
+              />
+            )}
             {canAssign && <ReportAssignment orgUsers={orgUsers} selectedUsers={selectedUsers} onAssignReport={handleAssignReport} />}
           </div>
         </div>

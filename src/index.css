@@ -223,7 +223,7 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 26 100% 50%; /* #ff5100 */
+  --primary: 19 100% 50%; /* #ff5100 */
   --primary-foreground: 355 100% 97%;
   --secondary: 210 40% 98%;
   --secondary-foreground: 222.2 84% 4.9%;
@@ -235,7 +235,7 @@
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 26 100% 50%;
+  --ring: 19 100% 50%;
   --radius: 0rem;
 }
 
@@ -246,7 +246,7 @@
   --card-foreground: 210 40% 98%;
   --popover: 0 0% 7.1%; /* #121212 */
   --popover-foreground: 210 40% 98%;
-  --primary: 26 100% 50%; /* #ff5100 */
+  --primary: 19 100% 50%; /* #ff5100 */
   --primary-foreground: 355 100% 97%;
   --secondary: 0 0% 17.9%; /* #2e2e2e */
   --secondary-foreground: 210 40% 98%;
@@ -258,7 +258,20 @@
   --destructive-foreground: 210 40% 98%;
   --border: 0 0% 17.9%; /* #2e2e2e */
   --input: 0 0% 17.9%; /* #2e2e2e */
-  --ring: 26 100% 50%;
+  --ring: 19 100% 50%;
+}
+
+/* Bounty flow — metallic gold accent (mobile parity: bountyGold #D4AF37) */
+[data-flow-accent='bounty'] {
+  --primary: 46 65% 52%; /* #D4AF37 */
+  --primary-foreground: 0 0% 0%;
+  --ring: 46 65% 52%;
+}
+
+.dark [data-flow-accent='bounty'] {
+  --primary: 46 65% 52%; /* #D4AF37 */
+  --primary-foreground: 0 0% 0%;
+  --ring: 46 65% 52%;
 }
 
 * {
@@ -680,4 +693,59 @@ input[type='date'].submit-report-date-input::-webkit-calendar-picker-indicator {
   body.submit-report-flow .submit-report-shell {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
+}
+
+/* Submit report v2 — desktop date picker */
+.submit-report-datepicker {
+  z-index: 40 !important;
+}
+
+.submit-report-datepicker .react-datepicker {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  background: hsl(var(--card));
+  font-family: inherit;
+  overflow: hidden;
+  box-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.2);
+}
+
+.submit-report-datepicker .react-datepicker__header {
+  background: hsl(var(--muted) / 0.45);
+  border-bottom: 1px solid hsl(var(--border));
+  padding-top: 0.75rem;
+}
+
+.submit-report-datepicker .react-datepicker__current-month,
+.submit-report-datepicker .react-datepicker__day-name {
+  color: hsl(var(--foreground));
+}
+
+.submit-report-datepicker .react-datepicker__day {
+  border-radius: 0.375rem;
+  color: hsl(var(--foreground));
+}
+
+.submit-report-datepicker .react-datepicker__day:hover {
+  background-color: hsl(var(--primary) / 0.12);
+}
+
+.submit-report-datepicker .react-datepicker__day--selected,
+.submit-report-datepicker .react-datepicker__day--keyboard-selected {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.submit-report-datepicker .react-datepicker__day--disabled {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.5;
+}
+
+.submit-report-datepicker .react-datepicker__month-dropdown-container select,
+.submit-report-datepicker .react-datepicker__year-dropdown-container select {
+  border-radius: 0.375rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
 }

@@ -59,6 +59,7 @@ module.exports = {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))',
 				},
+				'bounty-gold': '#D4AF37',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

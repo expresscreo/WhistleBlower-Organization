@@ -15,7 +15,7 @@ import { generateSEOMeta, STRUCTURED_DATA_TEMPLATES, DEFAULT_SEO_PAGES } from '@
 import { useCursorProximity } from '@/hooks/useCursorProximity';
 import { FlipWords } from '@/components/ui/flip-words';
 
-const HERO_FLIP_WORDS = ['CashOut!', 'GetPaid!'];
+const HERO_FLIP_WORDS = ['Cash Out!', 'Get Paid!'];
 
 const Counter = ({ initialValue, hourlyIncrease = 0, prefix = '', suffix = '', isDecimal = false }) => {
     const ref = useRef(null);
@@ -263,7 +263,7 @@ const HomePage = () => {
               <span>Report Crime Securely, And</span>
               <span className="relative inline-grid">
                 <span aria-hidden className="invisible col-start-1 row-start-1 select-none">
-                  CashOut!
+                  Cash Out!
                 </span>
                 <span className="col-start-1 row-start-1 inline-flex justify-center">
                   <FlipWords

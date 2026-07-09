@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Loader2, Mic, StopCircle, Trash2 } from 'lucide-react';
+import { Loader2, Mic, StopCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { anonymizeVoiceBlob } from '@/lib/voiceAnonymizer';
 import VoiceNoteCard from '@/components/media/VoiceNoteCard';
@@ -245,9 +245,11 @@ const VoiceRecorder = ({
   };
 
   const renderRecorderFooter = () => {
+    const footerClass = 'text-center text-sm text-muted-foreground';
+
     if (recorderState === 'recording') {
       return (
-        <p className="text-sm text-muted-foreground">
+        <p className={footerClass}>
           Speak clearly, then tap stop when finished. Avoid names or other identifying details.
         </p>
       );
@@ -255,7 +257,7 @@ const VoiceRecorder = ({
 
     if (recorderState === 'processing') {
       return (
-        <p className="text-sm text-muted-foreground">
+        <p className={footerClass}>
           Transforming on your device. The original voice is discarded before upload.
         </p>
       );
@@ -263,9 +265,8 @@ const VoiceRecorder = ({
 
     if (isFirstRecorder) {
       return (
-        <p className="text-sm text-muted-foreground">
-          Tap the microphone to record. Your voice is transformed on this device before anything is
-          uploaded.
+        <p className={footerClass}>
+          Tap the microphone to record. We&apos;ll change your voice.
         </p>
       );
     }
@@ -342,14 +343,6 @@ const VoiceRecorder = ({
           ) : null}
         </VoiceNoteCard>
       ) : null}
-
-      <div className="flex items-start gap-2 border border-border/80 bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <span>
-          For your safety, avoid mentioning personally identifiable information in your recording,
-          such as your name or specific location.
-        </span>
-      </div>
     </div>
   );
 };

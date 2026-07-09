@@ -14,6 +14,7 @@ export default function MobileIncidentDateField({
   placeholder = 'Select incident date',
   ariaLabel = 'Date of incident',
   maxDate = new Date(),
+  triggerClassName,
 }) {
   const max = useMemo(() => toDateInputValue(maxDate), [maxDate]);
   const displayLabel = value ? format(value, 'MMMM d, yyyy') : placeholder;
@@ -22,13 +23,17 @@ export default function MobileIncidentDateField({
     onChange(parseDateInputValue(event.target.value));
   };
 
+  const triggerClasses = triggerClassName || fieldFocusRingClasses;
+
   return (
     <label
       htmlFor={id}
       className={cn(
         'submit-report-mobile-date-trigger relative isolate block h-12 w-full min-h-[48px] cursor-pointer touch-manipulation md:hidden',
-        fieldFocusRingClasses,
-        'focus-within:shadow-[inset_0_0_0_2px_hsl(var(--primary))]'
+        triggerClasses,
+        triggerClasses.includes('border-input')
+          ? 'focus-within:border-primary'
+          : 'focus-within:shadow-[inset_0_0_0_2px_hsl(var(--primary))]'
       )}
     >
       <span

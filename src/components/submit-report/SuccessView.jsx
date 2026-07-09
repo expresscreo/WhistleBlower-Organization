@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import {
   ArrowRight,
   Check,
-  CheckCircle2,
   Copy,
   Download,
   Home,
@@ -37,6 +36,21 @@ function getTrackPageUrl() {
   return `${window.location.origin}/track`;
 }
 
+function CredentialField({ label, value, valueClassName }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="rounded-xl border border-border/70 bg-muted/35 px-3.5 py-3">
+        <p className={cn('break-all text-sm font-medium text-foreground', valueClassName)}>
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function CredentialsCard({
   trackPageUrl,
   idLabel,
@@ -47,58 +61,53 @@ function CredentialsCard({
   onCopy,
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      <div className="h-[3px] bg-primary" aria-hidden />
-
-      <div className="p-5 space-y-5">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Access credentials
+    <div className="overflow-hidden rounded-2xl border border-border bg-muted/20">
+      <div className="space-y-4 p-4 md:p-5">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">Access credentials</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Copy and store these details somewhere safe before leaving this page.
           </p>
-          <button
-            type="button"
-            onClick={onCopy}
-            aria-label={copied ? 'Copied credentials' : 'Copy track page, ID, and password'}
+        </div>
+
+        <div className="space-y-3">
+          <CredentialField label="Track page" value={trackPageUrl} valueClassName="text-primary" />
+          <CredentialField
+            label={idLabel}
+            value={reportId}
+            valueClassName="text-xl font-semibold tracking-wide text-primary"
+          />
+          {password ? <CredentialField label="Password" value={password} valueClassName="text-base" /> : null}
+        </div>
+
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label={copied ? 'Copied credentials' : 'Copy track page, ID, and password'}
+          className={cn(
+            'flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border text-sm font-medium transition-all duration-200',
+            copied
+              ? 'border-green-500/35 bg-green-500/10 text-green-700 dark:text-green-400'
+              : 'border-border bg-background text-foreground hover:bg-muted/60'
+          )}
+        >
+          <span
             className={cn(
-              'shrink-0 flex h-9 w-9 items-center justify-center transition-colors',
-              copied
-                ? 'border-0 bg-transparent'
-                : 'rounded-full border border-border bg-muted/60 hover:bg-muted'
+              'flex h-7 w-7 items-center justify-center rounded-full transition-colors',
+              copied ? 'bg-green-500/15' : 'bg-muted'
             )}
+            aria-hidden
           >
             {copied ? (
-              <CheckCircle2 className="h-9 w-9 text-green-600 dark:text-green-400" aria-hidden />
+              <Check className="h-4 w-4" strokeWidth={2.5} />
             ) : (
-              <Copy className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <Copy className="h-4 w-4 text-muted-foreground" />
             )}
-          </button>
-        </div>
+          </span>
+          {copied ? 'Copied to clipboard' : 'Copy all credentials'}
+        </button>
 
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Track page
-          </p>
-          <p className="text-sm font-semibold text-primary break-all">{trackPageUrl}</p>
-        </div>
-
-        <div className="space-y-1.5 pt-1 border-t border-border">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            {idLabel}
-          </p>
-          <p className="text-2xl font-semibold tracking-wide text-primary break-all">{reportId}</p>
-          {copyError ? (
-            <p className="text-xs text-destructive">{copyError}</p>
-          ) : null}
-        </div>
-
-        {password ? (
-          <div className="space-y-1.5 pt-4 border-t border-border">
-            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              Password
-            </p>
-            <p className="text-lg font-medium tracking-wide break-all">{password}</p>
-          </div>
-        ) : null}
+        {copyError ? <p className="text-xs text-destructive">{copyError}</p> : null}
       </div>
     </div>
   );
@@ -217,7 +226,7 @@ export default function SuccessView({
       >
         <motion.div
           variants={fadeUp}
-          className="overflow-hidden rounded-lg border border-border bg-card shadow-none"
+          className="overflow-hidden rounded-3xl border border-border bg-card/95 shadow-sm"
         >
           <div className="relative px-6 md:px-8 pt-8 pb-6 text-center border-b border-border/60 bg-gradient-to-b from-primary/10 to-transparent">
             <motion.div

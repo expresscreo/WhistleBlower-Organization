@@ -57,16 +57,24 @@ const Button = React.forwardRef(({
 
 	return (
 		<Comp
-			className={cn(buttonVariants({ variant, size, className }), loading && 'cursor-wait')}
+			className={cn(
+				buttonVariants({ variant, size, className }),
+				loading && 'relative cursor-wait',
+			)}
 			ref={ref}
 			disabled={disabled || loading}
 			aria-busy={loading || undefined}
 			{...props}
 		>
 			{loading ? (
-				<span className="inline-flex min-h-[1.25em] items-center justify-center">
-					<LoadingDots className={cn(loadingDotClassByVariant[variant ?? 'default'], loadingClassName)} />
-				</span>
+				<>
+					<span className="contents invisible" aria-hidden>
+						{children}
+					</span>
+					<span className="pointer-events-none absolute inset-0 inline-flex items-center justify-center">
+						<LoadingDots className={cn(loadingDotClassByVariant[variant ?? 'default'], loadingClassName)} />
+					</span>
+				</>
 			) : (
 				children
 			)}

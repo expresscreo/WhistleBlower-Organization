@@ -1,3 +1,20 @@
+export const fieldLabelClasses =
+  'mb-1 block w-full text-left text-[10px] font-medium uppercase tracking-wide text-muted-foreground';
+
+export const v2ControlClasses = [
+  'block h-12 w-full m-0 rounded-md border border-input bg-background px-3 text-base text-foreground',
+  'placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-0 focus:ring-offset-0',
+  'disabled:cursor-not-allowed disabled:opacity-50',
+].join(' ');
+
+export const v2TextareaClasses = [
+  'block min-h-[120px] w-full m-0 rounded-md border border-input bg-background px-3 py-2 text-base text-foreground',
+  'placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-0 focus:ring-offset-0',
+  'disabled:cursor-not-allowed disabled:opacity-50',
+].join(' ');
+
+export const v2DateInputClasses = [v2ControlClasses, 'submit-report-date-input'].join(' ');
+
 export const fieldFocusRingClasses =
   'border border-transparent shadow-[inset_0_0_0_1px_hsl(var(--input))] focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:shadow-[inset_0_0_0_2px_hsl(var(--primary))]';
 

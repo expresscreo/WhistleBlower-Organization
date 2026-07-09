@@ -7,10 +7,37 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const isDev = process.env.NODE_ENV === 'development';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  ...(isDev
+    ? {
+        experimental: {
+          staleTimes: {
+            dynamic: 0,
+            static: 0,
+          },
+        },
+      }
+    : {}),
+  async headers() {
+    if (!isDev) return [];
+
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {
@@ -34,11 +61,20 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL,
   },
-  webpack: (config) => {
+  webpack: (config, { dev }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, './src'),
     };
+
+    if (dev) {
+      config.watchOptions = {
+        poll: Number(process.env.WATCHPACK_POLLING_INTERVAL || 1000),
+        aggregateTimeout: 300,
+        ignored: ['**/node_modules/**'],
+      };
+    }
+
     return config;
   },
 };

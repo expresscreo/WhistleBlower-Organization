@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Gift, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { inputFieldClasses, inputWithTrailingIconClasses } from '@/lib/fieldStyles';
+import { fieldLabelClasses, inputFieldClasses, inputWithTrailingIconClasses } from '@/lib/fieldStyles';
 import { FieldError } from '@/components/ui/form-feedback';
 import { TipFieldGroup } from './TipFieldLabel';
 
@@ -13,9 +13,12 @@ export default function ContactInfo({
   formData,
   onInputChange,
   embedded = false,
+  showFieldLabels = false,
+  controlClassName,
   fieldErrors = {},
   isBountyMode = false,
 }) {
+  const inputClasses = controlClassName || inputFieldClasses;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -68,8 +71,10 @@ export default function ContactInfo({
         >
           <TipFieldGroup
             isBountyMode={isBountyMode}
+            showLabel={showFieldLabels}
             label="Create password"
             htmlFor="anonymousPassword"
+            labelClassName={showFieldLabels ? fieldLabelClasses : undefined}
           >
             <div className="relative">
               <Input
@@ -80,7 +85,7 @@ export default function ContactInfo({
                 autoComplete="new-password"
                 value={formData.anonymousPassword}
                 onChange={(e) => onInputChange('anonymousPassword', e.target.value)}
-                className={cn(inputFieldClasses, inputWithTrailingIconClasses)}
+                className={cn(inputClasses, inputWithTrailingIconClasses)}
               />
               <button
                 type="button"
@@ -95,8 +100,10 @@ export default function ContactInfo({
           </TipFieldGroup>
           <TipFieldGroup
             isBountyMode={isBountyMode}
+            showLabel={showFieldLabels}
             label="Confirm password"
             htmlFor="confirmPassword"
+            labelClassName={showFieldLabels ? fieldLabelClasses : undefined}
           >
             <div className="relative">
               <Input
@@ -107,7 +114,7 @@ export default function ContactInfo({
                 autoComplete="new-password"
                 value={formData.confirmPassword}
                 onChange={(e) => onInputChange('confirmPassword', e.target.value)}
-                className={cn(inputFieldClasses, inputWithTrailingIconClasses)}
+                className={cn(inputClasses, inputWithTrailingIconClasses)}
               />
               <button
                 type="button"
