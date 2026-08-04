@@ -24,6 +24,7 @@ import {
 } from '@/lib/voiceNoteUtils';
 import { notifyTrackingUpdatePush } from '@/lib/adminPushApi';
 import { notifyAdminMessage, notifyStatusUpdate } from '@/lib/notify';
+import { useLoadOnce, useLoadOnDeps } from '@/hooks/useLoadOnce';
 
 const formatSupabaseError = (error, fallback = 'Action failed.') => {
   if (!error) return fallback;
@@ -217,16 +218,16 @@ const ReportDetails = () => {
   fetchReportDetailsRef.current = fetchReportDetails;
   fetchUpdatesRef.current = fetchUpdates;
 
-  // Initial data fetch - only runs once when profile is loaded
-  useEffect(() => {
-    if (!profileLoading && profile && !hasInitialData.current) {
-        fetchReportDetails(true); // Force initial fetch
-    }
-  }, [profileLoading, profile?.id, id]); // Only depend on stable references
+  useLoadOnDeps(
+    !profileLoading && Boolean(profile?.id) && Boolean(id),
+    async () => {
+      hasInitialData.current = false;
+      await fetchReportDetails(true);
+    },
+    [id, profile?.id]
+  );
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
+  useLoadOnce(canUpdateOrganization, fetchOrganizations);
 
   useEffect(() => {
     if (id && user?.id) {

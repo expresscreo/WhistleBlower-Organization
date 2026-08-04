@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, ChevronDown, LayoutGrid, List, Newspaper } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { slugify, cn } from '@/lib/utils';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const VIEW_MODE_STORAGE_KEY = 'wb-news-editor-view';
 
@@ -80,9 +81,7 @@ const NewsEditor = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchNews();
-  }, [fetchNews]);
+  const { reload: reloadNews } = useLoadOnce(true, fetchNews);
 
   const filteredNewsItems = useMemo(() => {
     let results = [...newsItems];
@@ -138,7 +137,7 @@ const NewsEditor = () => {
       const { error } = await supabase.from('news').delete().eq('id', deleteDialog.item.id);
       if (error) throw error;
       setDeleteDialog({ open: false, item: null });
-      fetchNews();
+      reloadNews();
     } catch (error) {
       console.error('Error deleting news post:', error);
       setDeleteFeedback({ error: 'Failed to delete news post' });

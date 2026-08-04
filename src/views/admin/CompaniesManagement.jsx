@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLoadOnce, useLoadOnDeps } from '@/hooks/useLoadOnce';
 
 const CompaniesManagement = () => {
   const [organizations, setOrganizations] = useState([]);
@@ -41,17 +42,14 @@ const CompaniesManagement = () => {
     setLoading(false);
   }, [searchTerm]);
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
+  const { reload: reloadOrganizations } = useLoadOnDeps(true, fetchOrganizations, [searchTerm]);
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      const { data, error } = await supabase.from('plans').select('id, name');
-      if (!error) setPlans(data);
-    };
-    fetchPlans();
+  const loadPlans = useCallback(async () => {
+    const { data, error } = await supabase.from('plans').select('id, name');
+    if (!error) setPlans(data);
   }, []);
+
+  useLoadOnce(true, loadPlans);
 
   const handleAdd = () => {
     setFormFeedback({ error: '', success: '' });
@@ -80,7 +78,7 @@ const CompaniesManagement = () => {
         setDeleteFeedback({ error: error.message, success: '' });
       } else {
         setDeleteFeedback({ error: '', success: 'Organization deleted successfully' });
-        fetchOrganizations();
+        reloadOrganizations();
       }
       setIsDeleteModalOpen(false);
       setSelectedOrg(null);
@@ -110,7 +108,7 @@ const CompaniesManagement = () => {
         setFormFeedback({ error: error.message, success: '' });
       } else {
         setFormFeedback({ error: '', success: `Organization ${selectedOrg.id ? 'updated' : 'added'} successfully` });
-        fetchOrganizations();
+        reloadOrganizations();
       }
       setIsModalOpen(false);
       setSelectedOrg(null);

@@ -14,6 +14,7 @@ import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const REPORTS_PER_PAGE = 18;
 
@@ -34,21 +35,18 @@ const Reports = () => {
   const { fetchReports, loading } = useAdminData();
 
   const loadReports = useCallback(async () => {
-    if (!profile || profileLoading) return;
-    
+    if (!profile) return;
+
     try {
       const data = await fetchReports();
       setAllReports(data);
     } catch (error) {
-      // Error handling is done in the context
       console.error('Failed to load reports:', error);
       setAllReports([]);
     }
-  }, [profile, profileLoading, fetchReports]);
-  
-  useEffect(() => {
-    loadReports();
-  }, [loadReports]);
+  }, [profile, fetchReports]);
+
+  useLoadOnce(!profileLoading && Boolean(profile?.id), loadReports);
 
   useEffect(() => {
     let filtered = allReports;

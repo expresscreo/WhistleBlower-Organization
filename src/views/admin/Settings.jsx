@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/lib/customSupabaseClient';
 import NavbarLoader from '@/components/admin/NavbarLoader';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const ProfileSettings = () => {
     const [profileFeedback, setProfileFeedback] = useState({ error: '', success: '' });
@@ -122,31 +123,28 @@ const Settings = () => {
     notification_new_message: true,
   });
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      // Prevent refetching if already loaded
-      if (settingsLoadedRef.current) return;
-      
-      setLoading(true);
-      setSettingsFetchError('');
-      const { data, error } = await supabase.from('app_settings').select('*').limit(1).single();
-      if (data) {
-        setAppSettings(prev => ({...prev, ...data}));
-      } else if (error && error.code === 'PGRST116') {
-        // No settings found, use defaults
-      } else if (error) {
-        setSettingsFetchError(error.message);
-      }
-      setLoading(false);
-      settingsLoadedRef.current = true;
-    };
-    
-    if(profile?.user_type === 'super_admin'){
-        fetchSettings();
-    } else {
-        setLoading(false);
+  useLoadOnce(profile?.user_type === 'super_admin', async () => {
+    if (settingsLoadedRef.current) return;
+
+    setLoading(true);
+    setSettingsFetchError('');
+    const { data, error } = await supabase.from('app_settings').select('*').limit(1).single();
+    if (data) {
+      setAppSettings(prev => ({...prev, ...data}));
+    } else if (error && error.code === 'PGRST116') {
+      // No settings found, use defaults
+    } else if (error) {
+      setSettingsFetchError(error.message);
     }
-  }, [profile?.user_type]); // Only depend on user_type, not the entire profile object
+    setLoading(false);
+    settingsLoadedRef.current = true;
+  });
+
+  useEffect(() => {
+    if (profile && profile.user_type !== 'super_admin') {
+      setLoading(false);
+    }
+  }, [profile?.user_type]);
   
   const handleSettingChange = (key, value) => {
     setAppSettings(prev => ({...prev, [key]: value}));

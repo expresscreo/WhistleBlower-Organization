@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { cn } from '@/lib/utils';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const Billing = () => {
     const { profile, loading: profileLoading, organizationStatus } = useUserProfile();
@@ -21,15 +22,16 @@ const Billing = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [fetchError, setFetchError] = useState('');
     const [actionNotice, setActionNotice] = useState('');
+    const profileOrganizationId = profile?.organization_id;
 
     const fetchBillingHistory = useCallback(async () => {
-        if (!profile || !profile.organization_id) return;
+        if (!profileOrganizationId) return;
         setLoading(true);
         setFetchError('');
         const { data, error } = await supabase
             .from('billing')
             .select('*')
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', profileOrganizationId)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -38,13 +40,9 @@ const Billing = () => {
             setBillingHistory(data);
         }
         setLoading(false);
-    }, [profile]);
+    }, [profileOrganizationId]);
 
-    useEffect(() => {
-        if (!profileLoading && profile) {
-            fetchBillingHistory();
-        }
-    }, [profileLoading, profile, fetchBillingHistory]);
+    useLoadOnce(!profileLoading && Boolean(profileOrganizationId), fetchBillingHistory);
 
     const filteredHistory = billingHistory.filter(item =>
         item.plan_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

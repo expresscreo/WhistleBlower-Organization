@@ -23,6 +23,7 @@ import {
   getPhysicalDescriptionList,
   normalizeMostWantedDetails,
 } from '@/lib/mostWantedUtils';
+import { useLoadOnDeps } from '@/hooks/useLoadOnce';
 
 const MostWantedDetails = () => {
   const { id } = useParams();
@@ -71,9 +72,7 @@ const MostWantedDetails = () => {
     setLoading(false);
   }, [id, router, refreshSightingSubmissions]);
 
-  useEffect(() => {
-    fetchAlert();
-  }, [fetchAlert]);
+  useLoadOnDeps(Boolean(id), fetchAlert, [id]);
 
   useEffect(() => {
     if (!id) return;

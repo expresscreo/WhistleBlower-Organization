@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-
 import { RotateCcw, Calendar, Trash2, Award, FileText } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 import { format, addDays } from 'date-fns';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
@@ -30,11 +31,9 @@ const TrashedReports = () => {
   const router = useRouter();
   const { profile, loading: profileLoading } = useAuth();
   const [isProcessing, setIsProcessing] = useState(null);
-  
-  // Refs to prevent unnecessary re-fetching
-  const hasInitialData = useRef(false);
-  const lastFetchTime = useRef(0);
-  const fetchTrashedItemsRef = useRef(null);
+  const profileId = profile?.id;
+  const profileUserType = profile?.user_type;
+  const profileOrganizationId = profile?.organization_id;
   
   const [dialogState, setDialogState] = useState({
       isOpen: false,
@@ -50,33 +49,19 @@ const TrashedReports = () => {
     }
   }, []);
 
-  const fetchTrashedItems = useCallback(async (forceRefresh = false) => {
-    if (!profile) return;
-    
-    // Prevent unnecessary re-fetching
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchTime.current;
-    
-    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
-    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
-      return;
-    }
-    
-    // Skip fetch if page is not visible and not forced
-    if (!forceRefresh && document.visibilityState !== 'visible') {
-      return;
-    }
+  const fetchTrashedItems = useCallback(async () => {
+    if (!profileId) return;
+
     setLoading(true);
     setFetchError('');
-    lastFetchTime.current = now;
 
     await purgeExpiredTrash();
     
     let reportQuery = supabase.from('reports').select('*').eq('is_trashed', true);
     let bountyQuery = supabase.from('bounties').select('*').eq('is_trashed', true);
 
-    if (profile.user_type === 'executive_admin') {
-        reportQuery = reportQuery.eq('organization_id', profile.organization_id);
+    if (profileUserType === 'executive_admin') {
+        reportQuery = reportQuery.eq('organization_id', profileOrganizationId);
         bountyQuery = bountyQuery.limit(0); 
     }
     
@@ -90,28 +75,21 @@ const TrashedReports = () => {
       const bounties = bountiesRes.data.map(b => ({ ...b, type: 'bounty' }));
       const allItems = [...reports, ...bounties].sort((a, b) => new Date(b.trashed_at) - new Date(a.trashed_at));
       setTrashedItems(allItems);
-      hasInitialData.current = true;
     }
     setLoading(false);
-  }, [profile, purgeExpiredTrash]);
+  }, [profileId, profileUserType, profileOrganizationId, purgeExpiredTrash]);
 
-  // Store the latest fetchTrashedItems in ref
-  fetchTrashedItemsRef.current = fetchTrashedItems;
-  
-  // Initial data fetch - only runs once when profile is loaded
+  const { reload: reloadTrashedItems } = useLoadOnce(
+    !profileLoading && Boolean(profileId) && ['super_admin', 'executive_admin'].includes(profileUserType),
+    fetchTrashedItems
+  );
+
   useEffect(() => {
-    if (!profileLoading && profile) {
-      const allowedRoles = ['super_admin', 'executive_admin'];
-      if (!allowedRoles.includes(profile.user_type)) {
-          setFetchError("You don't have permission to view this page.");
-          router.push('/admin/overview');
-          return;
-      }
-      if (!hasInitialData.current) {
-        fetchTrashedItems(true); // Force initial fetch
-      }
+    if (!profileLoading && profileId && !['super_admin', 'executive_admin'].includes(profileUserType)) {
+      setFetchError("You don't have permission to view this page.");
+      router.push('/admin/overview');
     }
-  }, [profileLoading, profile?.id, profile?.user_type, router]); // Only depend on stable references
+  }, [profileLoading, profileId, profileUserType, router]);
   
   const handleActionClick = (e, item, action, type) => {
     e.stopPropagation();
@@ -145,10 +123,10 @@ const TrashedReports = () => {
       setActionFeedback({ error: error.message, success: '' });
     } else if (action === 'restore') {
       setActionFeedback({ error: '', success: `${type.charAt(0).toUpperCase() + type.slice(1)} restored successfully` });
-      fetchTrashedItems(true);
+      reloadTrashedItems();
     } else {
       setTrashedItems((prev) => prev.filter((entry) => entry.id !== item.id));
-      fetchTrashedItems(true);
+      reloadTrashedItems();
     }
 
     setIsProcessing(null);

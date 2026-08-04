@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Save } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import PageHeader from '@/components/admin/PageHeader';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const PlanFeatures = () => {
   const [plans, setPlans] = useState([]);
@@ -31,9 +32,7 @@ const PlanFeatures = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
+  useLoadOnce(true, fetchPlans);
 
   const handlePlanChange = (planId, field, value) => {
     setPlans(plans.map(p => p.id === planId ? { ...p, [field]: value } : p));

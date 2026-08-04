@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const COLORS = ['#ff5100', '#10b981', '#f59e0b', '#8b5cf6', '#3b82f6', '#ec4899'];
 const TERMINAL_STATUSES = new Set(['Resolved', 'resolved', 'Closed', 'closed', 'Rejected', 'rejected', 'refunded']);
@@ -98,7 +99,6 @@ const Overview = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [highPriorityReports, setHighPriorityReports] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const hasInitialData = useRef(false);
   const { profile, loading: profileLoading } = useAuth();
   const { fetchReports, fetchBounties, fetchMostWanted } = useAdminData();
   const profileId = profile?.id;
@@ -242,13 +242,8 @@ const Overview = () => {
     );
   }, []);
 
-  const loadDashboardData = useCallback(async (forceRefresh = false) => {
-    if (!profileId || profileLoading) return;
-    if (hasInitialData.current && !forceRefresh) return;
-
-    const showLoading = !hasInitialData.current;
-    if (showLoading) setInitialLoading(true);
-
+  const loadDashboardData = useCallback(async () => {
+    setInitialLoading(true);
     try {
       const [reportData, bountyData, mostWantedData, feedbackData] = await Promise.all([
         fetchReports(),
@@ -257,19 +252,14 @@ const Overview = () => {
         fetchFeedback(),
       ]);
       processReportData(reportData, bountyData, mostWantedData, feedbackData);
-      hasInitialData.current = true;
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
-      if (showLoading) setInitialLoading(false);
+      setInitialLoading(false);
     }
-  }, [profileId, profileLoading, fetchReports, fetchBounties, fetchMostWanted, fetchFeedback, processReportData]);
+  }, [fetchReports, fetchBounties, fetchMostWanted, fetchFeedback, processReportData]);
 
-  useEffect(() => {
-    if (!profileLoading && profileId && !hasInitialData.current) {
-      loadDashboardData(true);
-    }
-  }, [profileLoading, profileId, loadDashboardData]);
+  useLoadOnce(!profileLoading && Boolean(profileId), loadDashboardData);
 
   const planName = profile?.plans?.name;
   const canSeeAdvancedFeatures = profile && (profile.user_type === 'super_admin' || ['Executive', 'ExpressCreo'].includes(planName));

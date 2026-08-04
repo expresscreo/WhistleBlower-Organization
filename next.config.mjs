@@ -71,7 +71,12 @@ const nextConfig = {
       config.watchOptions = {
         poll: Number(process.env.WATCHPACK_POLLING_INTERVAL || 1000),
         aggregateTimeout: 300,
-        ignored: ['**/node_modules/**'],
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/supabase/.temp/**',
+          '**/.next/**',
+        ],
       };
     }
 

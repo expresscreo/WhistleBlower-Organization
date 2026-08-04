@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const UnmatchedOrganizations = () => {
   const [unmatchedReports, setUnmatchedReports] = useState([]);
@@ -39,14 +40,13 @@ const UnmatchedOrganizations = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchUnmatchedReports();
-    const fetchOrgs = async () => {
-      const { data } = await supabase.from('organizations').select('id, name');
-      setOrganizations(data || []);
-    };
-    fetchOrgs();
+  const loadPageData = useCallback(async () => {
+    await fetchUnmatchedReports();
+    const { data } = await supabase.from('organizations').select('id, name');
+    setOrganizations(data || []);
   }, [fetchUnmatchedReports]);
+
+  const { reload: reloadPageData } = useLoadOnce(true, loadPageData);
 
   const handleMatchClick = (report) => {
     setSelectedReport(report);

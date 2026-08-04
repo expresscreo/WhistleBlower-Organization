@@ -12,6 +12,7 @@ import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
 import { normalizeMostWantedDetails } from '@/lib/mostWantedUtils';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const ITEMS_PER_PAGE = 18;
 
@@ -40,9 +41,7 @@ const MostWantedManagement = () => {
     }
   }, [fetchMostWanted]);
 
-  useEffect(() => {
-    loadMostWantedData();
-  }, [loadMostWantedData]);
+  useLoadOnce(true, loadMostWantedData);
 
   useEffect(() => {
     let filtered = allItems;

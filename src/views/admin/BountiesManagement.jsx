@@ -11,6 +11,7 @@ import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const ITEMS_PER_PAGE = 18;
 
@@ -34,15 +35,12 @@ const BountiesManagement = () => {
             const data = await fetchBounties();
             setAllItems(data);
         } catch (error) {
-            // Error handling is done in the context
             console.error('Failed to load bounties data:', error);
             setAllItems([]);
         }
     }, [fetchBounties]);
 
-    useEffect(() => {
-        loadBountiesData();
-    }, [loadBountiesData]);
+    useLoadOnce(true, loadBountiesData);
 
     useEffect(() => {
         let filtered = allItems;

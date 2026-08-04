@@ -6,6 +6,27 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { AdminDataProvider } from '@/contexts/AdminDataContext';
 import DashboardLayout from './DashboardLayout';
 
+// Stable map — must live outside the component so it is not a new object every render.
+const ROUTE_TO_PAGE_NAME = {
+  '/admin/overview': 'Overview',
+  '/admin/reports': 'Reports',
+  '/admin/customer-feedback': 'Customer Feedback',
+  '/admin/user-management': 'User Management',
+  '/admin/organizations-management': 'Organizations',
+  '/admin/unmatched-organizations': 'Unmatched Organization',
+  '/admin/reward': 'Reward',
+  '/admin/bounties': 'Bounties',
+  '/admin/most-wanted': 'Most Wanted',
+  '/admin/news-editor': 'News Editor',
+  '/admin/billing': 'Billing',
+  '/admin/plan-features': 'Plan Features',
+  '/admin/plan-management': 'Plan Management',
+  '/admin/audit-logs': 'Audit Logs',
+  '/admin/settings': 'Settings',
+  '/admin/triage': 'Triage',
+  '/admin/trashed-reports': 'Trashed Report',
+};
+
 /**
  * AdminLayoutWrapper - Shows admin layout immediately while handling authentication in background
  * This ensures sidebar and topnav appear instantly on page refresh
@@ -14,27 +35,6 @@ const AdminLayoutWrapper = ({ children }) => {
   const router = useRouter();
   const { user, loading, profile, permissions } = useAuth();
   const pathname = usePathname();
-
-  // Map routes to page names for permission checking
-  const routeToPageName = {
-    '/admin/overview': 'Overview',
-    '/admin/reports': 'Reports',
-    '/admin/customer-feedback': 'Customer Feedback',
-    '/admin/user-management': 'User Management',
-    '/admin/organizations-management': 'Organizations',
-    '/admin/unmatched-organizations': 'Unmatched Organization',
-    '/admin/reward': 'Reward',
-    '/admin/bounties': 'Bounties',
-    '/admin/most-wanted': 'Most Wanted',
-    '/admin/news-editor': 'News Editor',
-    '/admin/billing': 'Billing',
-    '/admin/plan-features': 'Plan Features',
-    '/admin/plan-management': 'Plan Management',
-    '/admin/audit-logs': 'Audit Logs',
-    '/admin/settings': 'Settings',
-    '/admin/triage': 'Triage',
-    '/admin/trashed-reports': 'Trashed Report',
-  };
 
   // Handle redirects after authentication completes
   useEffect(() => {
@@ -48,7 +48,7 @@ const AdminLayoutWrapper = ({ children }) => {
       // Check permissions only after authentication is complete
       if (profile) {
         const isSuperAdmin = profile?.user_type === 'super_admin';
-        let pageName = routeToPageName[pathname];
+        let pageName = ROUTE_TO_PAGE_NAME[pathname];
         
         // Handle dynamic routes
         if (!pageName) {
@@ -74,7 +74,7 @@ const AdminLayoutWrapper = ({ children }) => {
         }
       }
     }
-  }, [loading, user, profile, permissions, pathname, routeToPageName]);
+  }, [loading, user, profile, permissions, pathname]);
 
   useEffect(() => {
     if (!loading && !user) {

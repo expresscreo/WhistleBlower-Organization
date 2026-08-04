@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
@@ -15,61 +15,79 @@ export const AdminDataProvider = ({ children }) => {
   const [loading, setLoading] = useState({});
   const { profile } = useAuth();
   const loadingRefs = useRef({});
+  const cacheRef = useRef(cache);
+  const loadingStateRef = useRef(loading);
+  const inFlightRef = useRef({});
 
+  cacheRef.current = cache;
+  loadingStateRef.current = loading;
+
+  // Keep fetchData identity stable. Depending on cache/loading state objects
+  // recreates every fetcher on each request and retriggers page useEffects.
   const fetchData = useCallback(async (key, fetchFunction, dependencies = []) => {
-    // Create a dependency string for cache invalidation
     const depString = JSON.stringify(dependencies);
     const cacheKey = `${key}_${depString}`;
-    
-    // If data is already cached and dependencies haven't changed, return cached data
-    if (cache[cacheKey] && !loading[key]) {
-      return cache[cacheKey];
+
+    if (cacheRef.current[cacheKey] && !loadingStateRef.current[key]) {
+      return cacheRef.current[cacheKey];
     }
 
-    // Prevent duplicate requests for the same key
+    if (inFlightRef.current[cacheKey]) {
+      return inFlightRef.current[cacheKey];
+    }
+
     if (loadingRefs.current[key]) {
-      // Wait for the existing request to complete
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        const started = Date.now();
         const checkCache = () => {
-          if (cache[cacheKey] && !loading[key]) {
-            resolve(cache[cacheKey]);
-          } else {
-            setTimeout(checkCache, 100);
+          if (cacheRef.current[cacheKey] && !loadingStateRef.current[key]) {
+            resolve(cacheRef.current[cacheKey]);
+            return;
           }
+          if (Date.now() - started > 30000) {
+            reject(new Error(`Timed out waiting for ${key}`));
+            return;
+          }
+          setTimeout(checkCache, 50);
         };
         checkCache();
       });
     }
 
     loadingRefs.current[key] = true;
-    setLoading(prev => ({ ...prev, [key]: true }));
+    setLoading((prev) => ({ ...prev, [key]: true }));
 
-    try {
-      const data = await fetchFunction();
-      setCache(prev => ({ ...prev, [cacheKey]: data }));
-      return data;
-    } catch (error) {
-      const errorMessage = [error?.message, error?.details, error?.hint, error?.code]
-        .filter(Boolean)
-        .join(' ');
-      console.error(`Error fetching data for ${key}:`, errorMessage || error);
-      throw error;
-    } finally {
-      loadingRefs.current[key] = false;
-      setLoading(prev => ({ ...prev, [key]: false }));
-    }
-  }, [cache, loading]);
+    const request = (async () => {
+      try {
+        const data = await fetchFunction();
+        setCache((prev) => ({ ...prev, [cacheKey]: data }));
+        return data;
+      } catch (error) {
+        const errorMessage = [error?.message, error?.details, error?.hint, error?.code]
+          .filter(Boolean)
+          .join(' ');
+        console.error(`Error fetching data for ${key}:`, errorMessage || error);
+        throw error;
+      } finally {
+        loadingRefs.current[key] = false;
+        delete inFlightRef.current[cacheKey];
+        setLoading((prev) => ({ ...prev, [key]: false }));
+      }
+    })();
+
+    inFlightRef.current[cacheKey] = request;
+    return request;
+  }, []);
 
   const invalidateCache = useCallback((key) => {
-    setCache(prev => {
-      const newCache = { ...prev };
-      // Remove all cache entries that start with the key
-      Object.keys(newCache).forEach(cacheKey => {
+    setCache((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((cacheKey) => {
         if (cacheKey.startsWith(key)) {
-          delete newCache[cacheKey];
+          delete next[cacheKey];
         }
       });
-      return newCache;
+      return next;
     });
   }, []);
 
@@ -77,28 +95,31 @@ export const AdminDataProvider = ({ children }) => {
     setCache({});
     setLoading({});
     loadingRefs.current = {};
+    inFlightRef.current = {};
   }, []);
 
-  // Common data fetching functions
   const fetchReports = useCallback(async () => {
     if (!profile) throw new Error('Profile not available');
-    
-    return fetchData('reports', async () => {
-      const { data, error } = await supabase.rpc('get_reports_for_user', {
-        user_id_param: profile.id,
-        user_role_param: profile.user_type,
-        organization_id_param: profile.organization_id
-      });
-      
-      if (error) throw error;
-      // Exclude bounty and most-wanted tips; they have dedicated admin pages.
-      const excludedCategories = new Set(['bounty', 'most wanted']);
-      const filtered = Array.isArray(data)
-        ? data.filter((r) => !excludedCategories.has(String(r.category || '').toLowerCase()))
-        : [];
-      return filtered;
-    }, [profile?.id, profile?.user_type, profile?.organization_id]);
-  }, [fetchData, profile]);
+
+    return fetchData(
+      'reports',
+      async () => {
+        const { data, error } = await supabase.rpc('get_reports_for_user', {
+          user_id_param: profile.id,
+          user_role_param: profile.user_type,
+          organization_id_param: profile.organization_id,
+        });
+
+        if (error) throw error;
+        const excludedCategories = new Set(['bounty', 'most wanted']);
+        const filtered = Array.isArray(data)
+          ? data.filter((r) => !excludedCategories.has(String(r.category || '').toLowerCase()))
+          : [];
+        return filtered;
+      },
+      [profile?.id, profile?.user_type, profile?.organization_id]
+    );
+  }, [fetchData, profile?.id, profile?.user_type, profile?.organization_id]);
 
   const fetchBounties = useCallback(async () => {
     return fetchData('bounties', async () => {
@@ -106,8 +127,7 @@ export const AdminDataProvider = ({ children }) => {
         .from('bounties')
         .select('*')
         .eq('is_trashed', false);
-      
-      // Only hunter tips explicitly linked to a bounty (via bounty_reports).
+
       const { data: reports, error: reportsError } = await supabase
         .from('reports')
         .select('*, bounty_reports!inner(bounty_id)')
@@ -180,7 +200,7 @@ export const AdminDataProvider = ({ children }) => {
         .select('*')
         .eq('is_trashed', false)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
     }, []);
@@ -192,31 +212,38 @@ export const AdminDataProvider = ({ children }) => {
         .from('plans')
         .select('*')
         .order('price', { ascending: true });
-      
+
       if (error) throw error;
       return data;
     }, []);
   }, [fetchData]);
 
-  const value = {
-    // Core functions
-    fetchData,
-    invalidateCache,
-    clearCache,
-    
-    // Loading states
-    loading,
-    
-    // Common data fetchers
-    fetchReports,
-    fetchBounties,
-    fetchMostWanted,
-    fetchTriageData,
-    fetchPlans,
-    
-    // Direct cache access (for advanced usage)
-    cache
-  };
+  const value = useMemo(
+    () => ({
+      fetchData,
+      invalidateCache,
+      clearCache,
+      loading,
+      fetchReports,
+      fetchBounties,
+      fetchMostWanted,
+      fetchTriageData,
+      fetchPlans,
+      cache,
+    }),
+    [
+      fetchData,
+      invalidateCache,
+      clearCache,
+      loading,
+      fetchReports,
+      fetchBounties,
+      fetchMostWanted,
+      fetchTriageData,
+      fetchPlans,
+      cache,
+    ]
+  );
 
   return (
     <AdminDataContext.Provider value={value}>

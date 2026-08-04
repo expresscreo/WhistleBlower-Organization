@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,6 +11,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce, useLoadOnDeps } from '@/hooks/useLoadOnce';
 
 const LOGS_PER_PAGE = 19;
 
@@ -23,32 +24,15 @@ const AuditLogs = () => {
   const [availableActions, setAvailableActions] = useState([]);
   const [fetchError, setFetchError] = useState('');
   const { profile, loading: profileLoading } = useUserProfile();
-  
-  // Refs to prevent unnecessary re-fetching
-  const hasInitialData = useRef(false);
-  const lastFetchTime = useRef(0);
-  const fetchLogsRef = useRef(null);
+  const profileId = profile?.id;
+  const profileUserType = profile?.user_type;
+  const profileOrganizationId = profile?.organization_id;
 
-  const fetchLogs = useCallback(async (forceRefresh = false) => {
-    if (!profile) return;
-    
-    // Prevent unnecessary re-fetching
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchTime.current;
-    
-    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
-    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
-      return;
-    }
-    
-    // Skip fetch if page is not visible and not forced
-    if (!forceRefresh && document.visibilityState !== 'visible') {
-      return;
-    }
-    
+  const fetchLogs = useCallback(async () => {
+    if (!profileId) return;
+
     setLoading(true);
     setFetchError('');
-    lastFetchTime.current = now;
 
     const from = (currentPage - 1) * LOGS_PER_PAGE;
     const to = from + LOGS_PER_PAGE - 1;
@@ -59,8 +43,8 @@ const AuditLogs = () => {
       .order('timestamp', { ascending: false })
       .range(from, to);
 
-    if (profile.user_type !== 'super_admin') {
-      query = query.eq('organization_id', profile.organization_id);
+    if (profileUserType !== 'super_admin') {
+      query = query.eq('organization_id', profileOrganizationId);
     }
     
     if (actionFilter !== 'all') {
@@ -74,26 +58,17 @@ const AuditLogs = () => {
     } else {
       setLogs(data);
       setTotalPages(Math.ceil(count / LOGS_PER_PAGE));
-      hasInitialData.current = true;
     }
     setLoading(false);
-  }, [profile, currentPage, actionFilter]);
+  }, [profileId, profileUserType, profileOrganizationId, currentPage, actionFilter]);
 
-  // Store the latest fetchLogs in ref
-  fetchLogsRef.current = fetchLogs;
+  const fetchAvailableActions = useCallback(async () => {
+      if (!profileId) return;
 
-  const fetchAvailableActions = useCallback(async (forceRefresh = false) => {
-      if (!profile) return;
+      let query = supabase.from('audit_logs').select('action');
       
-      // Only fetch actions once or when forced
-      if (availableActions.length > 0 && !forceRefresh) {
-        return;
-      }
-
-      let query = supabase.from('audit_logs').select('action', { count: 'exact' });
-      
-      if (profile.user_type !== 'super_admin') {
-          query = query.eq('organization_id', profile.organization_id);
+      if (profileUserType !== 'super_admin') {
+          query = query.eq('organization_id', profileOrganizationId);
       }
 
       const { data, error } = await query;
@@ -104,18 +79,15 @@ const AuditLogs = () => {
           const uniqueActions = [...new Set(data.map(item => item.action))];
           setAvailableActions(uniqueActions);
       }
-  }, [profile, availableActions.length]);
+  }, [profileId, profileUserType, profileOrganizationId]);
 
+  useLoadOnDeps(
+    !profileLoading && Boolean(profileId),
+    fetchLogs,
+    [currentPage, actionFilter, profileId]
+  );
 
-  // Initial data fetch - only runs when profile is loaded or when page/filter changes
-  useEffect(() => {
-    if (!profileLoading && profile) {
-      // Always fetch logs when page or filter changes (this is expected behavior)
-      fetchLogs(true);
-      // Only fetch available actions once
-      fetchAvailableActions(true);
-    }
-  }, [profileLoading, profile?.id, currentPage, actionFilter]); // Only depend on stable references and expected changes
+  useLoadOnce(!profileLoading && Boolean(profileId), fetchAvailableActions);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {

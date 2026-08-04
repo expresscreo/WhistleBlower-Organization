@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'Most Wanted', 'Most Wanted Details', 'News Editor', 'Bounty Details'];
 const allRoles = [{
   key: 'super_admin',
@@ -77,11 +78,7 @@ const PlanManagement = () => {
     }
   }, [profile?.user_type, fetchPlans]);
 
-  useEffect(() => {
-    if (!profileLoading) {
-      loadPlansData();
-    }
-  }, [profileLoading, loadPlansData]);
+  useLoadOnce(!profileLoading && profile?.user_type === 'super_admin', loadPlansData);
   const getRolesForPlan = planName => {
     const standardRoles = allRoles.filter(r => r.key !== 'super_admin');
     if (planName === 'Executive') {

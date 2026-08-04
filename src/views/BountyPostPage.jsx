@@ -18,6 +18,8 @@ import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGaller
 import MaximizableImage from '@/components/media/MaximizableImage';
 import ResolvedStorageImage from '@/components/media/ResolvedStorageImage';
 import RichTextMediaContent from '@/components/media/RichTextMediaContent';
+import PostDisclaimerSection from '@/components/news/PostDisclaimerSection';
+import RecentPostsSection from '@/components/news/RecentPostsSection';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { getBountyGalleryDisplayPaths } from '@/lib/publishedEvidence';
@@ -33,6 +35,7 @@ const BountyPostPage = () => {
     const [bounty, setBounty] = useState(null);
     const [loading, setLoading] = useState(true);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
+    const [recentPosts, setRecentPosts] = useState([]);
     const hasLoadedBountyRef = useRef(false);
 
     const stickyReportHref = useMemo(() => {
@@ -64,6 +67,12 @@ const BountyPostPage = () => {
         }
 
         const newsData = findPublishedNewsByRouteSlug(newsList, slug);
+
+        const recent = (newsList || [])
+            .filter((item) => item.id !== newsData?.id)
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 4);
+        setRecentPosts(recent);
 
         // If there's a published news item, use it
         if (newsData?.bounty_id) {
@@ -338,7 +347,9 @@ const BountyPostPage = () => {
                                     className="border-t pt-6"
                                 />
                             )}
-                            
+
+                            <PostDisclaimerSection />
+
                             {/* Social Share Section */}
                             <div className="border-t pt-6">
                                 <SocialShare 
@@ -350,6 +361,8 @@ const BountyPostPage = () => {
                             </div>
                         </CardContent>
                 </Card>
+
+                <RecentPostsSection posts={recentPosts} className="mt-10" />
             </div>
         </>
     );

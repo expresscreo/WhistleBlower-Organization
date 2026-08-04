@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
     import PageHead from '@/components/PageHead';
     import { useAuth } from '@/contexts/SupabaseAuthContext';
     import { supabase } from '@/lib/customSupabaseClient';
@@ -14,6 +14,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
     import PageContentWrapper from '@/components/admin/PageContentWrapper';
     import PageHeader from '@/components/admin/PageHeader';
     import { notifyRewardPaycode, notifyRewardRequest } from '@/lib/notify';
+    import { useLoadOnce } from '@/hooks/useLoadOnce';
     
     const RewardPage = () => {
       const { profile } = useAuth();
@@ -32,17 +33,13 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
         auditLog: [],
       });
       const [rewardAmounts, setRewardAmounts] = useState({});
-      
-      // Prevent duplicate data loading
-      const hasLoadedData = useRef(false);
     
       const fetchData = useCallback(async () => {
-        if (!profile?.id || hasLoadedData.current) return; // Don't fetch if no profile or already loaded
+        if (!profile?.id) return;
         
         setLoading(true);
         setFetchError('');
         setActionFeedback({ error: '', success: '' });
-        hasLoadedData.current = true; // Set immediately to prevent duplicate calls
         try {
           if (profile.user_type === 'super_admin') {
             const { data: orgSummary, error: orgSummaryError } = await supabase.from('organizations').select('id, name, organization_wallets(balance)');
@@ -91,17 +88,12 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
           }
         } catch (error) {
           setFetchError(error.message);
-          hasLoadedData.current = false; // Reset on error to allow retry
         } finally {
           setLoading(false);
         }
       }, [profile?.id, profile?.user_type, profile?.organization_id]);
     
-      useEffect(() => {
-        if (profile?.id && !hasLoadedData.current) {
-          fetchData();
-        }
-      }, [profile?.id, fetchData]);
+      const { reload: reloadRewardData } = useLoadOnce(Boolean(profile?.id), fetchData);
     
       const handleRewardAmountChange = (reportId, amount) => {
         setRewardAmounts(prev => ({ ...prev, [reportId]: amount }));
@@ -127,7 +119,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
           notifyRewardRequest(reportId);
     
           setActionFeedback({ error: '', success: 'Reward request submitted.' });
-          fetchData();
+          reloadRewardData();
         } catch (error) {
           setActionFeedback({ error: error.message, success: '' });
         } finally {
@@ -170,7 +162,7 @@ import NavbarLoader from '@/components/admin/NavbarLoader';
             notifyRewardPaycode(report.id, paycode);
     
             setActionFeedback({ error: '', success: `Paycode ${paycode} has been generated and assigned.` });
-            fetchData();
+            reloadRewardData();
         } catch (error) {
             setActionFeedback({ error: error.message, success: '' });
         } finally {

@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { useQueryParams } from '@/hooks/useQueryParams';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import PageHeader from '@/components/admin/PageHeader';
 import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const FEEDBACK_PER_PAGE = 18;
 
@@ -33,37 +34,15 @@ const CustomerFeedback = () => {
   const [fetchError, setFetchError] = useState('');
   const router = useRouter();
   const { profile, loading: profileLoading } = useUserProfile();
-  
-  // Refs to prevent unnecessary re-fetching
-  const hasInitialData = useRef(false);
-  const lastFetchTime = useRef(0);
-  const fetchFeedbackRef = useRef(null);
+  const profileId = profile?.id;
+  const profileUserType = profile?.user_type;
+  const profileOrganizationId = profile?.organization_id;
 
-  const fetchFeedback = useCallback(async (forceRefresh = false) => {
-    console.log('fetchFeedback called:', { forceRefresh, hasData: hasInitialData.current, profileId: profile?.id });
-    
-    if (!profile) return;
-    
-    // Prevent unnecessary re-fetching
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchTime.current;
-    
-    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
-    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
-      console.log('Skipping fetch - too soon since last fetch');
-      return;
-    }
-    
-    // Skip fetch if page is not visible and not forced
-    if (!forceRefresh && document.visibilityState !== 'visible') {
-      console.log('Skipping fetch - page not visible');
-      return;
-    }
-    
-    console.log('Actually fetching feedback...');
+  const fetchFeedback = useCallback(async () => {
+    if (!profileId) return;
+
     setLoading(true);
     setFetchError('');
-    lastFetchTime.current = now;
 
     let query = supabase
       .from('reports')
@@ -75,8 +54,8 @@ const CustomerFeedback = () => {
       .eq('is_trashed', false)
       .eq('is_feedback', true);
 
-    if (profile.user_type !== 'super_admin') {
-      query = query.eq('organization_id', profile.organization_id);
+    if (profileUserType !== 'super_admin') {
+      query = query.eq('organization_id', profileOrganizationId);
     }
     
     const { data, error } = await query;
@@ -96,20 +75,11 @@ const CustomerFeedback = () => {
             }
         });
         setAllFeedback(processedFeedback);
-        hasInitialData.current = true;
     }
     setLoading(false);
-  }, [profile]);
+  }, [profileId, profileUserType, profileOrganizationId]);
 
-  // Store the latest fetchFeedback in ref
-  fetchFeedbackRef.current = fetchFeedback;
-  
-  // Initial data fetch - only runs once when profile is loaded
-  useEffect(() => {
-    if (!profileLoading && profile && !hasInitialData.current) {
-        fetchFeedback(true); // Force initial fetch
-    }
-  }, [profileLoading, profile?.id]); // Only depend on profile.id, not the entire profile object
+  useLoadOnce(!profileLoading && Boolean(profileId), fetchFeedback);
 
   useEffect(() => {
     let filtered = allFeedback;

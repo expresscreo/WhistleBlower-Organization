@@ -138,7 +138,23 @@ export async function dispatchTrackingUpdatePush(service, { trackingType, tracki
     throw error;
   }
 
-  const tokens = (data || []).map((row) => row.expo_push_token).filter(Boolean);
+  const subscriptionTokens = [...new Set((data || []).map((row) => row.expo_push_token).filter(Boolean))];
+  if (!subscriptionTokens.length) {
+    return { sent: 0, message: 'No eligible tracking push subscriptions found.' };
+  }
+
+  const { data: activeTokenRows, error: activeTokenError } = await service
+    .from('push_tokens')
+    .select('expo_push_token')
+    .in('expo_push_token', subscriptionTokens)
+    .eq('is_active', true);
+
+  if (activeTokenError) {
+    throw activeTokenError;
+  }
+
+  const activeTokenSet = new Set((activeTokenRows || []).map((row) => row.expo_push_token));
+  const tokens = subscriptionTokens.filter((token) => activeTokenSet.has(token));
   if (!tokens.length) {
     return { sent: 0, message: 'No eligible tracking push subscriptions found.' };
   }
@@ -178,13 +194,27 @@ export async function dispatchTrackingUpdatePush(service, { trackingType, tracki
       throw new Error(result?.errors?.[0]?.message || 'Expo push request failed.');
     }
 
-    sent += messages.length;
+    const tickets = Array.isArray(result?.data) ? result.data : [];
+    const acceptedCount = tickets.filter((ticket) => ticket?.status === 'ok').length;
+    const invalidTokens = tickets
+      .map((ticket, index) => (ticket?.details?.error === 'DeviceNotRegistered' ? batch[index] : null))
+      .filter(Boolean);
+
+    if (invalidTokens.length) {
+      await service.from('push_tokens').update({ is_active: false, updated_at: new Date().toISOString() }).in('expo_push_token', invalidTokens);
+      await service
+        .from('push_tracking_subscriptions')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .in('expo_push_token', invalidTokens);
+    }
+
+    sent += acceptedCount;
     await logPushDelivery(service, {
       notification_type: 'tracking_update',
       category: normalizedType,
       target_id: normalizedId,
       route: '/notifications',
-      recipient_count: messages.length,
+      recipient_count: acceptedCount,
       expo_response: result,
     });
   }

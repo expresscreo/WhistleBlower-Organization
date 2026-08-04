@@ -6,6 +6,7 @@ import PageHead from '@/components/PageHead';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAdminData } from '@/contexts/AdminDataContext';
+import { useLoadOnDeps } from '@/hooks/useLoadOnce';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Upload, Trash2, Play, Pause, Volume2 } from 'lucide-react';
@@ -223,9 +224,7 @@ const BountyDetails = () => {
         if (error) console.error('Error marking bounty messages as read:', error);
     }, []);
 
-    useEffect(() => {
-        fetchBounty();
-    }, [fetchBounty]);
+    useLoadOnDeps(Boolean(id), fetchBounty, [id]);
 
     useEffect(() => {
         if (!bounty?.id || !user?.id) return;

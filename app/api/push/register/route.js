@@ -18,6 +18,7 @@ export async function POST(request) {
       preferences,
       is_active: true,
       last_registered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
     { onConflict: 'expo_push_token' }
   );

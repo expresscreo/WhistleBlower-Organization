@@ -60,7 +60,7 @@ const StickySections = () => {
           </motion.div>
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=640&h=640&fit=crop" alt="Anonymous Reporting" className="w-full h-full object-cover" />
+              <img src="/WBMedia/general/REPORT.jpg" alt="Anonymous Reporting" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#ff5100' }}>Anonymous Reporting</span>
             </div>
@@ -89,7 +89,7 @@ const StickySections = () => {
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=640&h=640&fit=crop" alt="Real-time Tracking" className="w-full h-full object-cover" />
+              <img src="/WBMedia/general/TRACK.jpg" alt="Real-time Tracking" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#00C853' }}>Real-time Tracking</span>
             </div>
@@ -118,7 +118,7 @@ const StickySections = () => {
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=640&h=640&fit=crop" alt="Rewards & Payments" className="w-full h-full object-cover" />
+              <img src="/WBMedia/general/MONEY.jpg" alt="Rewards & Payments" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FF0000' }}>Rewards & Payments</span>
             </div>
@@ -147,7 +147,7 @@ const StickySections = () => {
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=640&h=640&fit=crop" alt="Bounty System" className="w-full h-full object-cover" />
+              <img src="/WBMedia/general/BOUNTY.jpg" alt="Bounty System" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#FFA000' }}>Bounty System</span>
             </div>
@@ -174,7 +174,7 @@ const StickySections = () => {
         <div className="max-w-7xl w-full flex flex-col lg:flex-row items-center gap-12">
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-start order-2 lg:order-1">
             <div className="relative w-[348px] h-[300px] lg:w-[640px] lg:h-[640px] rounded-lg overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1504711331083-9c895941bf81?w=640&h=640&fit=crop" alt="News & Updates" className="w-full h-full object-cover" />
+              <img src="/WBMedia/general/NEWS.jpg" alt="News & Updates" className="w-full h-full object-cover" />
               {/* Mobile category tag overlapping image */}
               <span className="absolute top-4 left-4 lg:hidden px-3 py-1.5 text-white text-xs font-medium" style={{ backgroundColor: '#4285F4' }}>News & Updates</span>
             </div>

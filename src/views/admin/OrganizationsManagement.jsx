@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import QRCode from 'qrcode';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce, useLoadOnDeps } from '@/hooks/useLoadOnce';
 import { Badge } from '@/components/ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -93,17 +94,18 @@ const OrganizationsManagement = () => {
         setLoading(false);
     }, [searchTerm, selectedPlan, selectedStatus]);
 
-    useEffect(() => {
-        fetchOrganizations();
-    }, [fetchOrganizations]);
+    const { reload: reloadOrganizations } = useLoadOnDeps(true, fetchOrganizations, [
+      searchTerm,
+      selectedPlan,
+      selectedStatus,
+    ]);
 
-    useEffect(() => {
-        const fetchPlans = async () => {
-            const { data, error } = await supabase.from('plans').select('id, name');
-            if (!error) setPlans(data);
-        };
-        fetchPlans();
+    const loadPlans = useCallback(async () => {
+      const { data, error } = await supabase.from('plans').select('id, name');
+      if (!error) setPlans(data);
     }, []);
+
+    useLoadOnce(true, loadPlans);
 
     const toggleExpand = async (orgId) => {
         if (expandedOrgId === orgId) {
@@ -181,7 +183,7 @@ const OrganizationsManagement = () => {
             setDeleteFeedback({ error: error?.message || data?.error, success: '' });
         } else {
             setDeleteFeedback({ error: '', success: 'Organization deleted successfully' });
-            fetchOrganizations();
+            reloadOrganizations();
         }
         setIsDeleting(false);
         setIsDeleteModalOpen(false);
@@ -210,7 +212,7 @@ const OrganizationsManagement = () => {
                 setFormFeedback({ error: error.message, success: '' });
             } else {
                 setFormFeedback({ error: '', success: `Organization ${selectedOrg.id ? 'updated' : 'added'} successfully` });
-                fetchOrganizations();
+                reloadOrganizations();
             }
             setIsModalOpen(false);
             setSelectedOrg(null);

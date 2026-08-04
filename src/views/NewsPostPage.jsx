@@ -21,6 +21,8 @@ import { resolveMediaUrl } from '@/lib/mediaUtils';
 import { getBountyGalleryDisplayPaths } from '@/lib/publishedEvidence';
 import { hasStructuredMostWantedDetails } from '@/lib/mostWantedUtils';
 import MostWantedPostLayout from '@/components/news/MostWantedPostLayout';
+import PostDisclaimerSection from '@/components/news/PostDisclaimerSection';
+import RecentPostsSection from '@/components/news/RecentPostsSection';
 import { getLocalFileUrl, resolveImageUrl } from '@/lib/fileUtils';
 import { getBountyInfo } from '@/lib/bountyCta';
 import { PUBLISHED_ARTICLE_PROSE_CLASS } from '@/lib/articleContentStyles';
@@ -90,6 +92,7 @@ const NewsPostPage = () => {
     const [bountyDetails, setBountyDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [featuredImageUrl, setFeaturedImageUrl] = useState(null);
+    const [recentPosts, setRecentPosts] = useState([]);
 
     const stickyReportHref = useMemo(() => {
         if (!post) return null;
@@ -122,6 +125,14 @@ const NewsPostPage = () => {
             data = findPublishedNewsByRouteSlug(list, slug);
         } else if (listError) {
             error = listError;
+        }
+
+        if (Array.isArray(list)) {
+            const recent = list
+                .filter((item) => item.id !== data?.id)
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .slice(0, 4);
+            setRecentPosts(recent);
         }
 
         if (!data) {
@@ -364,6 +375,8 @@ const NewsPostPage = () => {
                                     className="border-t pt-6"
                                 />
                             )}
+
+                            {post.category === 'most_wanted' && <PostDisclaimerSection />}
                             
                             {/* Social Share Section */}
                             <div className="border-t pt-6">
@@ -376,6 +389,10 @@ const NewsPostPage = () => {
                             </div>
                         </CardContent>
                 </Card>
+
+                {post.category === 'most_wanted' && (
+                    <RecentPostsSection posts={recentPosts} className="mt-10" />
+                )}
             </div>
         </>
     );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { useAdminData } from '@/contexts/AdminDataContext';
 import PageHeader from '@/components/admin/PageHeader';
 import { cn } from '@/lib/utils';
 import FormattedReportDescription from '@/components/report/FormattedReportDescription';
+import { useLoadOnce } from '@/hooks/useLoadOnce';
 
 const TriagePage = () => {
   const [unassignedReports, setUnassignedReports] = useState([]);
@@ -47,9 +48,7 @@ const TriagePage = () => {
     }
   }, [fetchTriageData]);
 
-  useEffect(() => {
-    loadTriageData();
-  }, [loadTriageData]);
+  const { reload: reloadTriageData } = useLoadOnce(true, loadTriageData);
 
   const handleAssign = async () => {
     setActionFeedback({ error: '', success: '' });
@@ -97,7 +96,7 @@ const TriagePage = () => {
       setCurrentReportIndex(currentReportIndex + 1);
     } else {
       setActionFeedback({ error: '', success: 'All reports triaged!' });
-      loadTriageData();
+      reloadTriageData();
       setCurrentReportIndex(0);
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import PageHead from '@/components/PageHead';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import PageHeader from '@/components/admin/PageHeader';
+import { useLoadOnce, useLoadOnDeps } from '@/hooks/useLoadOnce';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -39,49 +40,27 @@ const UserManagement = () => {
   const [editFeedback, setEditFeedback] = useState({ error: '', success: '' });
   const [deleteFeedback, setDeleteFeedback] = useState({ error: '', success: '' });
   const { profile, loading: profileLoading, permissions } = useAuth();
+  const profileId = profile?.id;
+  const profileUserType = profile?.user_type;
+  const profileOrganizationId = profile?.organization_id;
   
-  // Refs to prevent unnecessary re-fetching
-  const hasInitialData = useRef(false);
-  const lastFetchTime = useRef(0);
-  const fetchUsersRef = useRef(null);
-  
-  const isSuperAdmin = !profileLoading && profile?.user_type === 'super_admin';
-  const isExecutiveAdmin = !profileLoading && profile?.user_type === 'executive_admin';
+  const isSuperAdmin = !profileLoading && profileUserType === 'super_admin';
+  const isExecutiveAdmin = !profileLoading && profileUserType === 'executive_admin';
   const canManageUsers = isSuperAdmin || isExecutiveAdmin || (!profileLoading && (permissions['User Management']));
 
   const userTypes = ['super_admin', 'executive_admin', 'organization_admin', 'staff', 'customer_care'];
 
-  const fetchUsers = useCallback(async (forceRefresh = false) => {
-    console.log('fetchUsers called:', { forceRefresh, hasData: hasInitialData.current, profileId: profile?.id });
-    
-    if (profileLoading) return;
-    
-    // Prevent unnecessary re-fetching
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchTime.current;
-    
-    // If we already have data and it's been less than 30 seconds, don't fetch again unless forced
-    if (hasInitialData.current && timeSinceLastFetch < 30000 && !forceRefresh) {
-      console.log('Skipping fetch - too soon since last fetch');
-      return;
-    }
-    
-    // Skip fetch if page is not visible and not forced
-    if (!forceRefresh && document.visibilityState !== 'visible') {
-      console.log('Skipping fetch - page not visible');
-      return;
-    }
-    
-    console.log('Actually fetching users...');
+  const fetchUsers = useCallback(async () => {
+    if (profileLoading || !profileId) return;
+
     setLoading(true);
     setFetchError('');
-    lastFetchTime.current = now;
     let query = supabase
       .from('users')
       .select('*, organizations(name, plans(id, name)), assigned_reports:report_assignments!assigned_to(count)');
       
-    if (profile?.user_type === 'organization_admin' || profile?.user_type === 'executive_admin') {
-      query = query.eq('organization_id', profile.organization_id);
+    if (profileUserType === 'organization_admin' || profileUserType === 'executive_admin') {
+      query = query.eq('organization_id', profileOrganizationId);
     }
 
     if (searchTerm) {
@@ -101,81 +80,59 @@ const UserManagement = () => {
         organization_name: user.organizations?.name
       }));
       
-      // Debug: Log first user to see data structure
-      if (usersWithCounts.length > 0) {
-        console.log('Sample user data:', {
-          name: usersWithCounts[0].name,
-          organization_name: usersWithCounts[0].organization_name,
-          plan_name: usersWithCounts[0].plan_name,
-          is_active: usersWithCounts[0].is_active,
-          organizations: usersWithCounts[0].organizations
-        });
-      }
-      
-      // Filter users based on selected filters
-      let filteredUsers = [...usersWithCounts]; // Create a copy
-      
-      console.log('Filtering with:', { selectedOrganization, selectedPlan, selectedStatus });
-      console.log('Total users before filtering:', filteredUsers.length);
+      let filteredUsers = [...usersWithCounts];
       
       if (selectedOrganization !== 'all') {
-        const beforeCount = filteredUsers.length;
         filteredUsers = filteredUsers.filter(user => user.organization_name === selectedOrganization);
-        console.log(`Organization filter: ${beforeCount} → ${filteredUsers.length} (filtering by: ${selectedOrganization})`);
       }
       
       if (selectedPlan !== 'all') {
-        const beforeCount = filteredUsers.length;
         filteredUsers = filteredUsers.filter(user => user.plan_name === selectedPlan);
-        console.log(`Plan filter: ${beforeCount} → ${filteredUsers.length} (filtering by: ${selectedPlan})`);
       }
       
       if (selectedStatus !== 'all') {
-        const beforeCount = filteredUsers.length;
         if (selectedStatus === 'active') {
           filteredUsers = filteredUsers.filter(user => user.is_active === true);
         } else if (selectedStatus === 'suspended') {
           filteredUsers = filteredUsers.filter(user => user.is_active === false);
         }
-        console.log(`Status filter: ${beforeCount} → ${filteredUsers.length} (filtering by: ${selectedStatus})`);
       }
       
-      // Sort by name by default
       filteredUsers.sort((a, b) => a.name.localeCompare(b.name));
       
       setUsers(filteredUsers);
-      hasInitialData.current = true;
     }
     setLoading(false);
-  }, [searchTerm, selectedOrganization, selectedPlan, selectedStatus, profile, profileLoading]);
+  }, [
+    searchTerm,
+    selectedOrganization,
+    selectedPlan,
+    selectedStatus,
+    profileId,
+    profileUserType,
+    profileOrganizationId,
+    profileLoading,
+  ]);
 
-  // Store the latest fetchUsers in ref
-  fetchUsersRef.current = fetchUsers;
+  const { reload: reloadUsers } = useLoadOnDeps(
+    !profileLoading && Boolean(profileId),
+    fetchUsers,
+    [searchTerm, selectedOrganization, selectedPlan, selectedStatus, profileId]
+  );
 
-  // Initial data fetch - only runs once when profile is loaded
-  useEffect(() => {
-    if (!profileLoading && !hasInitialData.current) {
-        fetchUsers(true); // Force initial fetch
+  const loadDropdownData = useCallback(async () => {
+    let orgQuery = supabase.from('organizations').select('id, name, plans(id, name)');
+    if (profileUserType === 'organization_admin' || profileUserType === 'executive_admin') {
+      orgQuery = orgQuery.eq('id', profileOrganizationId);
     }
-    const fetchDropdownData = async () => {
-      let orgQuery = supabase.from('organizations').select('id, name, plans(id, name)');
-      if (profile?.user_type === 'organization_admin' || profile?.user_type === 'executive_admin') {
-          orgQuery = orgQuery.eq('id', profile.organization_id);
-      }
-      const { data: orgsData } = await orgQuery;
-      console.log('Loaded organizations:', orgsData);
-      setOrganizations(orgsData || []);
-      
-      // Fetch plans
-      const { data: plansData } = await supabase.from('plans').select('id, name');
-      console.log('Loaded plans:', plansData);
-      setPlans(plansData || []);
-    };
+    const { data: orgsData } = await orgQuery;
+    setOrganizations(orgsData || []);
 
-    if (!profileLoading) {
-      fetchDropdownData();
-    }
-  }, [profileLoading, profile?.id]); // Only depend on profile.id, not the entire profile object
+    const { data: plansData } = await supabase.from('plans').select('id, name');
+    setPlans(plansData || []);
+  }, [profileUserType, profileOrganizationId]);
+
+  useLoadOnce(!profileLoading && Boolean(profileId), loadDropdownData);
 
   const handleOpenAddModal = () => {
     setAddFeedback({ error: '', success: '' });
@@ -209,7 +166,7 @@ const UserManagement = () => {
       } else {
           setAddFeedback({ error: '', success: 'User created successfully. Confirmation email sent.' });
           setIsAddModalOpen(false);
-          fetchUsers();
+          reloadUsers();
       }
     } finally {
       setIsAdding(false);
@@ -241,7 +198,7 @@ const UserManagement = () => {
           setDeleteFeedback({ error: error?.message || data.error, success: '' });
       } else {
           setDeleteFeedback({ error: '', success: 'User deleted successfully' });
-          fetchUsers();
+          reloadUsers();
       }
       setIsDeleteModalOpen(false);
       setSelectedUser(null);
@@ -274,7 +231,7 @@ const UserManagement = () => {
         setEditFeedback({ error: error.message, success: '' });
       } else {
         setEditFeedback({ error: '', success: 'User updated successfully' });
-        fetchUsers();
+        reloadUsers();
       }
       setIsEditModalOpen(false);
       setSelectedUser(null);
@@ -291,7 +248,7 @@ const UserManagement = () => {
       setListFeedback({ error: error.message, success: '' });
     } else {
       setListFeedback({ error: '', success: `User ${newStatus ? 'activated' : 'suspended'} successfully` });
-      fetchUsers();
+      reloadUsers();
     }
   };
   

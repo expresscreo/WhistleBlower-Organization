@@ -17,6 +17,7 @@ import PageHead from '@/components/PageHead';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { formatNumberWithCommas } from '@/lib/utils';
 import { consumeNavigationState } from '@/lib/navigation-state';
+import { useLoadOnDeps } from '@/hooks/useLoadOnce';
 import EvidenceThumbnailGallery from '@/components/media/EvidenceThumbnailGallery';
 import { isImagePath } from '@/lib/mediaUtils';
 import MostWantedEditorWizard from '@/components/admin/most-wanted-editor/MostWantedEditorWizard';
@@ -224,10 +225,8 @@ const NewsEditorPage = () => {
     }, []);
 
     // Load existing item if editing
-    useEffect(() => {
-        if (isEditing && id) {
-            loadNewsItem(id);
-        }
+    useLoadOnDeps(Boolean(isEditing && id), async () => {
+        await loadNewsItem(id);
     }, [id, isEditing]);
 
     const resetDirtyTracking = useCallback(() => {
