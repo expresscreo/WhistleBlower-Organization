@@ -221,6 +221,9 @@ const TrackReportPage = ({ reportId, password, initialAuthData, onAuthFailure, o
                     <h1 className="text-2xl sm:text-3xl font-bold break-words">Report Summary</h1>
                 </div>
                 <div className="space-y-8">
+                    {reportData.status === 'Resolved' && !reportData.is_feedback && (
+                      <RewardSection report={reportData} />
+                    )}
                     <ReportSummary
                       report={reportData}
                       reportId={reportId}
@@ -228,7 +231,9 @@ const TrackReportPage = ({ reportId, password, initialAuthData, onAuthFailure, o
                       onUpdateReport={() => setUpdateModalOpen(true)}
                       onLogout={handleLogout}
                     />
-                    {!reportData.is_feedback && <RewardSection report={reportData} />}
+                    {reportData.status !== 'Resolved' && !reportData.is_feedback && (
+                      <RewardSection report={reportData} />
+                    )}
                     <Chat
                       report={reportData}
                       updates={updates}

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import { isPlatformAdmin } from '@/lib/platformAccess';
 
 function isSuperAdmin(profile) {
   return profile?.user_type === 'super_admin';
@@ -33,7 +34,7 @@ function mergeReportIds(unseenRows = [], unreadReportIds = [], scopedUnreadRows 
   return ids.size;
 }
 
-async function countStandardReports(profile, { feedbackOnly = false, mostWantedOnly = false } = {}) {
+async function countStandardReports(profile, { feedbackOnly = false, mostWantedOnly = false, skipOrgFilter = false } = {}) {
   let unseenQuery = supabase
     .from('reports')
     .select('id')
@@ -51,7 +52,9 @@ async function countStandardReports(profile, { feedbackOnly = false, mostWantedO
     }
   }
 
-  unseenQuery = applyReportOrgFilter(unseenQuery, profile);
+  if (!skipOrgFilter) {
+    unseenQuery = applyReportOrgFilter(unseenQuery, profile);
+  }
 
   const { data: unseenRows, error: unseenError } = await unseenQuery;
   if (unseenError) throw unseenError;
@@ -88,7 +91,9 @@ async function countStandardReports(profile, { feedbackOnly = false, mostWantedO
     }
   }
 
-  scopedUnreadQuery = applyReportOrgFilter(scopedUnreadQuery, profile);
+  if (!skipOrgFilter) {
+    scopedUnreadQuery = applyReportOrgFilter(scopedUnreadQuery, profile);
+  }
 
   const { data: scopedUnreadRows, error: scopedUnreadError } = await scopedUnreadQuery;
   if (scopedUnreadError) throw scopedUnreadError;
@@ -97,6 +102,8 @@ async function countStandardReports(profile, { feedbackOnly = false, mostWantedO
 }
 
 async function countBounties(profile) {
+  if (!isPlatformAdmin(profile)) return 0;
+
   const { data: unseenBounties, error: bountyError } = await supabase
     .from('bounties')
     .select('id')
@@ -105,16 +112,12 @@ async function countBounties(profile) {
 
   if (bountyError) throw bountyError;
 
-  let unseenReportsQuery = supabase
+  const { data: unseenReports, error: reportError } = await supabase
     .from('reports')
     .select('id, bounty_reports!inner(bounty_id)')
     .eq('category', 'Bounty')
     .eq('is_trashed', false)
     .eq('admin_has_viewed', false);
-
-  unseenReportsQuery = applyReportOrgFilter(unseenReportsQuery, profile);
-
-  const { data: unseenReports, error: reportError } = await unseenReportsQuery;
   if (reportError) throw reportError;
 
   const { data: unreadBountyMessages, error: unreadError } = await supabase
@@ -165,7 +168,9 @@ async function countUnmatchedOrganizations() {
     .select('id', { count: 'exact', head: true })
     .eq('is_trashed', false)
     .is('organization_id', null)
-    .not('organization_name', 'is', null);
+    .not('organization_name', 'is', null)
+    .not('category', 'ilike', 'bounty')
+    .not('category', 'ilike', 'most wanted');
 
   if (error) throw error;
   return count || 0;
@@ -173,13 +178,26 @@ async function countUnmatchedOrganizations() {
 
 async function countRewards(profile) {
   if (isSuperAdmin(profile)) {
-    const { count, error } = await supabase
-      .from('reports')
-      .select('id', { count: 'exact', head: true })
-      .eq('reward_status', 'pending_request');
+    const [pendingResult, resolvedResult] = await Promise.all([
+      supabase
+        .from('reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('reward_status', 'pending_request')
+        .eq('is_anonymous', false)
+        .eq('is_trashed', false),
+      supabase
+        .from('reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'Resolved')
+        .eq('is_anonymous', false)
+        .eq('is_trashed', false)
+        .is('reward_paycode', null)
+        .or('reward_status.is.null,reward_status.eq.rejected'),
+    ]);
 
-    if (error) throw error;
-    return count || 0;
+    if (pendingResult.error) throw pendingResult.error;
+    if (resolvedResult.error) throw resolvedResult.error;
+    return (pendingResult.count || 0) + (resolvedResult.count || 0);
   }
 
   if (!profile?.organization_id) return 0;
@@ -189,8 +207,10 @@ async function countRewards(profile) {
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', profile.organization_id)
     .eq('status', 'Resolved')
+    .eq('is_anonymous', false)
+    .eq('is_trashed', false)
     .is('reward_paycode', null)
-    .eq('is_trashed', false);
+    .or('reward_status.is.null,reward_status.eq.rejected');
 
   if (error) throw error;
   return count || 0;
@@ -240,7 +260,9 @@ export async function fetchAdminNavNotifications(profile) {
   ] = await Promise.all([
     countStandardReports(profile),
     countBounties(profile),
-    countStandardReports(profile, { mostWantedOnly: true }),
+    isPlatformAdmin(profile)
+      ? countStandardReports(profile, { mostWantedOnly: true, skipOrgFilter: true })
+      : Promise.resolve(0),
     countStandardReports(profile, { feedbackOnly: true }),
     countNewsEditorDrafts(),
     countUnmatchedOrganizations(),

@@ -14,6 +14,7 @@ import PageHeader from '@/components/admin/PageHeader';
 import { cn } from '@/lib/utils';
 import FormattedReportDescription from '@/components/report/FormattedReportDescription';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
+import { isBountyOrMostWantedCategory } from '@/lib/platformAccess';
 
 const TriagePage = () => {
   const [unassignedReports, setUnassignedReports] = useState([]);
@@ -31,7 +32,9 @@ const TriagePage = () => {
     try {
       const triageData = await fetchTriageData();
       const unassigned = triageData.filter(report => 
-        report.status === 'Under Review' && !report.organization_id
+        report.status === 'Under Review' &&
+        !report.organization_id &&
+        !isBountyOrMostWantedCategory(report.category)
       );
       setUnassignedReports(unassigned);
 
@@ -58,6 +61,13 @@ const TriagePage = () => {
       return;
     }
     const report = unassignedReports[currentReportIndex];
+    if (isBountyOrMostWantedCategory(report?.category)) {
+      setActionFeedback({
+        error: 'Bounties and Most Wanted stay on the WhistleBlower platform and cannot be assigned to an organization.',
+        success: '',
+      });
+      return;
+    }
     const { error } = await supabase
       .from('reports')
       .update({ organization_id: selectedOrg, status: 'Assigned' })
@@ -110,7 +120,7 @@ const TriagePage = () => {
         <div className="space-y-8">
           <PageHeader 
             title="Report Triage" 
-            description="Assign unmatched reports to the appropriate organizations."
+            description="Assign unmatched organization reports. Bounties and Most Wanted stay on the WhistleBlower platform."
           />
 
           <PageErrorBanner error={fetchError} title="Could not load triage data" />

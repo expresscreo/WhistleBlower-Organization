@@ -25,6 +25,7 @@ import {
 import { notifyTrackingUpdatePush } from '@/lib/adminPushApi';
 import { notifyAdminMessage, notifyStatusUpdate } from '@/lib/notify';
 import { useLoadOnce, useLoadOnDeps } from '@/hooks/useLoadOnce';
+import { isBountyOrMostWantedCategory } from '@/lib/platformAccess';
 
 const formatSupabaseError = (error, fallback = 'Action failed.') => {
   if (!error) return fallback;
@@ -57,6 +58,7 @@ const ReportDetails = () => {
   
   const canAssign = !profileLoading && (profile?.user_type === 'super_admin' || profile?.user_type === 'executive_admin' || profile?.user_type === 'organization_admin');
   const canUpdateOrganization = !profileLoading && ['super_admin', 'executive_admin'].includes(profile?.user_type);
+  const isPlatformCase = isBountyOrMostWantedCategory(report?.category);
 
   const fetchAssignableUsers = useCallback(async (organizationId) => {
     if (!organizationId || !canAssign) {
@@ -320,6 +322,7 @@ const ReportDetails = () => {
 
   const handleUpdateOrganization = useCallback(async (organizationId) => {
     if (!canUpdateOrganization || !report || organizationId === report.organization_id) return;
+    if (isBountyOrMostWantedCategory(report.category)) return;
 
     const organization = organizations.find((org) => org.id === organizationId);
     if (!organization) {
@@ -645,7 +648,7 @@ const ReportDetails = () => {
               isVoiceNote={report.is_voice_note}
               hideVoiceNote={report.is_voice_note}
             />
-            {canUpdateOrganization && (
+            {canUpdateOrganization && !isPlatformCase && (
               <ReportOrganizationAssignment
                 organizations={organizations}
                 currentOrganizationId={report.organization_id}

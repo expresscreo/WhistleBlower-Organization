@@ -36,7 +36,3 @@ export function notifyAdminMessage(reportUuid, messagePreview) {
 export function notifyRewardRequest(reportUuid) {
   return postNotification({ type: 'reward_request', reportUuid });
 }
-
-export function notifyRewardPaycode(reportUuid, paycode) {
-  return postNotification({ type: 'reward_paycode', reportUuid, paycode });
-}

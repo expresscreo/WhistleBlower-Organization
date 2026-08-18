@@ -106,4 +106,9 @@ export const serverEnv = {
   resendApiKey: process.env.RESEND_API_KEY,
   resendFromEmail: process.env.RESEND_FROM_EMAIL,
   notificationSupportEmail: process.env.NOTIFICATION_SUPPORT_EMAIL,
+  monnifyApiKey: process.env.MONNIFY_API_KEY,
+  monnifySecretKey: process.env.MONNIFY_SECRET_KEY,
+  monnifyContractCode: process.env.MONNIFY_CONTRACT_CODE,
+  monnifyBaseUrl:
+    readEnv('MONNIFY_BASE_URL') || 'https://sandbox.monnify.com',
 };

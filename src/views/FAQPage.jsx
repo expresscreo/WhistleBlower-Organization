@@ -44,10 +44,10 @@ const FAQPage = () => {
       category: 'Rewards & Payments',
       icon: Gift,
       questions: [
-        { question: 'How does the reward system work?', answer: 'For standard reports, verified information that leads to successful investigations may be eligible for rewards. For bounties, the person who provides the key information that resolves the case is awarded the bounty amount. All payments are processed through Interswitch PayCode, ensuring secure and confidential payouts without requiring bank details.' },
+        { question: 'How does the reward system work?', answer: 'For standard reports, verified information that leads to successful investigations may be eligible for rewards. For bounties, the person who provides the key information that resolves the case is awarded the bounty amount. All payments are processed through Monnify Paycode, ensuring secure and confidential payouts at Moniepoint POS agents without requiring bank details.' },
         { question: 'When am I eligible for rewards?', answer: 'You become eligible for rewards when you provide contact information during report submission and your report is verified and leads to actionable outcomes by the relevant authorities.' },
         { question: 'How are rewards calculated?', answer: 'For standard reports, reward amounts depend on the severity of the incident and the impact of the resolution. For bounties, the reward is the amount set by the person who placed the bounty.' },
-        { question: 'How do I claim my reward?', answer: 'Once your report is marked as resolved and eligible for rewards, you\'ll see a "Claim Reward" button in your report tracking page. Follow the secure Interswitch PayCode process to receive your payment.' }
+        { question: 'How do I claim my reward?', answer: 'Once your report is marked as resolved and WhistleBlower.ng approves the reward, your Monnify Paycode appears on the report tracking page. Copy the code and redeem it at any Moniepoint POS or agent to receive your cash payment.' }
       ]
     },
     {

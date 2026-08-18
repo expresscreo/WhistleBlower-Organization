@@ -4,6 +4,7 @@ import {
   readJson,
   sanitizeReport,
 } from '../_utils';
+import { syncReportPaycodeExpiry } from '@/lib/monnify/paycodeLifecycle';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +23,10 @@ export async function POST(request) {
       .update({ reporter_has_viewed: true })
       .eq('id', report.id);
 
+    // Monnify has no expiry webhook — lazily catch an overdue pending
+    // paycode whenever the reporter views their report.
+    const syncedReport = await syncReportPaycodeExpiry(supabase, report);
+
     const { data: updates, error: updatesError } = await supabase
       .from('report_updates')
       .select('*')
@@ -31,7 +36,7 @@ export async function POST(request) {
     if (updatesError) throw updatesError;
 
     return Response.json({
-      report: sanitizeReport({ ...report, reporter_has_viewed: true }),
+      report: sanitizeReport({ ...syncedReport, reporter_has_viewed: true }),
       updates: updates || [],
     });
   } catch (error) {

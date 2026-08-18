@@ -26,6 +26,33 @@ const statusVariants = {
     pending_payment: "secondary"
 };
 
+const PLAN_HIERARCHY = [
+    'Basic',
+    'Professional',
+    'Enterprise',
+    'Enterprise Plus',
+    'Executive',
+    'Ultimate',
+];
+
+const sortPlansByHierarchy = (plans) => {
+    return [...plans].sort((a, b) => {
+        const aIndex = PLAN_HIERARCHY.findIndex(
+            (name) => name.toLowerCase() === a.name?.toLowerCase()
+        );
+        const bIndex = PLAN_HIERARCHY.findIndex(
+            (name) => name.toLowerCase() === b.name?.toLowerCase()
+        );
+        const aRank = aIndex === -1 ? PLAN_HIERARCHY.length : aIndex;
+        const bRank = bIndex === -1 ? PLAN_HIERARCHY.length : bIndex;
+        if (aRank !== bRank) return aRank - bRank;
+        const aPrice = Number(a.price) || 0;
+        const bPrice = Number(b.price) || 0;
+        if (aPrice !== bPrice) return aPrice - bPrice;
+        return (a.name || '').localeCompare(b.name || '');
+    });
+};
+
 const OrganizationsManagement = () => {
     const [organizations, setOrganizations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -101,8 +128,8 @@ const OrganizationsManagement = () => {
     ]);
 
     const loadPlans = useCallback(async () => {
-      const { data, error } = await supabase.from('plans').select('id, name');
-      if (!error) setPlans(data);
+      const { data, error } = await supabase.from('plans').select('id, name, price');
+      if (!error) setPlans(sortPlansByHierarchy(data || []));
     }, []);
 
     useLoadOnce(true, loadPlans);

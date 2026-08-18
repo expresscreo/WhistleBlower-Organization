@@ -15,6 +15,7 @@ import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
+import { compareAdminUnread, isAdminUnreadItem } from '@/lib/adminUnread';
 
 const REPORTS_PER_PAGE = 18;
 
@@ -56,6 +57,7 @@ const Reports = () => {
     }
     if (filters.status !== 'all') filtered = filtered.filter(r => r.status === filters.status);
     if (filters.category !== 'all') filtered = filtered.filter(r => r.category === filters.category);
+    if (filters.sortBy === 'unread') filtered = filtered.filter(isAdminUnreadItem);
 
     if (filters.sortBy === 'newest') {
         filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -63,6 +65,8 @@ const Reports = () => {
         filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     } else if (filters.sortBy === 'updated') {
         filtered.sort((a, b) => new Date(b.last_updated_at) - new Date(a.last_updated_at));
+    } else if (filters.sortBy === 'unread') {
+        filtered.sort(compareAdminUnread);
     }
 
 
@@ -123,6 +127,7 @@ const Reports = () => {
                 <SelectItem value="newest">Newest First</SelectItem>
                 <SelectItem value="oldest">Oldest First</SelectItem>
                 <SelectItem value="updated">Recently Updated</SelectItem>
+                <SelectItem value="unread">Unread Only</SelectItem>
               </SelectContent>
               </Select>
               <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>

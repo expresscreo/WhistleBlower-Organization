@@ -15,6 +15,7 @@ import { useAdminData } from '@/contexts/AdminDataContext';
 import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
+import { isPlatformExclusivePage, PLATFORM_PLAN_NAMES } from '@/lib/platformAccess';
 const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'Most Wanted', 'Most Wanted Details', 'News Editor', 'Bounty Details'];
 const allRoles = [{
   key: 'super_admin',
@@ -117,10 +118,13 @@ const PlanManagement = () => {
       if (limitError) throw limitError;
 
       // Prepare permissions for upsert, including seeding missing ones
+      const plan = plans.find((item) => item.id === planId);
+      const isPlatformPlan = PLATFORM_PLAN_NAMES.includes(plan?.name);
       const permissionsToUpsert = [];
       for (const role of rolesForPlan) {
         for (const page of availablePages) {
-          const hasPermission = permissions[planId]?.[role.key]?.[page] || false;
+          const allowedOnPlan = isPlatformPlan || !isPlatformExclusivePage(page);
+          const hasPermission = allowedOnPlan && (permissions[planId]?.[role.key]?.[page] || false);
           permissionsToUpsert.push({
             plan_id: planId,
             role: role.key,
@@ -168,6 +172,9 @@ const PlanManagement = () => {
                     </div>
                     {plans.map(plan => {
           const rolesForPlan = getRolesForPlan(plan.name);
+          const pagesForPlan = availablePages.filter(
+            (page) => PLATFORM_PLAN_NAMES.includes(plan.name) || !isPlatformExclusivePage(page)
+          );
           return <TabsContent key={plan.id} value={plan.id} className="space-y-6">
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                             <h3 className="text-xl font-semibold">{plan.name} Plan Settings</h3>
@@ -191,7 +198,7 @@ const PlanManagement = () => {
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {availablePages.map(page => <TableRow key={page}>
+                                                    {pagesForPlan.map(page => <TableRow key={page}>
                                                             <TableCell className="font-medium">{page}</TableCell>
                                                             {rolesForPlan.map(role => <TableCell key={role.key} className="text-center">
                                                                     <Switch checked={permissions[plan.id]?.[role.key]?.[page] || false} onCheckedChange={checked => handlePermissionChange(plan.id, role.key, page, checked)} />

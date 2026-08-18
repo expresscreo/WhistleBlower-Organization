@@ -2,7 +2,6 @@ import { jsonError, readJson } from '../track/_utils';
 import {
   notifyAdminMessage,
   notifyNewReport,
-  notifyRewardPaycode,
   notifyRewardRequest,
   notifyStatusUpdate,
 } from '@/lib/email/notifications';
@@ -76,23 +75,6 @@ export async function POST(request) {
         if (access.error) return access.error;
 
         const result = await notifyRewardRequest(reportUuid);
-        return Response.json({ ok: true, result });
-      }
-
-      case 'reward_paycode': {
-        const auth = await requireAuthenticatedAdmin(request);
-        if (auth.error) return auth.error;
-
-        const reportUuid = body.reportUuid;
-        const paycode = body.paycode;
-        if (!reportUuid || !paycode) {
-          return jsonError('reportUuid and paycode are required.');
-        }
-
-        const access = await requireReportAccess(auth.service, auth.profile, reportUuid);
-        if (access.error) return access.error;
-
-        const result = await notifyRewardPaycode(reportUuid, paycode);
         return Response.json({ ok: true, result });
       }
 

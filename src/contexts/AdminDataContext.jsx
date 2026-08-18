@@ -7,6 +7,7 @@ import {
   buildMostWantedAdminItems,
   fetchAllMostWantedLinks,
 } from '@/lib/mostWantedStatus';
+import { isBountyOrMostWantedCategory, isPlatformAdmin } from '@/lib/platformAccess';
 
 const AdminDataContext = createContext(null);
 
@@ -111,9 +112,8 @@ export const AdminDataProvider = ({ children }) => {
         });
 
         if (error) throw error;
-        const excludedCategories = new Set(['bounty', 'most wanted']);
         const filtered = Array.isArray(data)
-          ? data.filter((r) => !excludedCategories.has(String(r.category || '').toLowerCase()))
+          ? data.filter((r) => !isBountyOrMostWantedCategory(r.category))
           : [];
         return filtered;
       },
@@ -122,6 +122,8 @@ export const AdminDataProvider = ({ children }) => {
   }, [fetchData, profile?.id, profile?.user_type, profile?.organization_id]);
 
   const fetchBounties = useCallback(async () => {
+    if (!isPlatformAdmin(profile)) return [];
+
     return fetchData('bounties', async () => {
       const { data: bounties, error: bountiesError } = await supabase
         .from('bounties')
@@ -159,10 +161,12 @@ export const AdminDataProvider = ({ children }) => {
       }));
 
       return [...formattedBounties, ...formattedReports];
-    }, []);
-  }, [fetchData]);
+    }, [profile?.id, profile?.user_type, profile?.plan_name]);
+  }, [fetchData, profile?.id, profile?.user_type, profile?.plan_name]);
 
   const fetchMostWanted = useCallback(async () => {
+    if (!isPlatformAdmin(profile)) return [];
+
     return fetchData('mostWanted', async () => {
       const [
         { data: alerts, error: alertsError },
@@ -190,8 +194,8 @@ export const AdminDataProvider = ({ children }) => {
         reports: reports || [],
         links,
       });
-    }, []);
-  }, [fetchData]);
+    }, [profile?.id, profile?.user_type, profile?.plan_name]);
+  }, [fetchData, profile?.id, profile?.user_type, profile?.plan_name]);
 
   const fetchTriageData = useCallback(async () => {
     return fetchData('triage', async () => {
@@ -199,6 +203,8 @@ export const AdminDataProvider = ({ children }) => {
         .from('reports')
         .select('*')
         .eq('is_trashed', false)
+        .not('category', 'ilike', 'bounty')
+        .not('category', 'ilike', 'most wanted')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

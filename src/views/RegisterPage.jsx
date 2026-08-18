@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
+import { PLATFORM_PLAN_NAMES } from '@/lib/platformAccess';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ name: '', organizationName: '', email: '', password: '', plan: '' });
@@ -32,11 +33,13 @@ const RegisterPage = () => {
         const { data: plansData, error: plansError } = await supabase
           .from('plans')
           .select('name')
-          .eq('show_on_pricing', true)
-          .neq('name', 'ExpressCreo');
+          .eq('show_on_pricing', true);
         if (plansError) throw plansError;
-        
-        const availablePlans = plansData.map(p => p.name);
+
+        const hiddenPlans = new Set(PLATFORM_PLAN_NAMES.map((name) => name.toLowerCase()));
+        const availablePlans = (plansData || [])
+          .map((p) => p.name)
+          .filter((name) => !hiddenPlans.has(String(name || '').toLowerCase()));
         setPlans(availablePlans);
         
         const planFromUrl = searchParams.get('plan');

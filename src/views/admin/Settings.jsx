@@ -116,8 +116,6 @@ const Settings = () => {
     smtp_port: '',
     smtp_user: '',
     smtp_pass: '',
-    interswitch_pk: '',
-    interswitch_sk: '',
     notification_new_report: true,
     notification_status_update: true,
     notification_new_message: true,
@@ -153,7 +151,8 @@ const Settings = () => {
   const handleSaveSettings = async () => {
     setSettingsSaveFeedback({ error: '', success: '' });
     setSaving(true);
-    const { id, ...saveData } = appSettings;
+    const { id, interswitch_pk: _interswitchPk, interswitch_sk: _interswitchSk, ...saveData } =
+      appSettings;
     const { error } = await supabase.from('app_settings').upsert({ id: id || 1, ...saveData });
     if (error) {
       setSettingsSaveFeedback({ error: error.message, success: '' });
@@ -263,12 +262,20 @@ const Settings = () => {
                 <TabsContent value="payments" className="mt-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Interswitch API Keys</CardTitle>
-                        <CardDescription>Manage keys for reward payments. Keys are securely stored.</CardDescription>
+                        <CardTitle>Monnify Paycode</CardTitle>
+                        <CardDescription>
+                            Reward payouts use Monnify Paycodes redeemable at Moniepoint POS agents.
+                        </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2"><Label htmlFor="isw-pk">Public Key</Label><Input id="isw-pk" value={appSettings.interswitch_pk || ''} onChange={e => handleSettingChange('interswitch_pk', e.target.value)} /></div>
-                        <div className="space-y-2"><Label htmlFor="isw-sk">Secret Key</Label><Input id="isw-sk" type="password" value={appSettings.interswitch_sk || ''} onChange={e => handleSettingChange('interswitch_sk', e.target.value)} /></div>
+                    <CardContent className="space-y-4 text-sm text-muted-foreground">
+                        <p>
+                            Configure Monnify credentials as server environment variables — never store API secrets in the browser or database.
+                        </p>
+                        <div className="border p-4 space-y-2">
+                            <p><span className="font-medium text-foreground">Required:</span> <code className="text-foreground">MONNIFY_API_KEY</code>, <code className="text-foreground">MONNIFY_SECRET_KEY</code></p>
+                            <p><span className="font-medium text-foreground">Optional:</span> <code className="text-foreground">MONNIFY_BASE_URL</code> (defaults to <code className="text-foreground">https://sandbox.monnify.com</code>; use <code className="text-foreground">https://api.monnify.com</code> for live)</p>
+                            <p>Ensure Paycode (offline payout) is enabled on your Monnify merchant account and the Monnify wallet is funded before issuing rewards.</p>
+                        </div>
                     </CardContent>
                 </Card>
                 </TabsContent>

@@ -22,6 +22,7 @@ export function useAdminNavNotifications(profile) {
   const profileId = profile?.id;
   const profileUserType = profile?.user_type;
   const profileOrganizationId = profile?.organization_id;
+  const profilePlanName = profile?.plan_name;
   const isFetchingRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -33,6 +34,7 @@ export function useAdminNavNotifications(profile) {
         id: profileId,
         user_type: profileUserType,
         organization_id: profileOrganizationId,
+        plan_name: profilePlanName,
       });
       setCounts(nextCounts);
     } catch (error) {
@@ -40,7 +42,7 @@ export function useAdminNavNotifications(profile) {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [profileId, profileUserType, profileOrganizationId]);
+  }, [profileId, profileUserType, profileOrganizationId, profilePlanName]);
 
   useEffect(() => {
     if (!profileId) {

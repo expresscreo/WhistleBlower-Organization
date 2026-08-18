@@ -39,6 +39,7 @@ import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
+import { isPlatformAdmin } from '@/lib/platformAccess';
 
 const COLORS = ['#ff5100', '#10b981', '#f59e0b', '#8b5cf6', '#3b82f6', '#ec4899'];
 const TERMINAL_STATUSES = new Set(['Resolved', 'resolved', 'Closed', 'closed', 'Rejected', 'rejected', 'refunded']);
@@ -245,10 +246,11 @@ const Overview = () => {
   const loadDashboardData = useCallback(async () => {
     setInitialLoading(true);
     try {
+      const includePlatformCases = isPlatformAdmin(profile);
       const [reportData, bountyData, mostWantedData, feedbackData] = await Promise.all([
         fetchReports(),
-        fetchBounties(),
-        fetchMostWanted(),
+        includePlatformCases ? fetchBounties() : Promise.resolve([]),
+        includePlatformCases ? fetchMostWanted() : Promise.resolve([]),
         fetchFeedback(),
       ]);
       processReportData(reportData, bountyData, mostWantedData, feedbackData);
@@ -257,17 +259,20 @@ const Overview = () => {
     } finally {
       setInitialLoading(false);
     }
-  }, [fetchReports, fetchBounties, fetchMostWanted, fetchFeedback, processReportData]);
+  }, [profile, fetchReports, fetchBounties, fetchMostWanted, fetchFeedback, processReportData]);
 
   useLoadOnce(!profileLoading && Boolean(profileId), loadDashboardData);
 
-  const planName = profile?.plans?.name;
-  const canSeeAdvancedFeatures = profile && (profile.user_type === 'super_admin' || ['Executive', 'ExpressCreo'].includes(planName));
+  const canSeePlatformCases = isPlatformAdmin(profile);
   const isLoading = initialLoading;
   const typeDistributionData = [
     { name: 'Reports', value: stats.reports },
-    { name: 'Bounties', value: stats.bounties },
-    { name: 'Most Wanted', value: stats.mostWanted },
+    ...(canSeePlatformCases
+      ? [
+          { name: 'Bounties', value: stats.bounties },
+          { name: 'Most Wanted', value: stats.mostWanted },
+        ]
+      : []),
     { name: 'Feedback', value: stats.feedback },
   ].filter((item) => item.value > 0);
 
@@ -309,7 +314,11 @@ const Overview = () => {
         <div className="space-y-8">
           <PageHeader
             title={`Welcome back, ${profile?.name || 'Admin'}!`}
-            description="Complete intelligence across reports, bounties, Most Wanted, and customer feedback."
+            description={
+              canSeePlatformCases
+                ? 'Complete intelligence across reports, bounties, Most Wanted, and customer feedback.'
+                : "Intelligence across your organization's reports and customer feedback."
+            }
           />
 
           <Card className="overflow-hidden border-border/60">
@@ -325,14 +334,20 @@ const Overview = () => {
                     {stats.total} total submissions are in your pipeline
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Live snapshot from reports, bounty activity, Most Wanted, and customer feedback.
+                    {canSeePlatformCases
+                      ? 'Live snapshot from reports, bounty activity, Most Wanted, and customer feedback.'
+                      : 'Live snapshot from your organization reports and customer feedback.'}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   {[
                     { label: 'Reports', value: stats.reports, icon: FileText },
-                    { label: 'Bounties', value: stats.bounties, icon: Award },
-                    { label: 'Most Wanted', value: stats.mostWanted, icon: ScanSearch },
+                    ...(canSeePlatformCases
+                      ? [
+                          { label: 'Bounties', value: stats.bounties, icon: Award },
+                          { label: 'Most Wanted', value: stats.mostWanted, icon: ScanSearch },
+                        ]
+                      : []),
                     { label: 'Feedback', value: stats.feedback, icon: MessageSquare },
                   ].map((metric) => (
                     <div key={metric.label} className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
@@ -350,7 +365,11 @@ const Overview = () => {
             <StatCard
               title="Total Intake"
               value={stats.total}
-              subtitle="All reports, bounties, Most Wanted, and feedback"
+              subtitle={
+                canSeePlatformCases
+                  ? 'All reports, bounties, Most Wanted, and feedback'
+                  : 'Organization reports and feedback'
+              }
               icon={<Activity className="h-4 w-4" />}
               link="/admin/reports"
             />
@@ -386,9 +405,13 @@ const Overview = () => {
                   <TrendingUp className="h-4 w-4 text-primary" />
                   Submission Flow (Last 30 Days)
                 </CardTitle>
-                <CardDescription>Daily intake split by reports, bounties, Most Wanted, and feedback.</CardDescription>
-              </CardHeader>
-              <CardContent className="pl-0 pr-4">
+                  <CardDescription>
+                    {canSeePlatformCases
+                      ? 'Daily intake split by reports, bounties, Most Wanted, and feedback.'
+                      : 'Daily intake split by reports and customer feedback.'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pl-0 pr-4">
                 <ResponsiveContainer width="100%" height={320}>
                   <ReBarChart data={reportsOverTime}>
                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.15} />
@@ -397,8 +420,8 @@ const Overview = () => {
                     <Tooltip />
                     <Legend />
                     <Bar dataKey="reports" stackId="a" fill="#ff5100" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="bounties" stackId="a" fill="#8b5cf6" />
-                    <Bar dataKey="mostWanted" name="Most Wanted" stackId="a" fill="#ef4444" />
+                    {canSeePlatformCases && <Bar dataKey="bounties" stackId="a" fill="#8b5cf6" />}
+                    {canSeePlatformCases && <Bar dataKey="mostWanted" name="Most Wanted" stackId="a" fill="#ef4444" />}
                     <Bar dataKey="feedback" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </ReBarChart>
                 </ResponsiveContainer>
@@ -449,8 +472,12 @@ const Overview = () => {
                     <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
                       {[
                         { key: 'reports', label: 'Reports', color: '#ff5100' },
-                        { key: 'bounties', label: 'Bounties', color: '#8b5cf6' },
-                        { key: 'mostWanted', label: 'Most Wanted', color: '#ef4444' },
+                        ...(canSeePlatformCases
+                          ? [
+                              { key: 'bounties', label: 'Bounties', color: '#8b5cf6' },
+                              { key: 'mostWanted', label: 'Most Wanted', color: '#ef4444' },
+                            ]
+                          : []),
                         { key: 'feedback', label: 'Feedback', color: '#3b82f6' },
                       ].map((item) => (
                         <span key={item.key} className="inline-flex items-center gap-1.5">
@@ -498,8 +525,8 @@ const Overview = () => {
                           }}
                         />
                         <Bar dataKey="reports" name="Reports" stackId="mix" fill="#ff5100" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="bounties" name="Bounties" stackId="mix" fill="#8b5cf6" />
-                        <Bar dataKey="mostWanted" name="Most Wanted" stackId="mix" fill="#ef4444" />
+                        {canSeePlatformCases && <Bar dataKey="bounties" name="Bounties" stackId="mix" fill="#8b5cf6" />}
+                        {canSeePlatformCases && <Bar dataKey="mostWanted" name="Most Wanted" stackId="mix" fill="#ef4444" />}
                         <Bar dataKey="feedback" name="Feedback" stackId="mix" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                       </ReBarChart>
                     </ResponsiveContainer>
@@ -553,12 +580,15 @@ const Overview = () => {
             </Card>
           </div>
 
-          {canSeeAdvancedFeatures && (
-            <div className="grid gap-4 grid-cols-1 xl:grid-cols-12">
+          <div className="grid gap-4 grid-cols-1 xl:grid-cols-12">
               <Card className="xl:col-span-8 border-border/60">
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest events across reports, bounties, Most Wanted, and feedback.</CardDescription>
+                  <CardDescription>
+                    {canSeePlatformCases
+                      ? 'Latest events across reports, bounties, Most Wanted, and feedback.'
+                      : 'Latest events across your organization reports and feedback.'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -631,18 +661,21 @@ const Overview = () => {
                 </CardContent>
               </Card>
             </div>
-          )}
 
           <Card className="border-border/60">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Jump directly to the admin workstream you need.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5">
+            <CardContent className={`grid gap-3 grid-cols-1 sm:grid-cols-2 ${canSeePlatformCases ? 'xl:grid-cols-5' : 'xl:grid-cols-3'}`}>
               {[
                 { title: 'Review Reports', href: '/admin/reports', icon: FileText, hint: 'Investigate active report submissions' },
-                { title: 'Manage Bounties', href: '/admin/bounties', icon: Award, hint: 'Track placed bounties and linked tips' },
-                { title: 'Most Wanted', href: '/admin/most-wanted', icon: ScanSearch, hint: 'Review alerts and linked sighting tips' },
+                ...(canSeePlatformCases
+                  ? [
+                      { title: 'Manage Bounties', href: '/admin/bounties', icon: Award, hint: 'Track placed bounties and linked tips' },
+                      { title: 'Most Wanted', href: '/admin/most-wanted', icon: ScanSearch, hint: 'Review alerts and linked sighting tips' },
+                    ]
+                  : []),
                 { title: 'Customer Feedback', href: '/admin/customer-feedback', icon: MessageSquare, hint: 'Respond to user sentiment and issues' },
                 { title: 'Create News', href: '/admin/news-editor', icon: PlusCircle, hint: 'Publish updates to keep users informed' },
               ].map((action) => (

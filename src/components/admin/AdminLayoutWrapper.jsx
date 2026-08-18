@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { AdminDataProvider } from '@/contexts/AdminDataContext';
 import DashboardLayout from './DashboardLayout';
+import { isPlatformAdmin, isPlatformExclusivePage } from '@/lib/platformAccess';
 
 // Stable map — must live outside the component so it is not a new object every render.
 const ROUTE_TO_PAGE_NAME = {
@@ -62,19 +63,32 @@ const AdminLayoutWrapper = ({ children }) => {
         }
 
         // Check permissions for the specific page
+        if (isPlatformExclusivePage(pageName) && !isPlatformAdmin(profile)) {
+          router.replace('/admin/overview');
+          return;
+        }
+        if (isPlatformExclusivePage(pageName) && isPlatformAdmin(profile)) {
+          return;
+        }
         if (pageName === 'Trashed Report') {
           const allowedRoles = ['super_admin', 'executive_admin'];
-          if (!allowedRoles.includes(profile.user_type)) {
-            window.location.replace('/admin/overview');
+          if (!allowedRoles.includes(profile.user_type) && pathname !== '/admin/overview') {
+            router.replace('/admin/overview');
             return;
           }
-        } else if (!isSuperAdmin && pageName && !permissions[pageName]) {
-          window.location.replace('/admin/overview');
+        } else if (
+          !isSuperAdmin &&
+          pageName &&
+          pageName !== 'Overview' &&
+          !permissions[pageName] &&
+          pathname !== '/admin/overview'
+        ) {
+          router.replace('/admin/overview');
           return;
         }
       }
     }
-  }, [loading, user, profile, permissions, pathname]);
+  }, [loading, user, profile, permissions, pathname, router]);
 
   useEffect(() => {
     if (!loading && !user) {

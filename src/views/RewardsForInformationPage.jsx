@@ -29,19 +29,19 @@ const RewardsForInformationPage = () => {
     {
       id: 3,
       title: 'Request Your Reward',
-      description: 'Once your report is resolved, the "Request Reward" button becomes active. Click it to request your PayCode for the verified information.',
+      description: 'Once your report is resolved, the organization can request a reward. WhistleBlower.ng reviews and approves it, then issues your Monnify Paycode.',
       icon: Award,
     },
     {
       id: 4,
       title: 'Reveal Your PayCode',
-      description: 'We generate a unique PayCode for your reward. Click "Reveal PayCode" to see your secure withdrawal code.',
+      description: 'When approved, your unique Monnify Paycode appears on the report tracking page. Copy it securely from there.',
       icon: CreditCard,
     },
     {
       id: 5,
-      title: 'Withdraw at ATM/POS',
-      description: 'Copy your PayCode and visit any ATM or POS agent with PayCode features. Withdraw your cash reward instantly - no account details required.',
+      title: 'Withdraw at Moniepoint POS',
+      description: 'Take your Paycode to any Moniepoint POS or agent and withdraw your cash reward instantly — no account details required.',
       icon: MapPin,
     },
   ];
@@ -165,8 +165,8 @@ const RewardsForInformationPage = () => {
     },
     {
       icon: MapPin,
-      title: 'Instant ATM/POS Withdrawal',
-      description: 'Withdraw your reward instantly at any ATM or POS agent with PayCode features across Nigeria. No bank visits required.',
+      title: 'Instant Moniepoint Withdrawal',
+      description: 'Withdraw your reward instantly at any Moniepoint POS or agent across Nigeria. No bank visits required.',
       color: '#00C853'
     },
     {
@@ -181,8 +181,8 @@ const RewardsForInformationPage = () => {
     'Your report must be verified with solid evidence',
     'The criminal/most wanted/bounty target must be caught',
     'Your report status must show as "resolved" on the tracking page',
-    'You must request the reward using the "Request Reward" button',
-    'PayCode must be revealed and used at ATM/POS for withdrawal'
+    'You must have selected reward eligibility when submitting your report',
+    'WhistleBlower.ng must approve the reward and issue a Monnify Paycode for Moniepoint withdrawal'
   ];
 
   // Generate SEO metadata
@@ -334,11 +334,11 @@ const RewardsForInformationPage = () => {
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30  flex items-center justify-center mr-3">
                         <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <h4 className="font-semibold text-lg">ATM Withdrawal</h4>
+                      <h4 className="font-semibold text-lg">Moniepoint Agents</h4>
                     </div>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      Walk into any ATM with PayCode features, enter your code, and withdraw instantly. 
-                      Available at major banks nationwide.
+                      Walk into any Moniepoint agent location, present your Paycode, and withdraw instantly.
+                      Agents are available nationwide.
                     </p>
                   </PayCodeCard>
                 </motion.div>
@@ -355,10 +355,10 @@ const RewardsForInformationPage = () => {
                       <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30  flex items-center justify-center mr-3">
                         <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
                       </div>
-                      <h4 className="font-semibold text-lg">POS Agents</h4>
+                      <h4 className="font-semibold text-lg">Moniepoint POS</h4>
                     </div>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      Visit any POS agent with PayCode capability. They're everywhere - markets, shops, 
+                      Visit any Moniepoint POS terminal. They're everywhere - markets, shops,
                       and street corners across Nigeria.
                     </p>
                   </PayCodeCard>
@@ -549,11 +549,11 @@ const RewardsForInformationPage = () => {
             />
             <FAQItem 
               question="How does the PayCode system work?"
-              answer="Once your report is resolved, you can request a reward which generates a unique PayCode. Click 'Reveal PayCode' to see your code, then copy it and use it at any ATM or POS agent with PayCode features to withdraw your cash reward instantly and anonymously."
+              answer="Once your report is resolved and WhistleBlower.ng approves the reward, a unique Monnify Paycode is issued and shown on your tracking page. Copy the code and redeem it at any Moniepoint POS or agent to withdraw your cash reward instantly and anonymously."
             />
             <FAQItem 
               question="Do I need to provide identification when withdrawing my reward?"
-              answer="No. Your PayCode withdrawal is completely untraceable. No bank account details, personal information, or identification is required. Simply copy your PayCode and use it at any ATM or POS agent with PayCode features to withdraw your cash reward anonymously."
+              answer="No. Your Paycode withdrawal does not require a bank account, personal information, or identification. Simply present your Monnify Paycode at any Moniepoint POS or agent to withdraw your cash reward."
             />
           </div>
         </div>

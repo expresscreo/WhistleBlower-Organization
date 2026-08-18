@@ -80,33 +80,6 @@ export function reporterActivityEmail({ reportId, activity, adminUrl }) {
   };
 }
 
-export function statusUpdateEmail({ reportId, status, trackUrl }) {
-  const body = `
-    <p>Your report <strong>${escapeHtml(reportId)}</strong> status has been updated.</p>
-    <p><strong>New status:</strong> ${escapeHtml(status)}</p>
-    <p>Sign in with your report ID and password to view details.</p>
-    ${button(trackUrl, 'Track your report')}
-  `;
-  return {
-    subject: `Report ${reportId} status: ${status}`,
-    html: layout({ title: 'Status update', body }),
-  };
-}
-
-export function adminMessageEmail({ reportId, messagePreview, trackUrl }) {
-  const body = `
-    <p>You have a new message about report <strong>${escapeHtml(reportId)}</strong>.</p>
-    <p style="white-space:pre-wrap;border-left:3px solid #e11d48;padding-left:12px;color:#3f3f46;">
-      ${escapeHtml(messagePreview)}
-    </p>
-    ${button(trackUrl, 'View message')}
-  `;
-  return {
-    subject: `New message on report ${reportId}`,
-    html: layout({ title: 'New message', body }),
-  };
-}
-
 export function rewardRequestEmail({ reportId, amount, organizationName, adminUrl }) {
   const body = `
     <p>A reward has been requested for report <strong>${escapeHtml(reportId)}</strong>.</p>
@@ -120,16 +93,60 @@ export function rewardRequestEmail({ reportId, amount, organizationName, adminUr
   };
 }
 
-export function rewardPaycodeEmail({ reportId, paycode, trackUrl }) {
+function formatNaira(amount) {
+  const value = Number(amount);
+  return Number.isFinite(value) ? `₦${value.toLocaleString()}` : '—';
+}
+
+/** Mask a paycode for email, e.g. 17607732 → xxxxx732 */
+function maskPaycode(paycode) {
+  const value = String(paycode || '').trim();
+  if (!value) return '—';
+  const visible = Math.min(3, value.length);
+  return `${'x'.repeat(value.length - visible)}${value.slice(-visible)}`;
+}
+
+export function rewardPaycodeGeneratedEmail({ reportId, paycode, amount, organizationName, adminUrl }) {
   const body = `
-    <p>Your reward paycode for report <strong>${escapeHtml(reportId)}</strong> is ready.</p>
-    <p style="font-size:20px;font-weight:bold;letter-spacing:2px;">${escapeHtml(paycode)}</p>
-    <p>Use your report ID and password to track your report and claim instructions.</p>
-    ${button(trackUrl, 'Track your report')}
+    <p>A Monnify reward paycode has been generated for report <strong>${escapeHtml(reportId)}</strong>.</p>
+    <p><strong>Organization:</strong> ${escapeHtml(organizationName || 'N/A')}</p>
+    <p><strong>Amount:</strong> ${formatNaira(amount)}</p>
+    <p><strong>Paycode:</strong> ${escapeHtml(maskPaycode(paycode))}</p>
+    <p>The reporter can redeem this at any Moniepoint POS or agent until it expires.</p>
+    ${button(adminUrl, 'View report')}
   `;
   return {
-    subject: `Reward paycode for report ${reportId}`,
-    html: layout({ title: 'Reward paycode', body }),
+    subject: `Paycode generated for report ${reportId}`,
+    html: layout({ title: 'Paycode generated', body }),
+  };
+}
+
+export function rewardPaycodeRedeemedEmail({ reportId, paycode, amount, organizationName, adminUrl }) {
+  const body = `
+    <p>The reward paycode for report <strong>${escapeHtml(reportId)}</strong> has been redeemed at a Moniepoint agent.</p>
+    <p><strong>Organization:</strong> ${escapeHtml(organizationName || 'N/A')}</p>
+    <p><strong>Amount:</strong> ${formatNaira(amount)}</p>
+    <p><strong>Paycode:</strong> ${escapeHtml(maskPaycode(paycode))}</p>
+    ${button(adminUrl, 'View report')}
+  `;
+  return {
+    subject: `Paycode redeemed for report ${reportId}`,
+    html: layout({ title: 'Paycode redeemed', body }),
+  };
+}
+
+export function rewardPaycodeExpiredEmail({ reportId, paycode, amount, organizationName, adminUrl }) {
+  const body = `
+    <p>The reward paycode for report <strong>${escapeHtml(reportId)}</strong> has expired unused.</p>
+    <p><strong>Organization:</strong> ${escapeHtml(organizationName || 'N/A')}</p>
+    <p><strong>Amount:</strong> ${formatNaira(amount)}</p>
+    <p><strong>Paycode:</strong> ${escapeHtml(maskPaycode(paycode))}</p>
+    <p>You may need to issue a new paycode for this reporter.</p>
+    ${button(adminUrl, 'View report')}
+  `;
+  return {
+    subject: `Paycode expired for report ${reportId}`,
+    html: layout({ title: 'Paycode expired', body }),
   };
 }
 

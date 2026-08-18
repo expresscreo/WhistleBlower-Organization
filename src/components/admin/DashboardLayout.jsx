@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import NavNotificationBadge from '@/components/admin/NavNotificationBadge';
 import { useAdminNavNotifications } from '@/hooks/useAdminNavNotifications';
 import { PAGE_NAME_TO_NOTIFICATION_KEY } from '@/lib/adminNavNotifications';
+import { isPlatformAdmin, PLATFORM_NAV_PAGE_NAMES } from '@/lib/platformAccess';
 
 import { 
     LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, 
@@ -54,19 +55,19 @@ const DashboardLayout = ({ children }) => {
     ];
     
     const isSuperAdmin = profile?.user_type === 'super_admin';
+    const canSeePlatformPages = isPlatformAdmin(profile);
     const canSeeTrashed = isSuperAdmin || profile?.user_type === 'executive_admin';
     const canCreateNewsPost = Boolean(profile && (isSuperAdmin || permissions['News Editor']));
     
     // Show filtered links immediately - if we don't have profile data yet, show basic links
     const visibleNavLinks = profile ? navLinks.filter(link => {
+        if (link.pageName === 'Overview') return true;
+        if (PLATFORM_NAV_PAGE_NAMES.includes(link.pageName)) return canSeePlatformPages;
         if (link.pageName === 'Trashed Report') return canSeeTrashed;
         return isSuperAdmin || permissions[link.pageName];
     }) : [
-        // Show basic navigation links while profile loads
         { href: '/admin/overview', label: 'Overview', icon: LayoutDashboard, pageName: 'Overview' },
         { href: '/admin/reports', label: 'Reports', icon: FileText, pageName: 'Reports' },
-        { href: '/admin/bounties', label: 'Bounties', icon: Award, pageName: 'Bounties' },
-        { href: '/admin/most-wanted', label: 'Most Wanted', icon: ScanSearch, pageName: 'Most Wanted' },
         { href: '/admin/settings', label: 'Settings', icon: Settings, pageName: 'Settings' },
     ];
 

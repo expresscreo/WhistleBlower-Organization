@@ -1,19 +1,15 @@
 import { getServiceSupabase } from '@/lib/serverSupabase';
-import {
-  adminReportUrl,
-  emailConfig,
-  reportTrackUrl,
-} from './config';
+import { adminReportUrl, emailConfig } from './config';
 import { sendEmail } from './resend';
 import {
-  adminMessageEmail,
   contactAutoReply,
   contactFormEmail,
   newReportEmail,
   reporterActivityEmail,
-  rewardPaycodeEmail,
+  rewardPaycodeExpiredEmail,
+  rewardPaycodeGeneratedEmail,
+  rewardPaycodeRedeemedEmail,
   rewardRequestEmail,
-  statusUpdateEmail,
 } from './templates';
 
 const ORG_RECIPIENT_ROLES = [
@@ -62,11 +58,25 @@ async function getRecipientEmails(supabase, { organizationId }) {
   return [...new Set((data || []).map((user) => user.email).filter(Boolean))];
 }
 
+// Paycode lifecycle events (generated / redeemed / expired) are strictly a
+// WhistleBlower.ng (platform) concern — approval and issuance is a
+// super-admin-only flow, so only super admins are notified, not
+// organization staff or executive_admin.
+async function getSuperAdminEmails(supabase) {
+  const { data } = await supabase
+    .from('users')
+    .select('email')
+    .eq('user_type', 'super_admin')
+    .not('email', 'is', null);
+
+  return [...new Set((data || []).map((user) => user.email).filter(Boolean))];
+}
+
 async function getReportByPublicId(supabase, reportId) {
   const { data, error } = await supabase
     .from('reports')
     .select(
-      'id, report_id, title, category, organization_id, organization_name, contact_email, status, created_at, submitted_at, organizations(name)',
+      'id, report_id, title, category, organization_id, organization_name, status, created_at, organizations(name)',
     )
     .eq('report_id', reportId)
     .maybeSingle();
@@ -79,7 +89,7 @@ async function getReportByUuid(supabase, reportUuid) {
   const { data, error } = await supabase
     .from('reports')
     .select(
-      'id, report_id, title, category, organization_id, organization_name, contact_email, status, reward_requested_amount, organizations(name)',
+      'id, report_id, title, category, organization_id, organization_name, status, reward_requested_amount, reward_paycode, organizations(name)',
     )
     .eq('id', reportUuid)
     .maybeSingle();
@@ -123,7 +133,7 @@ export async function notifyNewReport(reportId) {
     return { ok: false, skipped: true, reason: 'report_not_found' };
   }
 
-  const createdAt = new Date(report.submitted_at || report.created_at || 0);
+  const createdAt = new Date(report.created_at || 0);
   if (Date.now() - createdAt.getTime() > 10 * 60 * 1000) {
     return { ok: false, skipped: true, reason: 'report_too_old' };
   }
@@ -171,54 +181,16 @@ export async function notifyReporterActivity({ report, activity }) {
   });
 }
 
-export async function notifyStatusUpdate(reportUuid, status) {
-  const supabase = getServiceSupabase();
-  const settings = await getAppSettings(supabase);
-  if (!settings.notification_status_update) {
-    return { ok: false, skipped: true, reason: 'disabled' };
-  }
-
-  const report = await getReportByUuid(supabase, reportUuid);
-  if (!report?.contact_email) {
-    return { ok: false, skipped: true, reason: 'no_reporter_email' };
-  }
-
-  const template = statusUpdateEmail({
-    reportId: report.report_id,
-    status,
-    trackUrl: reportTrackUrl(report.report_id),
-  });
-
-  return sendEmail({
-    to: report.contact_email,
-    subject: template.subject,
-    html: template.html,
-  });
+// Reporters never provide an email address (reports are tracked via report ID +
+// password only, by design, to preserve anonymity), so there is no reporter
+// inbox to notify here. These are kept as no-ops so existing call sites and
+// the /api/notifications dispatcher continue to work unchanged.
+export async function notifyStatusUpdate() {
+  return { ok: false, skipped: true, reason: 'no_reporter_email' };
 }
 
-export async function notifyAdminMessage(reportUuid, messagePreview) {
-  const supabase = getServiceSupabase();
-  const settings = await getAppSettings(supabase);
-  if (!settings.notification_new_message) {
-    return { ok: false, skipped: true, reason: 'disabled' };
-  }
-
-  const report = await getReportByUuid(supabase, reportUuid);
-  if (!report?.contact_email) {
-    return { ok: false, skipped: true, reason: 'no_reporter_email' };
-  }
-
-  const template = adminMessageEmail({
-    reportId: report.report_id,
-    messagePreview,
-    trackUrl: reportTrackUrl(report.report_id),
-  });
-
-  return sendEmail({
-    to: report.contact_email,
-    subject: template.subject,
-    html: template.html,
-  });
+export async function notifyAdminMessage() {
+  return { ok: false, skipped: true, reason: 'no_reporter_email' };
 }
 
 export async function notifyRewardRequest(reportUuid) {
@@ -249,21 +221,86 @@ export async function notifyRewardRequest(reportUuid) {
   });
 }
 
-export async function notifyRewardPaycode(reportUuid, paycode) {
+// Reporters never provide an email address, so paycodes are only ever
+// delivered via the Track Report page. Instead, WhistleBlower.ng super
+// admins are notified at each stage of the paycode lifecycle below.
+
+export async function notifyRewardPaycodeGenerated(reportUuid) {
   const supabase = getServiceSupabase();
   const report = await getReportByUuid(supabase, reportUuid);
-  if (!report?.contact_email) {
-    return { ok: false, skipped: true, reason: 'no_reporter_email' };
+  if (!report) {
+    return { ok: false, skipped: true, reason: 'report_not_found' };
   }
 
-  const template = rewardPaycodeEmail({
+  const recipients = await getSuperAdminEmails(supabase);
+  if (recipients.length === 0) {
+    return { ok: false, skipped: true, reason: 'no_recipients' };
+  }
+
+  const template = rewardPaycodeGeneratedEmail({
     reportId: report.report_id,
-    paycode,
-    trackUrl: reportTrackUrl(report.report_id),
+    paycode: report.reward_paycode,
+    amount: report.reward_requested_amount,
+    organizationName: organizationLabel(report),
+    adminUrl: adminReportUrl(report.id),
   });
 
   return sendEmail({
-    to: report.contact_email,
+    to: recipients,
+    subject: template.subject,
+    html: template.html,
+  });
+}
+
+export async function notifyRewardPaycodeRedeemed(reportUuid) {
+  const supabase = getServiceSupabase();
+  const report = await getReportByUuid(supabase, reportUuid);
+  if (!report) {
+    return { ok: false, skipped: true, reason: 'report_not_found' };
+  }
+
+  const recipients = await getSuperAdminEmails(supabase);
+  if (recipients.length === 0) {
+    return { ok: false, skipped: true, reason: 'no_recipients' };
+  }
+
+  const template = rewardPaycodeRedeemedEmail({
+    reportId: report.report_id,
+    paycode: report.reward_paycode,
+    amount: report.reward_requested_amount,
+    organizationName: organizationLabel(report),
+    adminUrl: adminReportUrl(report.id),
+  });
+
+  return sendEmail({
+    to: recipients,
+    subject: template.subject,
+    html: template.html,
+  });
+}
+
+export async function notifyRewardPaycodeExpired(reportUuid) {
+  const supabase = getServiceSupabase();
+  const report = await getReportByUuid(supabase, reportUuid);
+  if (!report) {
+    return { ok: false, skipped: true, reason: 'report_not_found' };
+  }
+
+  const recipients = await getSuperAdminEmails(supabase);
+  if (recipients.length === 0) {
+    return { ok: false, skipped: true, reason: 'no_recipients' };
+  }
+
+  const template = rewardPaycodeExpiredEmail({
+    reportId: report.report_id,
+    paycode: report.reward_paycode,
+    amount: report.reward_requested_amount,
+    organizationName: organizationLabel(report),
+    adminUrl: adminReportUrl(report.id),
+  });
+
+  return sendEmail({
+    to: recipients,
     subject: template.subject,
     html: template.html,
   });

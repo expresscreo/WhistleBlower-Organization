@@ -16,15 +16,27 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('*, organization:organizations(name, plan_id)')
+          .select('*, plans(name), organization:organizations(name, plan_id, plans(name))')
           .eq('id', sessionUser.id)
           .single();
         
         if (userError) throw userError;
+
+        const planId = userData.organization?.plan_id || userData.plan_id;
+        let planName = userData.organization?.plans?.name || userData.plans?.name || null;
+        if (!planName && planId) {
+          const { data: planRow } = await supabase
+            .from('plans')
+            .select('name')
+            .eq('id', planId)
+            .maybeSingle();
+          planName = planRow?.name || null;
+        }
         
         const userProfile = {
           ...userData,
-          plan_id: userData.organization?.plan_id || userData.plan_id,
+          plan_id: planId,
+          plan_name: planName,
           organizationName: userData.organization?.name,
           organization_id: userData.organization_id
         };

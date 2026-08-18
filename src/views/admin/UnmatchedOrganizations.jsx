@@ -30,7 +30,9 @@ const UnmatchedOrganizations = () => {
       .from('reports')
       .select('id, report_id, organization_name')
       .is('organization_id', null)
-      .not('organization_name', 'is', null);
+      .not('organization_name', 'is', null)
+      .not('category', 'ilike', 'bounty')
+      .not('category', 'ilike', 'most wanted');
     
     if (error) {
       setFetchError(error.message);

@@ -35,8 +35,8 @@ export default function PostDisclaimerSection({ className = '' }) {
                             track your report
                         </Link>{' '}
                         and request your reward once it is marked as resolved. Once approved, you&apos;ll receive a
-                        secure PayCode that can be withdrawn instantly and anonymously at any ATM or POS agent — no
-                        bank account or identification required.
+                        secure Monnify Paycode that can be withdrawn instantly and anonymously at any Moniepoint POS
+                        or agent — no bank account or identification required.
                     </p>
                     <p className="text-muted-foreground mt-3">
                         More details about the rewards process — at the heart of which is ensuring you stay 100%

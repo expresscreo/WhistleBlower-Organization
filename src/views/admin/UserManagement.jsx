@@ -265,6 +265,7 @@ const UserManagement = () => {
   return (
     <>
       <PageHead title="User Management — WhistleBlower.ng" />
+      {(loading || profileLoading) && <NavbarLoader />}
       <div className="space-y-8">
         <PageHeader 
           title="User Management"
@@ -349,12 +350,9 @@ const UserManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {loading || profileLoading ? (
-                    <>
-                      <NavbarLoader />
                       <TableRow><TableCell colSpan="8" className="text-center">
                         {/* Loading indication is handled by NavbarLoader */}
                       </TableCell></TableRow>
-                    </>
                   ) :
                   users.map(user => (
                     <TableRow key={user.id}>

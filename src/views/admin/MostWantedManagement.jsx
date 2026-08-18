@@ -13,6 +13,7 @@ import PageHeader from '@/components/admin/PageHeader';
 import ReportCardMetaFooter from '@/components/admin/ReportCardMetaFooter';
 import { normalizeMostWantedDetails } from '@/lib/mostWantedUtils';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
+import { compareAdminUnread, isAdminUnreadItem } from '@/lib/adminUnread';
 
 const ITEMS_PER_PAGE = 18;
 
@@ -66,11 +67,15 @@ const MostWantedManagement = () => {
     if (filters.type !== 'all') {
       filtered = filtered.filter((item) => item.item_type === filters.type);
     }
+    if (filters.sortBy === 'unread') {
+      filtered = filtered.filter(isAdminUnreadItem);
+    }
 
     const sortDate = (a, b) =>
       new Date(b.created_at || b.submitted_at) - new Date(a.created_at || a.submitted_at);
     if (filters.sortBy === 'newest') filtered.sort(sortDate);
-    else filtered.sort((a, b) => -sortDate(a, b));
+    else if (filters.sortBy === 'oldest') filtered.sort((a, b) => -sortDate(a, b));
+    else if (filters.sortBy === 'unread') filtered.sort(compareAdminUnread);
 
     setTotalPages(Math.ceil(filtered.length / ITEMS_PER_PAGE));
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -134,6 +139,16 @@ const MostWantedManagement = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <Select value={filters.sortBy} onValueChange={(v) => setFilters((f) => ({ ...f, sortBy: v }))}>
+              <SelectTrigger className="h-10 w-full sm:w-[160px] shrink-0">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="unread">Unread Only</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
               <SelectTrigger className="h-10 w-full sm:w-[160px] shrink-0">
                 <SelectValue placeholder="Filter by Status" />
@@ -184,7 +199,15 @@ const MostWantedManagement = () => {
                           </span>
                         )}
                       </div>
-                      <MessageSquare className="w-5 h-5 text-primary hover:text-primary/80 shrink-0" />
+                      <div className="relative shrink-0">
+                        <MessageSquare className="w-5 h-5 text-primary hover:text-primary/80" />
+                        {isAdminUnreadItem(item) && (
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full bg-red-500 opacity-75"></span>
+                            <span className="relative inline-flex h-3 w-3 bg-red-600"></span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <CardTitle className="text-sm font-semibold uppercase text-muted-foreground pt-2">
                       {isAlert
