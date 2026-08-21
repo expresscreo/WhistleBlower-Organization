@@ -16,6 +16,7 @@ import PageContentWrapper from '@/components/admin/PageContentWrapper';
 import PageHeader from '@/components/admin/PageHeader';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
 import { isPlatformExclusivePage, PLATFORM_PLAN_NAMES } from '@/lib/platformAccess';
+import { parseFormattedNumber } from '@/lib/utils';
 const availablePages = ['Overview', 'Reports', 'Customer Feedback', 'Report Details', 'Triage', 'User Management', 'Organizations', 'Unmatched Organization', 'Plan Management', 'Plan Features', 'Audit Logs', 'Billing', 'Settings', 'Trashed Reports', 'Reward', 'Bounties', 'Most Wanted', 'Most Wanted Details', 'News Editor', 'Bounty Details'];
 const allRoles = [{
   key: 'super_admin',
@@ -113,7 +114,10 @@ const PlanManagement = () => {
       const {
         error: limitError
       } = await supabase.from('plans').update({
-        monthly_report_limit: reportLimits[planId]
+        monthly_report_limit: (() => {
+          const parsed = parseFormattedNumber(reportLimits[planId]);
+          return Number.isFinite(parsed) ? parsed : 0;
+        })(),
       }).eq('id', planId);
       if (limitError) throw limitError;
 
@@ -181,7 +185,20 @@ const PlanManagement = () => {
                                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
                                                 <div className="flex items-center gap-2 w-full sm:w-auto">
                                                     <Label htmlFor={`limit-${plan.id}`} className="whitespace-nowrap">Monthly Report Limit</Label>
-                                                    <Input id={`limit-${plan.id}`} type="number" className="w-24 flex-shrink-0" value={reportLimits[plan.id] || 0} onChange={e => handleReportLimitChange(plan.id, parseInt(e.target.value, 10))} />
+                                                    <Input
+                                                      id={`limit-${plan.id}`}
+                                                      type="number"
+                                                      allowNegative
+                                                      className="w-24 flex-shrink-0"
+                                                      value={reportLimits[plan.id] ?? ''}
+                                                      onChange={(e) => {
+                                                        const parsed = parseFormattedNumber(e.target.value);
+                                                        handleReportLimitChange(
+                                                          plan.id,
+                                                          Number.isFinite(parsed) ? parsed : e.target.value === '-' ? '-' : 0,
+                                                        );
+                                                      }}
+                                                    />
                                                 </div>
                                                 <Button onClick={() => handleSaveChanges(plan.id, rolesForPlan)} loading={saving} className="w-full sm:w-auto">
                                                     <Save className="mr-2 h-4 w-4" />

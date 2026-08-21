@@ -1673,6 +1673,8 @@ const NewsEditorPage = () => {
                                                 </div>
                                                 <Input
                                                     id="bounty_amount"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     placeholder="e.g., 50,000"
                                                     value={currentItem.bounty_amount}
                                                     onChange={(e) => {

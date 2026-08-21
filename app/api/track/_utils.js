@@ -115,6 +115,20 @@ export function sanitizeReport(report) {
   return safeReport;
 }
 
+export async function attachReporterPaycode(supabase, report) {
+  if (!report) return report;
+  const { data: paycodeSecret, error } = await supabase
+    .from('reward_paycode_secrets')
+    .select('paycode')
+    .eq('report_id', report.id)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    ...report,
+    reward_paycode: paycodeSecret?.paycode || null,
+  };
+}
+
 export function sanitizeBounty(bounty) {
   if (!bounty) return null;
   const {

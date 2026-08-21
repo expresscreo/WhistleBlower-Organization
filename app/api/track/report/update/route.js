@@ -1,5 +1,6 @@
 import { notifyReporterActivity } from '@/lib/email/notifications';
 import {
+  attachReporterPaycode,
   authenticateReport,
   jsonError,
   normalizeEvidencePaths,
@@ -87,8 +88,10 @@ export async function POST(request) {
       console.error('Report update notification failed:', error);
     });
 
+    const reportWithPaycode = await attachReporterPaycode(supabase, updatedReport);
+
     return Response.json({
-      report: sanitizeReport(updatedReport),
+      report: sanitizeReport(reportWithPaycode),
       update,
     });
   } catch (error) {

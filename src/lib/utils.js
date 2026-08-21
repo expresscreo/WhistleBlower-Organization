@@ -9,30 +9,43 @@ export const sanitizeFilename = (filename) => {
   return filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 };
 
-export const formatNumberWithCommas = (value) => {
+function groupThousands(intPart) {
+  return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+export const formatNumberWithCommas = (value, { allowNegative = false } = {}) => {
   if (value === null || value === undefined) return '';
-  const raw = String(value).replace(/,/g, '');
+  let raw = String(value).replace(/,/g, '').trim();
   if (!raw) return '';
 
+  const negative = allowNegative && raw.startsWith('-');
+  if (raw.startsWith('-')) raw = raw.slice(1);
+  if (!raw) return negative ? '-' : '';
+
+  let formatted;
   if (/^\d+$/.test(raw)) {
-    return raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    formatted = groupThousands(raw);
+  } else {
+    const decimalMatch = raw.match(/^(\d+)\.(\d*)$/);
+    if (decimalMatch) {
+      formatted = `${groupThousands(decimalMatch[1])}.${decimalMatch[2]}`;
+    } else if (/^\d+\.$/.test(raw)) {
+      formatted = `${groupThousands(raw.slice(0, -1))}.`;
+    } else {
+      const digits = raw.replace(/\D/g, '');
+      if (!digits) return negative ? '-' : '';
+      formatted = groupThousands(digits);
+    }
   }
 
-  const decimalMatch = raw.match(/^(\d+)\.(\d*)$/);
-  if (decimalMatch) {
-    const [, intPart, decPart] = decimalMatch;
-    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return `${formattedInt}.${decPart}`;
-  }
+  return negative ? `-${formatted}` : formatted;
+};
 
-  if (/^\d+\.$/.test(raw)) {
-    const intPart = raw.slice(0, -1);
-    return `${intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.`;
-  }
-
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+export const parseFormattedNumber = (value) => {
+  if (value === null || value === undefined || value === '') return NaN;
+  const raw = String(value).replace(/,/g, '').trim();
+  if (!raw || raw === '-' || raw === '.' || raw === '-.') return NaN;
+  return Number(raw);
 };
 
 /** Strip HTML tags and collapse whitespace for plain-text previews. */

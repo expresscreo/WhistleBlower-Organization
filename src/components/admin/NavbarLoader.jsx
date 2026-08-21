@@ -1,15 +1,36 @@
+'use client';
+
 import React from 'react';
+import { useNavigationProgressState, usePageLoading } from '@/contexts/NavigationProgressContext';
 
 /**
- * NavbarLoader - Animated progress bar positioned at the bottom of the admin navbar
- * Uses the website's orange gradient colors for a smooth loading animation
+ * Visual progress bar for the dashboard header. Mount once in the layout.
  */
-const NavbarLoader = () => {
+export const NavbarProgress = () => {
+  const { progress, visible, fading } = useNavigationProgressState();
+  const className = [
+    'navbar-loader',
+    visible ? 'is-visible' : '',
+    fading ? 'is-fading' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="navbar-loader">
-      <div className="navbar-progress-orange"></div>
+    <div className={className} aria-hidden="true">
+      <div
+        className="navbar-progress-orange"
+        style={{ transform: `scaleX(${progress})` }}
+      />
     </div>
   );
+};
+
+/**
+ * Headless registrar — pages keep rendering this while they are loading.
+ * The actual bar lives in the dashboard header.
+ */
+const NavbarLoader = () => {
+  usePageLoading(true);
+  return null;
 };
 
 export default NavbarLoader;

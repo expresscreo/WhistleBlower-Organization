@@ -13,6 +13,8 @@ import NavNotificationBadge from '@/components/admin/NavNotificationBadge';
 import { useAdminNavNotifications } from '@/hooks/useAdminNavNotifications';
 import { PAGE_NAME_TO_NOTIFICATION_KEY } from '@/lib/adminNavNotifications';
 import { isPlatformAdmin, PLATFORM_NAV_PAGE_NAMES } from '@/lib/platformAccess';
+import { useNavigationProgress } from '@/contexts/NavigationProgressContext';
+import { NavbarProgress } from '@/components/admin/NavbarLoader';
 
 import { 
     LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, 
@@ -28,6 +30,7 @@ const DashboardLayout = ({ children }) => {
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
     const { counts: notificationCounts } = useAdminNavNotifications(profile);
+    const { start: startNavigation } = useNavigationProgress();
 
     const handleLogout = async () => {
         await logout();
@@ -128,7 +131,8 @@ const DashboardLayout = ({ children }) => {
                 {sideNav(!isSidebarOpen)}
             </div>
             <div className={cn("flex flex-col transition-all duration-300", isSidebarOpen ? "md:ml-[280px]" : "md:ml-[80px]")}>
-                <header className="flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6 sticky top-0 z-30">
+                <header className="relative flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6 sticky top-0 z-30">
+                    <NavbarProgress />
                     <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                         <SheetTrigger asChild>
                             <Button variant="outline" size="icon" className="shrink-0 md:hidden">
@@ -163,7 +167,10 @@ const DashboardLayout = ({ children }) => {
                             <Button
                                 variant="default"
                                 size="icon"
-                                onClick={() => router.push('/admin/news-editor/create')}
+                                onClick={() => {
+                                    startNavigation();
+                                    router.push('/admin/news-editor/create');
+                                }}
                                 aria-label="Create news post"
                                 title="Create news post"
                             >

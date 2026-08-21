@@ -3,8 +3,8 @@ import NavbarLoader from './NavbarLoader';
 
 /**
  * PageContentWrapper - Handles loading state for individual admin page content
- * This allows the layout (sidebar + topnav) to render immediately while 
- * the NavbarLoader shows at the navbar border during loading
+ * Layout (sidebar + topnav) stays visible while NavbarLoader registers
+ * page loading with the header progress bar.
  */
 const PageContentWrapper = ({ 
   loading, 
@@ -17,7 +17,7 @@ const PageContentWrapper = ({
       <>
         <NavbarLoader />
         <div className={`flex flex-col items-center justify-center min-h-[400px] space-y-4 ${className}`}>
-          {/* Loading indication is handled by NavbarLoader */}
+          {/* Loading indication is handled by the header progress bar */}
         </div>
       </>
     );

@@ -111,4 +111,10 @@ export const serverEnv = {
   monnifyContractCode: process.env.MONNIFY_CONTRACT_CODE,
   monnifyBaseUrl:
     readEnv('MONNIFY_BASE_URL') || 'https://sandbox.monnify.com',
+  monnifyCollectionFeeRate:
+    Number(readEnv('MONNIFY_COLLECTION_FEE_RATE')) || 0.015,
+  monnifyCollectionFeeVatRate:
+    Number(readEnv('MONNIFY_COLLECTION_FEE_VAT_RATE')) || 0.075,
+  monnifyCollectionFeeCap:
+    Number(readEnv('MONNIFY_COLLECTION_FEE_CAP')) || 2000,
 };

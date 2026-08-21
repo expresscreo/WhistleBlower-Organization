@@ -42,8 +42,15 @@ import {
 import { Coins, Copy, Check, Eye, EyeOff, Gift, MoreHorizontal, Wallet } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
 import { format } from 'date-fns';
-import { notifyRewardRequest } from '@/lib/notify';
-import { generateRewardPaycode, initializeRewardDeposit, syncRewardPaycodeExpiry } from '@/lib/rewardAdminApi';
+import {
+  fetchRewardManagementData,
+  generateRewardPaycode,
+  initializeRewardDeposit,
+  requestOrganizationReward,
+  syncRewardPaycodeExpiry,
+} from '@/lib/rewardAdminApi';
+import { calculateDepositQuote, calculateRewardCharge } from '@/lib/rewardFees';
+import { parseFormattedNumber } from '@/lib/utils';
 import { useLoadOnce } from '@/hooks/useLoadOnce';
 import { useCopyFeedback } from '@/hooks/useCopyFeedback';
 
@@ -54,6 +61,10 @@ function organizationName(report) {
 function eligibleReportLabel(report) {
   const title = String(report.title || '').trim() || 'Untitled report';
   return `${report.report_id} — ${title}`;
+}
+
+function hasPaycode(report) {
+  return Boolean(report?.has_paycode || report?.reward_paycode);
 }
 
 function statusMeta(report) {
@@ -67,7 +78,7 @@ function statusMeta(report) {
   if (paycodeStatus === 'CANCELLED') {
     return { label: 'cancelled', className: 'bg-red-100 text-red-800' };
   }
-  if (report.reward_paycode) {
+  if (hasPaycode(report)) {
     return { label: 'approved', className: 'bg-green-100 text-green-800' };
   }
   if (report.reward_status === 'pending_request') {
@@ -149,6 +160,20 @@ const RewardPage = () => {
   const [selectedReward, setSelectedReward] = useState(null);
   const [formData, setFormData] = useState({ report_id: '', amount: '' });
   const [formFeedback, setFormFeedback] = useState({ error: '', success: '' });
+  const rewardQuote = useMemo(() => {
+    try {
+      return formData.amount ? calculateRewardCharge(formData.amount) : null;
+    } catch {
+      return null;
+    }
+  }, [formData.amount]);
+  const depositQuote = useMemo(() => {
+    try {
+      return depositAmount ? calculateDepositQuote(depositAmount) : null;
+    } catch {
+      return null;
+    }
+  }, [depositAmount]);
 
   const isPending = useCallback(
     (key) => pendingActions.has(key),
@@ -176,28 +201,9 @@ const RewardPage = () => {
     try {
       if (isSuperAdmin) {
         syncRewardPaycodeExpiry();
-
-        const { data: rewardRows, error: rewardError } = await supabase
-          .from('reports')
-          .select('*, organizations(name)')
-          .eq('is_anonymous', false)
-          .eq('is_trashed', false)
-          .or('reward_status.eq.pending_request,reward_status.eq.paid,reward_paycode.not.is.null')
-          .order('created_at', { ascending: false });
-        if (rewardError) throw rewardError;
-
-        const { data: eligible, error: eligibleError } = await supabase
-          .from('reports')
-          .select('*, organizations(name)')
-          .eq('status', 'Resolved')
-          .eq('is_anonymous', false)
-          .eq('is_trashed', false)
-          .is('reward_paycode', null)
-          .or('reward_status.is.null,reward_status.eq.rejected,reward_status.eq.pending_request');
-        if (eligibleError) throw eligibleError;
-
-        setRewards((rewardRows || []).filter((row) => !row.is_feedback));
-        setEligibleReports((eligible || []).filter((row) => !row.is_feedback));
+        const rewardData = await fetchRewardManagementData();
+        setRewards(rewardData.rewards || []);
+        setEligibleReports(rewardData.eligibleReports || []);
 
         const { data: orgRows, error: orgError } = await supabase
           .from('organizations')
@@ -240,34 +246,9 @@ const RewardPage = () => {
       if (transError) throw transError;
       setWalletTransactions(transactions || []);
 
-      const { data: rewardRows, error: rewardError } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('organization_id', profile.organization_id)
-        .eq('is_anonymous', false)
-        .eq('is_trashed', false)
-        .or('reward_status.eq.pending_request,reward_status.eq.paid,reward_status.eq.rejected,reward_paycode.not.is.null')
-        .order('created_at', { ascending: false });
-      if (rewardError) throw rewardError;
-
-      const { data: eligible, error: eligibleError } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('organization_id', profile.organization_id)
-        .eq('status', 'Resolved')
-        .eq('is_anonymous', false)
-        .eq('is_trashed', false)
-        .is('reward_paycode', null);
-      if (eligibleError) throw eligibleError;
-
-      setRewards((rewardRows || []).filter((row) => !row.is_feedback));
-      setEligibleReports(
-        (eligible || []).filter((row) => {
-          if (row.is_feedback) return false;
-          const rewardStatus = row.reward_status;
-          return !rewardStatus || rewardStatus === 'rejected';
-        }),
-      );
+      const rewardData = await fetchRewardManagementData();
+      setRewards(rewardData.rewards || []);
+      setEligibleReports(rewardData.eligibleReports || []);
     } catch (error) {
       setFetchError(error.message);
     } finally {
@@ -303,8 +284,8 @@ const RewardPage = () => {
 
   const sortedRewards = useMemo(() => {
     const rank = (report) => {
-      if (report.reward_status === 'pending_request' && !report.reward_paycode) return 0;
-      if (report.reward_paycode && String(report.reward_paycode_status || '').toUpperCase() === 'PENDING') return 1;
+      if (report.reward_status === 'pending_request' && !hasPaycode(report)) return 0;
+      if (hasPaycode(report) && String(report.reward_paycode_status || '').toUpperCase() === 'PENDING') return 1;
       return 2;
     };
     return [...rewards].sort((a, b) => rank(a) - rank(b));
@@ -348,8 +329,8 @@ const RewardPage = () => {
 
     const needsAmount =
       report.reward_status !== 'pending_request' || !report.reward_requested_amount;
-    const amount = needsAmount ? formData.amount : report.reward_requested_amount;
-    if (needsAmount && (!amount || Number(amount) <= 0)) {
+    const amount = needsAmount ? parseFormattedNumber(formData.amount) : Number(report.reward_requested_amount);
+    if (needsAmount && (!Number.isFinite(amount) || amount <= 0)) {
       setFormFeedback({ error: 'Please enter a valid reward amount.', success: '' });
       return;
     }
@@ -376,28 +357,27 @@ const RewardPage = () => {
   const handleRequestReward = (e) => {
     e.preventDefault();
     setFormFeedback({ error: '', success: '' });
-    const amount = Number(formData.amount);
+    const amount = parseFormattedNumber(formData.amount);
     if (!formData.report_id) {
       setFormFeedback({ error: 'Please select a resolved report.', success: '' });
       return;
     }
-    if (!amount || amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       setFormFeedback({ error: 'Please enter a valid reward amount.', success: '' });
       return;
     }
-    if (wallet?.balance < amount) {
-      setFormFeedback({ error: 'Your wallet balance is too low. Please deposit funds.', success: '' });
+    const charge = calculateRewardCharge(amount);
+    if (Number(wallet?.balance || 0) < charge.totalDebit) {
+      setFormFeedback({
+        error: `Your wallet must cover the reward and 10% service charge (${formatNaira(charge.totalDebit)} total).`,
+        success: '',
+      });
       return;
     }
 
     withPendingAction(`request:${formData.report_id}`, async () => {
       try {
-        const { error } = await supabase
-          .from('reports')
-          .update({ reward_requested_amount: amount, reward_status: 'pending_request' })
-          .eq('id', formData.report_id);
-        if (error) throw error;
-        notifyRewardRequest(formData.report_id);
+        await requestOrganizationReward(formData.report_id, amount);
         setFormFeedback({ error: '', success: 'Reward request submitted.' });
         setActionFeedback({ error: '', success: 'Reward request submitted.' });
         setIsRequestOpen(false);
@@ -435,7 +415,7 @@ const RewardPage = () => {
   const handleDepositFunds = (e) => {
     e.preventDefault();
     setDepositFeedback({ error: '', success: '' });
-    const amount = Number(depositAmount);
+    const amount = parseFormattedNumber(depositAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       setDepositFeedback({ error: 'Please enter a valid deposit amount.', success: '' });
       return;
@@ -537,9 +517,11 @@ const RewardPage = () => {
                   <TableRow>
                     <TableHead>Report ID</TableHead>
                     {isSuperAdmin && <TableHead>Organization</TableHead>}
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Reward</TableHead>
+                    <TableHead>Service Fee</TableHead>
+                    <TableHead>Total Debit</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Paycode</TableHead>
+                    {isSuperAdmin && <TableHead>Paycode</TableHead>}
                     <TableHead>Expires</TableHead>
                     <TableHead><span className="sr-only">Actions</span></TableHead>
                   </TableRow>
@@ -547,13 +529,13 @@ const RewardPage = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={isSuperAdmin ? 9 : 7} className="text-center text-muted-foreground">
                         Loading rewards…
                       </TableCell>
                     </TableRow>
                   ) : sortedRewards.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={isSuperAdmin ? 9 : 7} className="text-center text-muted-foreground">
                         No rewards yet.
                       </TableCell>
                     </TableRow>
@@ -569,39 +551,55 @@ const RewardPage = () => {
                           )}
                           <TableCell>
                             {report.reward_requested_amount
-                              ? `₦${Number(report.reward_requested_amount).toLocaleString()}`
+                              ? formatNaira(report.reward_requested_amount)
                               : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {report.reward_service_fee_amount != null
+                              ? formatNaira(report.reward_service_fee_amount)
+                              : report.reward_requested_amount
+                                ? formatNaira(calculateRewardCharge(report.reward_requested_amount).serviceFee)
+                                : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {report.reward_total_debit != null
+                              ? formatNaira(report.reward_total_debit)
+                              : report.reward_requested_amount
+                                ? formatNaira(calculateRewardCharge(report.reward_requested_amount).totalDebit)
+                                : 'N/A'}
                           </TableCell>
                           <TableCell>
                             <StatusBadge report={report} />
                           </TableCell>
-                          <TableCell>
-                            {report.reward_paycode ? (
-                              <div className="flex items-center gap-2">
-                                <code className="rounded bg-muted px-2 py-1 text-sm">
-                                  {isVisible ? report.reward_paycode : '••••••••'}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => togglePaycodeVisibility(report.id)}
-                                >
-                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
-                                {isVisible && (
+                          {isSuperAdmin && (
+                            <TableCell>
+                              {report.reward_paycode ? (
+                                <div className="flex items-center gap-2">
+                                  <code className="rounded bg-muted px-2 py-1 text-sm">
+                                    {isVisible ? report.reward_paycode : '••••••••'}
+                                  </code>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => copy(report.reward_paycode, report.id)}
+                                    onClick={() => togglePaycodeVisibility(report.id)}
                                   >
-                                    {isCopied(report.id) ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                   </Button>
-                                )}
-                              </div>
-                            ) : (
-                              'N/A'
-                            )}
-                          </TableCell>
+                                  {isVisible && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => copy(report.reward_paycode, report.id)}
+                                    >
+                                      {isCopied(report.id) ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : (
+                                'N/A'
+                              )}
+                            </TableCell>
+                          )}
                           <TableCell>
                             {report.reward_paycode_expires_at
                               ? format(new Date(report.reward_paycode_expires_at), 'PP')
@@ -615,7 +613,7 @@ const RewardPage = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                {report.reward_paycode && (
+                                {hasPaycode(report) && (
                                   <DropdownMenuItem
                                     onClick={() => {
                                       setSelectedReward(report);
@@ -625,12 +623,12 @@ const RewardPage = () => {
                                     <Eye className="mr-2 h-4 w-4" /> View Details
                                   </DropdownMenuItem>
                                 )}
-                                {isSuperAdmin && !report.reward_paycode && (
+                                {isSuperAdmin && !hasPaycode(report) && (
                                   <DropdownMenuItem onClick={() => openGenerateDialog(report)}>
                                     <Coins className="mr-2 h-4 w-4" /> Generate Paycode
                                   </DropdownMenuItem>
                                 )}
-                                {isSuperAdmin && report.reward_status === 'pending_request' && !report.reward_paycode && (
+                                {isSuperAdmin && report.reward_status === 'pending_request' && !hasPaycode(report) && (
                                   <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => {
@@ -733,7 +731,9 @@ const RewardPage = () => {
                       <TableRow key={tx.id}>
                         <TableCell>{format(new Date(tx.created_at), 'PPP')}</TableCell>
                         <TableCell>{formatNaira(tx.amount)}</TableCell>
-                        <TableCell>{tx.transaction_type}</TableCell>
+                        <TableCell className="capitalize">
+                          {(tx.transaction_subtype || tx.transaction_type).replace(/_/g, ' ')}
+                        </TableCell>
                         <TableCell>{tx.reference_id}</TableCell>
                       </TableRow>
                     ))}
@@ -790,10 +790,26 @@ const RewardPage = () => {
                 step="0.01"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                placeholder="e.g. 50000"
+                placeholder="e.g. 50,000"
                 required
               />
             </div>
+            {rewardQuote ? (
+              <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Reporter receives</span>
+                  <span>{formatNaira(rewardQuote.rewardAmount)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Platform service charge (10%)</span>
+                  <span>{formatNaira(rewardQuote.serviceFee)}</span>
+                </div>
+                <div className="flex justify-between gap-4 border-t pt-2 font-semibold">
+                  <span>Total wallet debit</span>
+                  <span>{formatNaira(rewardQuote.totalDebit)}</span>
+                </div>
+              </div>
+            ) : null}
             <FieldError message={formFeedback.error} />
             <FieldSuccess message={formFeedback.success} />
             <DialogFooter>
@@ -851,10 +867,26 @@ const RewardPage = () => {
                 step="0.01"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                placeholder="e.g. 50000"
+                placeholder="e.g. 50,000"
                 required
               />
             </div>
+            {rewardQuote ? (
+              <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Reporter receives</span>
+                  <span>{formatNaira(rewardQuote.rewardAmount)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Platform service charge (10%)</span>
+                  <span>{formatNaira(rewardQuote.serviceFee)}</span>
+                </div>
+                <div className="flex justify-between gap-4 border-t pt-2 font-semibold">
+                  <span>Total wallet debit</span>
+                  <span>{formatNaira(rewardQuote.totalDebit)}</span>
+                </div>
+              </div>
+            ) : null}
             <FieldError message={formFeedback.error} />
             <FieldSuccess message={formFeedback.success} />
             <DialogFooter>
@@ -886,19 +918,40 @@ const RewardPage = () => {
                 min="1"
                 step="0.01"
                 value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="e.g. 50000"
+                onChange={(e) => {
+                  setDepositAmount(e.target.value);
+                  setDepositFeedback({ error: '', success: '' });
+                }}
+                placeholder="e.g. 50,000"
                 required
               />
             </div>
+            {depositQuote ? (
+              <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Wallet credit</span>
+                  <span className="font-medium">{formatNaira(depositQuote.walletCredit)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Monnify processing charge</span>
+                  <span className="font-medium">{formatNaira(depositQuote.processingFee)}</span>
+                </div>
+                <div className="flex justify-between gap-4 border-t pt-2">
+                  <span className="font-semibold">Total payable</span>
+                  <span className="font-semibold">{formatNaira(depositQuote.totalPayable)}</span>
+                </div>
+              </div>
+            ) : null}
             <FieldError message={depositFeedback.error} />
             <FieldSuccess message={depositFeedback.success} />
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsDepositOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" loading={isPending('deposit')}>
-                Continue to Monnify
+              <Button type="submit" loading={isPending('deposit')} disabled={!depositQuote}>
+                {depositQuote
+                  ? `Pay ${formatNaira(depositQuote.totalPayable)} with Monnify`
+                  : 'Continue to Monnify'}
               </Button>
             </DialogFooter>
           </form>
@@ -908,10 +961,10 @@ const RewardPage = () => {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent aria-describedby="paycode-details-description">
           <DialogHeader>
-            <DialogTitle>Paycode Details</DialogTitle>
+            <DialogTitle>{isSuperAdmin ? 'Paycode Details' : 'Reward Details'}</DialogTitle>
           </DialogHeader>
           <div id="paycode-details-description" className="sr-only">
-            View complete details of the generated Paycode including the code, amount, and expiration information.
+            View reward amount, service fee, status, and expiration information.
           </div>
           {selectedReward && (
             <div className="space-y-4 py-4">
@@ -921,30 +974,52 @@ const RewardPage = () => {
                   <p className="font-mono text-sm">{selectedReward.report_id}</p>
                 </div>
                 <div>
-                  <Label>Amount</Label>
+                  <Label>Reporter receives</Label>
                   <p className="font-medium">
-                    ₦{Number(selectedReward.reward_requested_amount || 0).toLocaleString()}
+                    {formatNaira(selectedReward.reward_requested_amount)}
                   </p>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Paycode</Label>
-                <div className="flex items-center gap-2">
-                  <Input value={selectedReward.reward_paycode || ''} readOnly className="font-mono" />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copy(selectedReward.reward_paycode, `details-${selectedReward.id}`)}
-                  >
-                    {isCopied(`details-${selectedReward.id}`) ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Service charge (10%)</Label>
+                  <p className="font-medium">
+                    {formatNaira(
+                      selectedReward.reward_service_fee_amount ??
+                      calculateRewardCharge(selectedReward.reward_requested_amount).serviceFee,
                     )}
-                  </Button>
+                  </p>
                 </div>
-                <FieldError message={copyError} />
+                <div>
+                  <Label>Total wallet debit</Label>
+                  <p className="font-medium">
+                    {formatNaira(
+                      selectedReward.reward_total_debit ??
+                      calculateRewardCharge(selectedReward.reward_requested_amount).totalDebit,
+                    )}
+                  </p>
+                </div>
               </div>
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Paycode</Label>
+                  <div className="flex items-center gap-2">
+                    <Input value={selectedReward.reward_paycode || ''} readOnly className="font-mono" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copy(selectedReward.reward_paycode, `details-${selectedReward.id}`)}
+                    >
+                      {isCopied(`details-${selectedReward.id}`) ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <FieldError message={copyError} />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Status</Label>

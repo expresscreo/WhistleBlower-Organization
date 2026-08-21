@@ -3,6 +3,8 @@ import { jsonError, readJson } from '@/lib/httpJson';
 import { requireAuthenticatedAdmin } from '@/lib/email/auth';
 import { emailConfig } from '@/lib/email/config';
 import { initializeDepositTransaction } from '@/lib/monnify/collections';
+import { serverEnv } from '@/lib/env';
+import { calculateDepositQuote } from '@/lib/rewardFees';
 
 export const runtime = 'nodejs';
 
@@ -59,23 +61,71 @@ export async function POST(request) {
     return jsonError('Your account does not have an email address.');
   }
 
+  const feeConfig = {
+    feeRate: serverEnv.monnifyCollectionFeeRate,
+    vatRate: serverEnv.monnifyCollectionFeeVatRate,
+    feeCapNaira: serverEnv.monnifyCollectionFeeCap,
+  };
+  const quote = calculateDepositQuote(amount, feeConfig);
+
+  const { data: intent, error: intentError } = await service
+    .from('wallet_deposit_intents')
+    .insert({
+      organization_id: organization.id,
+      wallet_id: walletId,
+      created_by: profile.id,
+      payment_reference: paymentReference,
+      wallet_credit_amount: quote.walletCredit,
+      processing_fee_amount: quote.processingFee,
+      gross_amount: quote.totalPayable,
+      fee_rate: feeConfig.feeRate,
+      fee_vat_rate: feeConfig.vatRate,
+      fee_cap_amount: feeConfig.feeCapNaira,
+      status: 'pending',
+    })
+    .select('id')
+    .single();
+
+  if (intentError || !intent) {
+    console.error('Reward deposit: intent creation failed', intentError?.message);
+    return jsonError('Could not prepare the organization deposit.', 500);
+  }
+
   try {
     const result = await initializeDepositTransaction({
-      amount,
+      amount: quote.totalPayable,
       paymentReference,
       customerName: organization.name || 'WhistleBlower Organization',
       customerEmail,
       organizationId: organization.id,
+      depositIntentId: intent.id,
+      walletCreditAmount: quote.walletCredit,
       redirectUrl: `${origin}/admin/reward?deposit=success`,
     });
+
+    await service
+      .from('wallet_deposit_intents')
+      .update({
+        monnify_transaction_reference: result.transactionReference,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', intent.id);
 
     return Response.json({
       ok: true,
       checkoutUrl: result.checkoutUrl,
       paymentReference: result.paymentReference,
+      walletCredit: quote.walletCredit,
+      processingFee: quote.processingFee,
+      totalPayable: quote.totalPayable,
     });
   } catch (error) {
     console.error('Reward deposit: Monnify init failed', error?.message || error);
+    await service
+      .from('wallet_deposit_intents')
+      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .eq('id', intent.id)
+      .eq('status', 'pending');
     return jsonError(error?.message || 'Failed to start Monnify deposit.', 502);
   }
 }

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/customSupabaseClient';
+import { parseFormattedNumber } from '@/lib/utils';
 import { FieldError, FieldSuccess, PageErrorBanner } from '@/components/ui/form-feedback';
 import { Save } from 'lucide-react';
 import NavbarLoader from '@/components/admin/NavbarLoader';
@@ -53,6 +54,14 @@ const PlanFeatures = () => {
     const plan = plans.find(p => p.id === planId);
     const { id, features, ...planData } = plan;
     planData.feature_flags = { features };
+    const parsedPrice = parseFormattedNumber(planData.price);
+    const parsedLimit = parseFormattedNumber(planData.report_limit);
+    if (planData.price !== '' && planData.price != null) {
+      planData.price = Number.isFinite(parsedPrice) ? parsedPrice : planData.price;
+    }
+    if (planData.report_limit !== '' && planData.report_limit != null) {
+      planData.report_limit = Number.isFinite(parsedLimit) ? parsedLimit : planData.report_limit;
+    }
 
     setPlanFeedback((prev) => ({ ...prev, [planId]: { error: '', success: '' } }));
     setSavingPlanId(planId);
@@ -98,11 +107,20 @@ const PlanFeatures = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Price (Numeric)</Label>
-                      <Input type="number" value={plan.price || ''} onChange={e => handlePlanChange(plan.id, 'price', e.target.value)} />
+                      <Input
+                        type="number"
+                        value={plan.price || ''}
+                        onChange={e => handlePlanChange(plan.id, 'price', e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Report Limit (-1 for unlimited)</Label>
-                      <Input type="number" value={plan.report_limit || ''} onChange={e => handlePlanChange(plan.id, 'report_limit', e.target.value)} />
+                      <Input
+                        type="number"
+                        allowNegative
+                        value={plan.report_limit ?? ''}
+                        onChange={e => handlePlanChange(plan.id, 'report_limit', e.target.value)}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">

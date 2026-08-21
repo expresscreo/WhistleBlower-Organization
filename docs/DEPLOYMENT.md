@@ -47,6 +47,8 @@ Use your real Supabase project URL and anon key from the Supabase dashboard → 
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` (pk_* only)
 - Server-only: `SUPABASE_SERVICE_ROLE_KEY`, `PAYSTACK_*_SECRET_KEY`, `RESEND_API_KEY`
 - Monnify Paycode + organization deposits: `MONNIFY_API_KEY`, `MONNIFY_SECRET_KEY`, `MONNIFY_CONTRACT_CODE` (from the Monnify dashboard), optional `MONNIFY_BASE_URL` (sandbox default `https://sandbox.monnify.com`; live `https://api.monnify.com`). Register Transaction Completion webhook `https://<your-domain>/api/webhooks/monnify` so deposits and paycode redemptions both notify the app.
+- Monnify collection-fee gross-up (server-only, optional): `MONNIFY_COLLECTION_FEE_RATE` (default `0.015`), `MONNIFY_COLLECTION_FEE_VAT_RATE` (default `0.075`), and `MONNIFY_COLLECTION_FEE_CAP` in NGN (default `2000`). Keep these aligned with the live Monnify contract so organizations cover the gateway charge and the intended wallet amount settles in full.
+- Reward paycodes debit the reporter's full reward plus an uncapped 10% WhistleBlower service charge from the organization ledger. The reporter receives the full requested amount.
 - Optional email overrides: `RESEND_FROM_EMAIL` (default `WhistleBlower.ng <noreply@WhistleBlower.ng>`), `NOTIFICATION_SUPPORT_EMAIL` (default `support@whistleblower.ng`)
 
 ## Static-only hosting

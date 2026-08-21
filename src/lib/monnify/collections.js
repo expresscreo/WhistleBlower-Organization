@@ -46,6 +46,8 @@ export async function initializeDepositTransaction({
   customerName,
   customerEmail,
   organizationId,
+  depositIntentId,
+  walletCreditAmount,
   redirectUrl,
 }) {
   const contractCode = serverEnv.monnifyContractCode?.trim();
@@ -72,7 +74,11 @@ export async function initializeDepositTransaction({
     contractCode,
     redirectUrl,
     paymentMethods: ['CARD', 'ACCOUNT_TRANSFER'],
-    metaData: { organizationId: String(organizationId) },
+    metaData: {
+      organizationId: String(organizationId),
+      depositIntentId: String(depositIntentId),
+      walletCreditAmount: String(walletCreditAmount),
+    },
   };
 
   const response = await fetch(`${baseUrl}/api/v1/merchant/transactions/init-transaction`, {

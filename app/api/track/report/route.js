@@ -1,4 +1,5 @@
 import {
+  attachReporterPaycode,
   authenticateReport,
   jsonError,
   readJson,
@@ -26,6 +27,10 @@ export async function POST(request) {
     // Monnify has no expiry webhook — lazily catch an overdue pending
     // paycode whenever the reporter views their report.
     const syncedReport = await syncReportPaycodeExpiry(supabase, report);
+    const reportWithPaycode = await attachReporterPaycode(supabase, {
+      ...syncedReport,
+      reporter_has_viewed: true,
+    });
 
     const { data: updates, error: updatesError } = await supabase
       .from('report_updates')
@@ -36,7 +41,7 @@ export async function POST(request) {
     if (updatesError) throw updatesError;
 
     return Response.json({
-      report: sanitizeReport({ ...syncedReport, reporter_has_viewed: true }),
+      report: sanitizeReport(reportWithPaycode),
       updates: updates || [],
     });
   } catch (error) {

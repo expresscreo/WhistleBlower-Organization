@@ -89,13 +89,21 @@ async function getReportByUuid(supabase, reportUuid) {
   const { data, error } = await supabase
     .from('reports')
     .select(
-      'id, report_id, title, category, organization_id, organization_name, status, reward_requested_amount, reward_paycode, organizations(name)',
+      'id, report_id, title, category, organization_id, organization_name, status, reward_requested_amount, organizations(name)',
     )
     .eq('id', reportUuid)
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  if (!data) return null;
+
+  const { data: secret, error: secretError } = await supabase
+    .from('reward_paycode_secrets')
+    .select('paycode')
+    .eq('report_id', data.id)
+    .maybeSingle();
+  if (secretError) throw secretError;
+  return { ...data, reward_paycode: secret?.paycode || null };
 }
 
 function organizationLabel(report) {

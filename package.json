@@ -7,6 +7,7 @@
     "dev": "WATCHPACK_POLLING=true next dev",
     "dev:clean": "rm -rf .next && WATCHPACK_POLLING=true next dev",
     "build": "next build && node scripts/generate-news-sitemap.mjs",
+    "test": "node --test src/lib/*.test.js",
     "generate:news-sitemap": "node scripts/generate-news-sitemap.mjs",
     "start": "next start",
     "verify-images": "node tools/verify-images.js"

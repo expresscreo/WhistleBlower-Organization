@@ -319,39 +319,47 @@ body {
     background-color: #121212;
 }
 
-/* NavbarLoader - Animated progress bar for admin dashboard loading states */
+/* NavbarLoader - Progress bar at the bottom of the dashboard header */
 .navbar-loader {
-  position: fixed;
-  top: 64px; /* Exactly below dashboard header (h-16 = 64px) */
+  position: absolute;
   left: 0;
-  width: 100%;
+  right: 0;
+  bottom: 0;
   height: 2px;
-  z-index: 60; /* Higher than other UI elements to ensure visibility */
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
   background-color: transparent;
+  transition: opacity 220ms ease-out;
 }
 
-/* Animated progress bar with orange gradient */
+.navbar-loader.is-visible {
+  opacity: 1;
+}
+
+.navbar-loader.is-visible.is-fading {
+  opacity: 0;
+}
+
 .navbar-progress-orange {
   height: 100%;
-  width: 0%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
   background-image: linear-gradient(90deg, #ff7e4d, #ff5100, #ff4500, #ff6b35, #ff5100, #ff7e4d);
   background-size: 400% 100%;
-  animation: navbar-progress-fill 2s ease-in-out infinite;
+  animation: navbar-progress-shimmer 1.2s linear infinite;
+  transition: transform 200ms ease-out;
 }
 
-/* Smooth fill and gradient animation */
-@keyframes navbar-progress-fill {
-  0% { 
-    width: 0%; 
-    background-position: 0% 50%; 
+@keyframes navbar-progress-shimmer {
+  0% {
+    background-position: 0% 50%;
   }
-  50% { 
-    width: 100%; 
-    background-position: 100% 50%; 
-  }
-  100% { 
-    width: 0%; 
-    background-position: 0% 50%; 
+  100% {
+    background-position: 100% 50%;
   }
 }
 

@@ -12,7 +12,6 @@ export async function creditOrganizationDeposit({
   paymentReference,
   transactionReference,
   metadata,
-  amountHint,
 }) {
   if (!paymentReference) {
     console.error('Monnify deposit: missing paymentReference');
@@ -21,14 +20,23 @@ export async function creditOrganizationDeposit({
 
   const supabase = getServiceSupabase();
 
-  const { data: existing } = await supabase
-    .from('wallet_transactions')
-    .select('id')
-    .eq('reference_id', paymentReference)
+  const { data: intent, error: intentError } = await supabase
+    .from('wallet_deposit_intents')
+    .select(
+      'id, organization_id, payment_reference, gross_amount, wallet_credit_amount, status',
+    )
+    .eq('payment_reference', paymentReference)
     .maybeSingle();
 
-  if (existing) {
+  if (intentError || !intent) {
+    console.error('Monnify deposit: intent lookup failed', intentError?.message);
+    return { ok: false, reason: 'intent_not_found' };
+  }
+  if (intent.status === 'completed') {
     return { ok: true, skipped: true, reason: 'already_credited' };
+  }
+  if (intent.status !== 'pending') {
+    return { ok: false, skipped: true, reason: 'intent_not_pending' };
   }
 
   let verified;
@@ -43,10 +51,12 @@ export async function creditOrganizationDeposit({
     return { ok: false, skipped: true, reason: 'not_paid' };
   }
 
-  const amount = Number(verified.amountPaid || amountHint);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    console.error('Monnify deposit: invalid amount', { paymentReference, amount });
-    return { ok: false, reason: 'invalid_amount' };
+  if (
+    verified.paymentReference &&
+    verified.paymentReference !== intent.payment_reference
+  ) {
+    console.error('Monnify deposit: payment reference mismatch');
+    return { ok: false, reason: 'reference_mismatch' };
   }
 
   const organizationId = parseDepositOrganizationId(
@@ -57,87 +67,43 @@ export async function creditOrganizationDeposit({
     console.error('Monnify deposit: could not resolve organization', { paymentReference });
     return { ok: false, reason: 'missing_organization' };
   }
+  if (organizationId !== intent.organization_id) {
+    console.error('Monnify deposit: organization mismatch');
+    return { ok: false, reason: 'organization_mismatch' };
+  }
 
-  const { data: walletId, error: walletEnsureError } = await supabase.rpc(
-    'get_or_create_wallet',
-    { org_id: organizationId },
+  const grossPaid = Number(verified.amountPaid);
+  if (
+    !Number.isFinite(grossPaid) ||
+    Math.abs(grossPaid - Number(intent.gross_amount)) > 0.01
+  ) {
+    console.error('Monnify deposit: gross amount mismatch', {
+      paymentReference,
+      expected: intent.gross_amount,
+      received: grossPaid,
+    });
+    return { ok: false, reason: 'amount_mismatch' };
+  }
+
+  const { data: completed, error: completionError } = await supabase.rpc(
+    'complete_wallet_deposit',
+    {
+      p_payment_reference: paymentReference,
+      p_monnify_transaction_reference:
+        verified.transactionReference || transactionReference,
+      p_gross_paid: grossPaid,
+    },
   );
-  if (walletEnsureError || !walletId) {
-    console.error('Monnify deposit: wallet ensure failed', walletEnsureError?.message);
-    return { ok: false, reason: 'wallet_missing' };
+
+  if (completionError) {
+    console.error('Monnify deposit: atomic completion failed', completionError.message);
+    return { ok: false, reason: 'completion_failed' };
   }
 
-  async function creditWithLock() {
-    const { data: wallet, error: walletError } = await supabase
-      .from('organization_wallets')
-      .select('id, balance')
-      .eq('id', walletId)
-      .maybeSingle();
-
-    if (walletError || !wallet) {
-      return { wallet: null, credited: null, error: walletError };
-    }
-
-    const newBalance = Number(wallet.balance) + amount;
-    const { data: credited, error: creditError } = await supabase
-      .from('organization_wallets')
-      .update({ balance: newBalance })
-      .eq('id', wallet.id)
-      .eq('balance', wallet.balance)
-      .select('id')
-      .maybeSingle();
-
-    return { wallet, credited, error: creditError };
-  }
-
-  let { wallet, credited, error: creditError } = await creditWithLock();
-  if (!credited && !creditError) {
-    ({ wallet, credited, error: creditError } = await creditWithLock());
-  }
-
-  if (creditError || !credited || !wallet) {
-    console.error(
-      'Monnify deposit: wallet credit failed',
-      creditError?.message || 'balance changed',
-    );
-    return { ok: false, reason: 'credit_failed' };
-  }
-
-  const { error: txError } = await supabase.from('wallet_transactions').insert({
-    wallet_id: wallet.id,
-    amount,
-    transaction_type: 'credit',
-    status: 'completed',
-    reference_id: paymentReference,
-  });
-
-  if (txError) {
-    async function reverseCredit() {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const { data: current } = await supabase
-          .from('organization_wallets')
-          .select('id, balance')
-          .eq('id', wallet.id)
-          .maybeSingle();
-        if (!current) return;
-        const { data: reversed } = await supabase
-          .from('organization_wallets')
-          .update({ balance: Number(current.balance) - amount })
-          .eq('id', wallet.id)
-          .eq('balance', current.balance)
-          .select('id')
-          .maybeSingle();
-        if (reversed) return;
-      }
-    }
-
-    await reverseCredit();
-    if (txError.code === '23505') {
-      return { ok: true, skipped: true, reason: 'already_credited' };
-    }
-    console.error('Monnify deposit: transaction insert failed', txError.message);
-    return { ok: false, reason: 'tx_insert_failed' };
-  }
-
-  return { ok: true, organizationId, amount };
+  return {
+    ok: true,
+    skipped: Boolean(completed?.alreadyCompleted),
+    organizationId,
+    amount: Number(intent.wallet_credit_amount),
+  };
 }

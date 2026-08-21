@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { AdminDataProvider } from '@/contexts/AdminDataContext';
+import { NavigationProgressProvider } from '@/contexts/NavigationProgressContext';
 import DashboardLayout from './DashboardLayout';
 import { isPlatformAdmin, isPlatformExclusivePage } from '@/lib/platformAccess';
 
@@ -104,9 +105,11 @@ const AdminLayoutWrapper = ({ children }) => {
   // Authentication and permission checks happen in the background
   return (
     <AdminDataProvider>
-      <DashboardLayout>
-        {children}
-      </DashboardLayout>
+      <NavigationProgressProvider>
+        <DashboardLayout>
+          {children}
+        </DashboardLayout>
+      </NavigationProgressProvider>
     </AdminDataProvider>
   );
 };

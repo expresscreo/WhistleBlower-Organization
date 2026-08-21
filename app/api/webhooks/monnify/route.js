@@ -43,24 +43,25 @@ async function handlePaycodeRedemption(eventData) {
 
   const supabase = getServiceSupabase();
   const lookup = supabase
-    .from('reports')
-    .select('id')
-    .eq('reward_paycode_status', 'PENDING');
+    .from('reward_paycode_secrets')
+    .select('report_id');
 
-  const { data: report, error } = paycodeReference
+  const { data: secret, error } = paycodeReference
     ? await lookup.eq('monnify_paycode_reference', paycodeReference).maybeSingle()
-    : await lookup.eq('monnify_transaction_reference', transactionReference).maybeSingle();
+    : await lookup
+        .eq('monnify_transaction_reference', transactionReference)
+        .maybeSingle();
 
   if (error) {
     console.error('Monnify webhook: report lookup failed', error.message);
     return;
   }
-  if (!report) return;
+  if (!secret) return;
 
   const { data: updated, error: updateError } = await supabase
     .from('reports')
     .update({ reward_paycode_status: 'SUCCESS' })
-    .eq('id', report.id)
+    .eq('id', secret.report_id)
     .eq('reward_paycode_status', 'PENDING')
     .select('id')
     .maybeSingle();
@@ -71,7 +72,7 @@ async function handlePaycodeRedemption(eventData) {
   }
   if (!updated) return;
 
-  await notifyRewardPaycodeRedeemed(report.id);
+  await notifyRewardPaycodeRedeemed(secret.report_id);
 }
 
 export async function POST(request) {

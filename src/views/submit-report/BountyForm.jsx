@@ -218,7 +218,7 @@ const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
                 <div className="flex items-center justify-center text-white">
                     <Label htmlFor="bounty-amount" className="text-white font-semibold text-lg">SET THE BOUNTY AMOUNT</Label>
                 </div>
-                <Input id="bounty-amount" placeholder="e.g., 50,000" value={formData.bountyAmount} onChange={handleBountyAmountChange} required className="mx-auto max-w-sm text-center text-lg h-12 bg-white text-orange-900 placeholder-orange-700/60 border-[#00000026] focus:border-[#00000026] outline-none focus:outline-none ring-0 focus:ring-0 focus-visible:ring-0 shadow-none focus:shadow-none" />
+                <Input id="bounty-amount" inputMode="decimal" placeholder="e.g., 50,000" value={formData.bountyAmount} onChange={handleBountyAmountChange} required className="mx-auto max-w-sm text-center text-lg h-12 bg-white text-orange-900 placeholder-orange-700/60 border-[#00000026] focus:border-[#00000026] outline-none focus:outline-none ring-0 focus:ring-0 focus-visible:ring-0 shadow-none focus:shadow-none" />
                 <p className="text-xs text-white/80">(Refundable if not approved)</p>
             </div>
             <div className="space-y-4 pt-4 border-t">

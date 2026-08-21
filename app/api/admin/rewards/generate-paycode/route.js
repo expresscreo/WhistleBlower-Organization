@@ -8,6 +8,7 @@ import {
   defaultPaycodeExpiryDate,
   DEFAULT_BENEFICIARY_NAME,
 } from '@/lib/monnify/paycode';
+import { calculateRewardCharge } from '@/lib/rewardFees';
 
 export const runtime = 'nodejs';
 
@@ -48,7 +49,7 @@ export async function POST(request) {
   const { data: report, error: reportError } = await service
     .from('reports')
     .select(
-      'id, report_id, organization_id, status, is_anonymous, reward_status, reward_requested_amount, reward_paycode',
+      'id, report_id, organization_id, status, is_anonymous, reward_status, reward_requested_amount',
     )
     .eq('id', reportUuid)
     .maybeSingle();
@@ -67,7 +68,15 @@ export async function POST(request) {
   if (report.is_anonymous !== false) {
     return jsonError('This reporter did not opt in for a reward.');
   }
-  if (report.reward_paycode) {
+  const { data: existingSecret, error: secretError } = await service
+    .from('reward_paycode_secrets')
+    .select('report_id')
+    .eq('report_id', report.id)
+    .maybeSingle();
+  if (secretError) {
+    return jsonError('Could not verify paycode status.', 500);
+  }
+  if (existingSecret) {
     return jsonError('A paycode has already been issued for this report.');
   }
 
@@ -91,21 +100,9 @@ export async function POST(request) {
     if (!Number.isFinite(amount) || amount <= 0) {
       return jsonError('Please provide a valid reward amount.');
     }
-
-    const { error: amountError } = await service
-      .from('reports')
-      .update({
-        reward_requested_amount: amount,
-        reward_status: 'pending_request',
-      })
-      .eq('id', report.id)
-      .is('reward_paycode', null);
-
-    if (amountError) {
-      console.error('Reward generate-paycode: failed to set amount', amountError.message);
-      return jsonError('Could not save reward amount.', 500);
-    }
   }
+
+  const charge = calculateRewardCharge(amount);
 
   if (!report.organization_id) {
     return jsonError('Report is not linked to an organization.');
@@ -124,8 +121,10 @@ export async function POST(request) {
   if (!wallet) {
     return jsonError('Organization wallet not found.');
   }
-  if (Number(wallet.balance) < amount) {
-    return jsonError('Organization has insufficient wallet funds.');
+  if (Number(wallet.balance) < charge.totalDebit) {
+    return jsonError(
+      `Organization needs ₦${charge.totalDebit.toLocaleString()} for the reward and 10% service charge.`,
+    );
   }
 
   const paycodeReference = `REWARD-${report.report_id}-${randomUUID()}`;
@@ -134,7 +133,7 @@ export async function POST(request) {
   let monnifyResult;
   try {
     monnifyResult = await createPaycode({
-      amount,
+      amount: charge.rewardAmount,
       paycodeReference,
       beneficiaryName: DEFAULT_BENEFICIARY_NAME,
       expiryDate,
@@ -152,8 +151,6 @@ export async function POST(request) {
   }
 
   const expiresAt = parseMonnifyExpiry(monnifyResult.expiryDate);
-  const newBalance = Number(wallet.balance) - amount;
-  const transactionReference = `REWARD-${report.report_id}`;
 
   async function rollbackMonnify(reason) {
     try {
@@ -166,86 +163,35 @@ export async function POST(request) {
     }
   }
 
-  async function restoreWallet() {
-    await service
-      .from('organization_wallets')
-      .update({ balance: Number(wallet.balance) })
-      .eq('id', wallet.id);
-  }
+  const { error: finalizeError } = await service.rpc(
+    'finalize_reward_paycode_issue',
+    {
+      p_report_id: report.id,
+      p_reward_amount: charge.rewardAmount,
+      p_service_fee: charge.serviceFee,
+      p_total_debit: charge.totalDebit,
+      p_service_fee_rate: charge.serviceFeeRate,
+      p_paycode: monnifyResult.paycode,
+      p_paycode_reference: monnifyResult.paycodeReference,
+      p_transaction_reference: monnifyResult.transactionReference,
+      p_expires_at: expiresAt,
+      p_paycode_status: monnifyResult.transactionStatus || 'PENDING',
+    },
+  );
 
-  async function removeWalletTransaction() {
-    await service
-      .from('wallet_transactions')
-      .delete()
-      .eq('wallet_id', wallet.id)
-      .eq('reference_id', transactionReference)
-      .eq('report_id', report.id);
-  }
-
-  // Optimistic lock: only debit if balance is still the value we read
-  const { data: debitedWallet, error: walletUpdateError } = await service
-    .from('organization_wallets')
-    .update({ balance: newBalance })
-    .eq('id', wallet.id)
-    .eq('balance', wallet.balance)
-    .select('id, balance')
-    .maybeSingle();
-
-  if (walletUpdateError || !debitedWallet) {
+  if (finalizeError) {
     console.error(
-      'Reward generate-paycode: wallet debit failed',
-      walletUpdateError?.message || 'balance changed',
+      'Reward generate-paycode: atomic finalization failed',
+      finalizeError.message,
     );
-    await rollbackMonnify('wallet failure');
+    await rollbackMonnify('database finalization failure');
+    const insufficient = /insufficient_wallet_funds/i.test(finalizeError.message);
     return jsonError(
-      walletUpdateError
-        ? 'Failed to debit organization wallet. Paycode was cancelled.'
-        : 'Organization wallet balance changed. Please retry.',
-      walletUpdateError ? 500 : 409,
+      insufficient
+        ? 'Organization wallet balance changed and is now insufficient. Paycode was cancelled.'
+        : 'Failed to record the paycode. Paycode was cancelled.',
+      insufficient ? 409 : 500,
     );
-  }
-
-  const { error: transError } = await service.from('wallet_transactions').insert({
-    wallet_id: wallet.id,
-    report_id: report.id,
-    amount,
-    transaction_type: 'debit',
-    status: 'completed',
-    reference_id: transactionReference,
-  });
-
-  if (transError) {
-    console.error('Reward generate-paycode: transaction insert failed', transError.message);
-    await restoreWallet();
-    await rollbackMonnify('tx failure');
-    return jsonError('Failed to record wallet transaction. Paycode was cancelled.', 500);
-  }
-
-  const { data: updatedReport, error: updateError } = await service
-    .from('reports')
-    .update({
-      reward_paycode: monnifyResult.paycode,
-      reward_status: 'paid',
-      monnify_paycode_reference: monnifyResult.paycodeReference,
-      monnify_transaction_reference: monnifyResult.transactionReference,
-      reward_paycode_expires_at: expiresAt,
-      reward_paycode_status: monnifyResult.transactionStatus || 'PENDING',
-    })
-    .eq('id', report.id)
-    .eq('reward_status', 'pending_request')
-    .is('reward_paycode', null)
-    .select('id')
-    .maybeSingle();
-
-  if (updateError || !updatedReport) {
-    console.error(
-      'Reward generate-paycode: report update failed',
-      updateError?.message || 'already processed',
-    );
-    await removeWalletTransaction();
-    await restoreWallet();
-    await rollbackMonnify('report failure');
-    return jsonError('Failed to save paycode on report. Paycode was cancelled.', 500);
   }
 
   try {
@@ -266,5 +212,8 @@ export async function POST(request) {
     paycodeReference: monnifyResult.paycodeReference,
     expiresAt,
     status: monnifyResult.transactionStatus || 'PENDING',
+    rewardAmount: charge.rewardAmount,
+    serviceFee: charge.serviceFee,
+    totalDebit: charge.totalDebit,
   });
 }
