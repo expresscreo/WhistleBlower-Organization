@@ -18,7 +18,7 @@ import MaximizableThumbnailOverlay, { maximizableThumbnailGroupClass } from '@/c
  
 
 const crimeTypes = [
-    "Theft", "Murderer", "Fraud", "Assault", "Scam", "Sex Predator", "Armed Robbery", "Kidnapping", "Vandalism", "Missing Person", "Cybercrime", "Other"
+    "Armed Robbery", "Assault", "Cybercrime", "Electricity Theft", "Fraud", "Kidnapping", "Missing Person", "Murderer", "Scam", "Sex Predator", "Theft", "Vandalism", "Other"
 ];
 
 const BountyForm = ({ onSubmit, isSubmitting, uploadProgress }) => {
