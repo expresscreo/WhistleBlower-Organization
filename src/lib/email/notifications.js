@@ -168,8 +168,51 @@ export async function notifyNewReport(reportId) {
   });
 }
 
-export async function notifyReporterActivity({ report, activity }) {
-  const recipients = await getRecipientEmails(getServiceSupabase(), {
+const MS_PER_HOUR = 60 * 60 * 1000;
+
+/**
+ * Notify org/platform admins of reporter activity.
+ * Pass throttleHours (e.g. 24) for chat messages so admins only get the first
+ * email, then at most one more every throttleHours.
+ */
+export async function notifyReporterActivity({
+  report,
+  activity,
+  throttleHours = 0,
+}) {
+  const supabase = getServiceSupabase();
+
+  if (throttleHours > 0) {
+    const { data: current, error: throttleError } = await supabase
+      .from('reports')
+      .select('last_reporter_chat_email_at')
+      .eq('id', report.id)
+      .maybeSingle();
+
+    // If the throttle column isn't migrated yet, continue without throttling
+    // rather than blocking all chat emails.
+    if (
+      throttleError &&
+      !/last_reporter_chat_email_at/i.test(throttleError.message || '')
+    ) {
+      throw throttleError;
+    }
+
+    if (!throttleError) {
+      const lastSentAt = current?.last_reporter_chat_email_at
+        ? new Date(current.last_reporter_chat_email_at).getTime()
+        : 0;
+
+      if (
+        lastSentAt &&
+        Date.now() - lastSentAt < throttleHours * MS_PER_HOUR
+      ) {
+        return { ok: false, skipped: true, reason: 'throttled' };
+      }
+    }
+  }
+
+  const recipients = await getRecipientEmails(supabase, {
     organizationId: report.organization_id,
   });
   if (recipients.length === 0) {
@@ -182,11 +225,24 @@ export async function notifyReporterActivity({ report, activity }) {
     adminUrl: adminReportUrl(report.id),
   });
 
-  return sendEmail({
+  const result = await sendEmail({
     to: recipients,
     subject: template.subject,
     html: template.html,
   });
+
+  if (throttleHours > 0 && result.ok) {
+    const { error: stampError } = await supabase
+      .from('reports')
+      .update({ last_reporter_chat_email_at: new Date().toISOString() })
+      .eq('id', report.id);
+
+    if (stampError) {
+      console.error('Failed to stamp reporter chat email throttle:', stampError);
+    }
+  }
+
+  return result;
 }
 
 // Reporters never provide an email address (reports are tracked via report ID +

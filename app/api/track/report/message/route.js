@@ -49,6 +49,8 @@ export async function POST(request) {
     notifyReporterActivity({
       report,
       activity: `New message from reporter:\n\n${message}`,
+      // First chat email only; next email at most once per 24 hours.
+      throttleHours: 24,
     }).catch((error) => {
       console.error('Reporter message notification failed:', error);
     });

@@ -71,7 +71,17 @@ function PaycodeWell({ children, empty }) {
   );
 }
 
+export function isRewardEligibleReport(report) {
+  if (!report || report.is_feedback) return false;
+  const isAnonymous = report.is_anonymous === true || report.isAnonymous === true;
+  return !isAnonymous;
+}
+
 const RewardSection = ({ report }) => {
+  if (!isRewardEligibleReport(report)) {
+    return null;
+  }
+
   const {
     status,
     reward_paycode,

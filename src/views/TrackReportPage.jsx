@@ -13,7 +13,7 @@ import {
 } from '@/lib/trackApi';
 import ReportSummary from '@/views/track-report/ReportSummary';
 import Chat from '@/components/Chat';
-import RewardSection from '@/views/track-report/RewardSection';
+import RewardSection, { isRewardEligibleReport } from '@/views/track-report/RewardSection';
 import UpdateReportDialog from '@/views/track-report/UpdateReportDialog';
 import SEOHead from '@/components/SEOHead';
 import { generateSEOMeta, DEFAULT_SEO_PAGES } from '@/lib/seoUtils';
@@ -221,7 +221,7 @@ const TrackReportPage = ({ reportId, password, initialAuthData, onAuthFailure, o
                     <h1 className="text-2xl sm:text-3xl font-bold break-words">Report Summary</h1>
                 </div>
                 <div className="space-y-8">
-                    {reportData.status === 'Resolved' && !reportData.is_feedback && (
+                    {reportData.status === 'Resolved' && isRewardEligibleReport(reportData) && (
                       <RewardSection report={reportData} />
                     )}
                     <ReportSummary
@@ -231,7 +231,7 @@ const TrackReportPage = ({ reportId, password, initialAuthData, onAuthFailure, o
                       onUpdateReport={() => setUpdateModalOpen(true)}
                       onLogout={handleLogout}
                     />
-                    {reportData.status !== 'Resolved' && !reportData.is_feedback && (
+                    {reportData.status !== 'Resolved' && isRewardEligibleReport(reportData) && (
                       <RewardSection report={reportData} />
                     )}
                     <Chat
