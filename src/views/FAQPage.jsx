@@ -137,7 +137,7 @@ const FAQPage = () => {
             <p className="text-muted-foreground mb-6">Can't find the answer you're looking for? Our support team is here to help.</p>
             <div className="space-y-2">
               <p className="text-sm"><span className="font-semibold">Email:</span> support@whistleblower.ng</p>
-              <p className="text-sm"><span className="font-semibold">Phone:</span> +234 800 WHISTLE</p>
+              <p className="text-sm"><span className="font-semibold">Phone:</span> 08053834017</p>
             </div>
           </motion.div>
         </div>

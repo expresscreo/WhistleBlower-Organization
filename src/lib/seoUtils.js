@@ -129,6 +129,7 @@ export const STRUCTURED_DATA_TEMPLATES = {
       contactPoint: {
         '@type': 'ContactPoint',
         email: 'support@whistleblower.ng',
+        telephone: '+2348053834017',
         contactType: 'Customer Support',
         availableLanguage: ['English'],
       },

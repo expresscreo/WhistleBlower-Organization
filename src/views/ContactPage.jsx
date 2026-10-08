@@ -59,7 +59,7 @@ const ContactPage = () => {
 
     const contactInfo = [
         { icon: Mail, title: 'Email Us', content: 'support@whistleblower.ng', href: 'mailto:support@whistleblower.ng' },
-        { icon: Phone, title: 'Call Us', content: '+234 800 WHISTLE', href: 'tel:+2348009447853' },
+        { icon: Phone, title: 'Call Us', content: '08053834017', href: 'tel:+2348053834017' },
         { icon: MapPin, title: 'Our Office', content: 'Lagos, Nigeria', href: '#' },
     ];
 

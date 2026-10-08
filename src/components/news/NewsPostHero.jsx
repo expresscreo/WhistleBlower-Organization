@@ -86,14 +86,16 @@ export default function NewsPostHero({ post }) {
           </h1>
         </div>
 
-        <div className="border-t border-white/20 pt-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/20 pt-4 text-sm text-white/75">
           <time
-            className="inline-flex items-center gap-2 text-sm text-white/75"
+            className="inline-flex items-center gap-2"
             dateTime={post.created_at}
           >
             <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span>Published {format(new Date(post.created_at), 'PPP')}</span>
           </time>
+          <span aria-hidden="true">•</span>
+          <span>Publisher: WhistleBlower.ng</span>
         </div>
       </div>
     </section>
